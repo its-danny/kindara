@@ -1,7 +1,7 @@
 <div align="center">
-    <h1>⚔️  aureus</h1>
+  <h1>⚔️  aureus</h1>
 
-    A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
+  A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
 </div>
 
 ## License
