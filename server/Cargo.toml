@@ -1,0 +1,8 @@
+[package]
+name = "server"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+bevy = { version = "0.10.1", default-features = false }
+bevy-nest = { git = "https://github.com/its-danny/bevy-nest" }
