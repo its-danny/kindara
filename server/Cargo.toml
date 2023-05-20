@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.10.1", default-features = false }
 bevy-nest = { git = "https://github.com/its-danny/bevy-nest" }
+
+[dev-dependencies]
+rusty-hook = "0.11.2"
