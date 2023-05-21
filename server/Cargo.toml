@@ -4,8 +4,21 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+async-std = { version = "1.12.0", features = ["attributes"] }
+bcrypt = "0.14.0"
 bevy = { version = "0.10.1", default-features = false }
 bevy-nest = { git = "https://github.com/its-danny/bevy-nest" }
+chrono = "0.4.24"
+dotenvy = "0.15.7"
+futures-lite = "1.13.0"
+owo-colors = "3.5.0"
+regex = "1.8.1"
+sqlx = { version = "0.7.0-alpha.3", features = [
+  "runtime-async-std",
+  "tls-rustls",
+  "postgres",
+  "chrono",
+] }
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
