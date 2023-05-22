@@ -8,3 +8,6 @@ pub struct Tile {
     pub name: String,
     pub description: String,
 }
+
+#[derive(Component)]
+pub struct Impassable;
