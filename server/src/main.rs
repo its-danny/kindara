@@ -2,6 +2,8 @@ mod auth;
 mod db;
 mod player;
 mod social;
+mod spatial;
+mod world;
 
 use std::{env, time::Duration};
 
@@ -10,7 +12,10 @@ use bevy_nest::prelude::*;
 use dotenvy::dotenv;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
-use crate::{auth::plugin::AuthPlugin, db::pool::DatabasePool, social::plugin::SocialPlugin};
+use crate::{
+    auth::plugin::AuthPlugin, db::pool::DatabasePool, social::plugin::SocialPlugin,
+    spatial::plugin::SpatialPlugin, world::plugin::WorldPlugin,
+};
 
 fn setup_network(server: Res<Server>) {
     server.listen("127.0.0.1:3000");
@@ -37,7 +42,9 @@ async fn main() -> Result<(), sqlx::Error> {
             ..Default::default()
         })
         .add_plugin(NestPlugin)
+        .add_plugin(WorldPlugin)
         .add_plugin(AuthPlugin)
+        .add_plugin(SpatialPlugin)
         .add_plugin(SocialPlugin)
         .add_startup_system(setup_network)
         .run();
