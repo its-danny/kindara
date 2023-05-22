@@ -10,6 +10,7 @@ use sqlx::{Pool, Postgres};
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
     player::components::{Character, Client},
+    spatial::components::Position,
 };
 
 use super::components::{AuthState, Authenticating};
@@ -140,8 +141,8 @@ fn spawn_user_exists_task(
 pub(super) fn handle_user_exists_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut UserExists)>,
-    mut clients: Query<(&Client, &mut Authenticating)>,
     mut outbox: EventWriter<Outbox>,
+    mut clients: Query<(&Client, &mut Authenticating)>,
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
@@ -213,7 +214,7 @@ fn spawn_authenticate_task(
 pub(super) fn handle_authenticate_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut Authenticated)>,
-    mut clients: Query<(Entity, &Client), With<Authenticating>>,
+    clients: Query<(Entity, &Client), With<Authenticating>>,
     mut outbox: EventWriter<Outbox>,
 ) {
     for (task_entity, mut task) in &mut tasks {
@@ -221,7 +222,7 @@ pub(super) fn handle_authenticate_task(
             future::block_on(future::poll_once(&mut task.0))
         {
             let Some((player_entity, client)) =
-                clients.iter_mut().find(|(_, c)| c.0 == client_id)
+                clients.iter().find(|(_, c)| c.0 == client_id)
             else {
                 return;
             };
@@ -235,9 +236,12 @@ pub(super) fn handle_authenticate_task(
                 );
 
                 commands.entity(player_entity).remove::<Authenticating>();
-                commands.entity(player_entity).insert(Character {
-                    name: character.name,
-                });
+                commands.entity(player_entity).insert((
+                    Character {
+                        name: character.name,
+                    },
+                    Position(IVec3::new(0, 0, 0)),
+                ));
             } else {
                 outbox.send_text(
                     client.0,
