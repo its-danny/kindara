@@ -20,6 +20,6 @@ pub(super) fn who(
             .map(|character| character.name.clone())
             .collect::<Vec<_>>();
 
-        outbox.send_text(message.from, format!("Online: {}", online.join(", ")));
+        outbox.send_text(message.from, online.join(", "));
     }
 }

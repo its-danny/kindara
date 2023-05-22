@@ -114,7 +114,7 @@ pub(super) fn movement(
                 if impassable.is_none() {
                     position.0 = tile_position.0;
                 } else {
-                    outbox.send_text(client.0, "Something bars thy way.");
+                    outbox.send_text(client.0, "Something blocks your path.");
                 }
             }
         }
