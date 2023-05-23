@@ -10,7 +10,7 @@ use sqlx::{Pool, Postgres};
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
     player::components::{Character, Client},
-    spatial::components::Position,
+    spatial::components::{Position, Zone},
 };
 
 use super::components::{AuthState, Authenticating};
@@ -239,8 +239,12 @@ pub(super) fn handle_authenticate_task(
                 commands.entity(player_entity).insert((
                     Character {
                         name: character.name,
+                        role: character.role,
                     },
-                    Position(IVec3::new(0, 0, 0)),
+                    Position {
+                        zone: Zone::Movement,
+                        coords: IVec3::ZERO,
+                    },
                 ));
             } else {
                 outbox.send_text(

@@ -9,7 +9,7 @@ pub(super) fn who(
     mut outbox: EventWriter<Outbox>,
     players: Query<&Character>,
 ) {
-    let regex = Regex::new("^who$").unwrap();
+    let regex = Regex::new(r"^who$").unwrap();
 
     for message in inbox
         .iter()
