@@ -1,10 +1,10 @@
 
 (
-  name: "world-void",
+  name: "world.void",
   children: [
     (
       value: Inline((
-        name: "void",
+        name: "world.void.0.0.0",
         schematics: {
           "server::spatial::components::Position": (
             zone: Void,
