@@ -3,6 +3,7 @@ mod db;
 mod player;
 mod social;
 mod spatial;
+mod visual;
 mod world;
 
 use std::{env, time::Duration};
@@ -52,6 +53,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .register_type::<spatial::components::Position>()
         .register_type::<spatial::components::Zone>()
         .register_type::<spatial::components::Tile>()
+        .register_type::<visual::components::Sprite>()
         // Our plugins
         .add_plugin(NestPlugin)
         .add_plugin(WorldPlugin)
