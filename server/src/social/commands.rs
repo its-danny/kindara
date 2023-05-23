@@ -11,10 +11,10 @@ pub(super) fn who(
 ) {
     let regex = Regex::new(r"^who$").unwrap();
 
-    for message in inbox
-        .iter()
-        .filter(|message| matches!(&message.content, Message::Text(text) if regex.is_match(text)))
-    {
+    for (message, _) in inbox.iter().filter_map(|message| match &message.content {
+        Message::Text(text) if regex.is_match(text) => Some((message, text)),
+        _ => None,
+    }) {
         let online = players
             .iter()
             .map(|character| character.name.clone())
