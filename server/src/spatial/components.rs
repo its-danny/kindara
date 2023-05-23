@@ -10,7 +10,7 @@ pub struct Position {
     pub coords: IVec3,
 }
 
-#[derive(Copy, Clone, PartialEq, Reflect, FromReflect)]
+#[derive(Copy, Clone, Eq, Hash, PartialEq, Reflect, FromReflect)]
 pub enum Zone {
     Void,
     Movement,

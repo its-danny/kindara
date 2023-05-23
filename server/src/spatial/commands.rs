@@ -8,6 +8,7 @@ use crate::{
         permissions,
     },
     visual::components::Sprite,
+    world::resources::TileMap,
 };
 
 use super::{
@@ -17,10 +18,11 @@ use super::{
 
 // USAGE: (look|l)
 pub(super) fn look(
+    tile_map: Res<TileMap>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Position), With<Character>>,
-    tiles: Query<(&Position, &Tile, &Sprite)>,
+    tiles: Query<(&Tile, &Sprite)>,
 ) {
     let regex = Regex::new(r"^(look|l)$").unwrap();
 
@@ -32,12 +34,11 @@ pub(super) fn look(
             return;
         };
 
-        let Some((_, tile, sprite)) = tiles
-            .iter()
-            .filter(|(p, _, _)| p.zone == player_position.zone)
-            .find(|(p, _, _)| p.coords == player_position.coords) else {
-                return;
-            };
+        let Some((tile, sprite)) = tile_map
+                .get(player_position.zone, player_position.coords)
+                .and_then(|e| tiles.get(*e).ok()) else {
+                    return;
+                };
 
         outbox.send_text(client.0, view_for_tile(tile, sprite));
     }
@@ -45,10 +46,11 @@ pub(super) fn look(
 
 // USAGE: (map|m)
 pub(super) fn map(
+    tile_map: Res<TileMap>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Position), With<Character>>,
-    tiles: Query<(&Position, &Tile, &Sprite)>,
+    tiles: Query<&Sprite, With<Tile>>,
 ) {
     let regex = Regex::new(r"^(map|m)$").unwrap();
 
@@ -74,10 +76,12 @@ pub(super) fn map(
             for y in start_y..=end_y {
                 if x == player_position.coords.x && y == player_position.coords.y {
                     map[(y - start_y) as usize][(x - start_x) as usize] = '@';
-                } else if let Some((_, _, sprite)) = tiles
-                    .iter()
-                    .filter(|(p, _, _)| p.zone == player_position.zone)
-                    .find(|(p, _, _)| p.coords == IVec3::new(x, y, player_position.coords.z))
+                } else if let Some(sprite) = tile_map
+                    .get(
+                        player_position.zone,
+                        IVec3::new(x, y, player_position.coords.z),
+                    )
+                    .and_then(|e| tiles.get(*e).ok())
                 {
                     map[(y - start_y) as usize][(x - start_x) as usize] =
                         sprite.character.chars().next().unwrap_or(' ');
@@ -97,6 +101,7 @@ pub(super) fn map(
 
 // USAGE: <direction>
 pub(super) fn movement(
+    tile_map: Res<TileMap>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Position), With<Character>>,
@@ -115,21 +120,22 @@ pub(super) fn movement(
             return;
         };
 
-        if let Some(offset) = offset_for_direction(direction) {
-            let destination = tiles
-                .iter()
-                .filter(|(p, _, _, _)| p.zone == player_position.zone)
-                .find(|(p, _, _, _)| p.coords == player_position.coords + offset);
+        let Some(offset) = offset_for_direction(direction) else {
+            return;
+        };
 
-            if let Some((tile_position, tile, sprite, impassable)) = destination {
-                if impassable.is_none() {
-                    player_position.coords = tile_position.coords;
+        let Some((tile_position, tile, sprite, impassable)) = tile_map
+                .get(player_position.zone, player_position.coords + offset)
+                .and_then(|e| tiles.get(*e).ok()) else {
+                    return;
+                };
 
-                    outbox.send_text(client.0, view_for_tile(tile, sprite))
-                } else {
-                    outbox.send_text(client.0, "Something blocks your path.");
-                }
-            }
+        if impassable.is_none() {
+            player_position.coords = tile_position.coords;
+
+            outbox.send_text(client.0, view_for_tile(tile, sprite))
+        } else {
+            outbox.send_text(client.0, "Something blocks your path.");
         }
     }
 }
