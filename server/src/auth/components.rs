@@ -9,7 +9,7 @@ pub(super) struct Authenticating {
 impl Default for Authenticating {
     fn default() -> Self {
         Self {
-            state: AuthState::AwaitingName,
+            state: AuthState::Name,
             name: "".to_string(),
         }
     }
@@ -17,6 +17,10 @@ impl Default for Authenticating {
 
 #[derive(PartialEq, Eq)]
 pub(super) enum AuthState {
-    AwaitingName,
-    AwaitingPassword,
+    /// Waiting for the client to send their name.
+    Name,
+    /// Waiting for the client to send their password.
+    Password,
+    /// We want to ignore any messages until the current async task is complete.
+    AwaitingTaskCompletion,
 }
