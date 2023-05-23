@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
@@ -12,6 +14,15 @@ pub struct Position {
 pub enum Zone {
     Void,
     Movement,
+}
+
+impl Display for Zone {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Zone::Void => write!(f, "The Void"),
+            Zone::Movement => write!(f, "Testing - Movement"),
+        }
+    }
 }
 
 #[derive(Component, Schematic, Reflect, FromReflect)]

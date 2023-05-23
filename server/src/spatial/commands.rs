@@ -57,7 +57,7 @@ pub(super) fn map(
             return;
         };
 
-        let width = 80;
+        let width = 64;
         let height = 16;
 
         let mut map = vec![vec![" "; width]; height];
@@ -86,7 +86,7 @@ pub(super) fn map(
             .collect::<Vec<_>>()
             .join("\n");
 
-        outbox.send_text(message.from, display);
+        outbox.send_text(message.from, format!("{}\n{}", position.zone, display));
     }
 }
 
