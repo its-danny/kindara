@@ -66,7 +66,7 @@ pub(super) fn authenticate(
         };
 
         match &mut auth.state {
-            AuthState::AwaitingName => {
+            AuthState::Name => {
                 if let Message::Text(name) = &message.content {
                     // TODO: Needs real validation. Can't be empty, can't contain special
                     // characters, etc.
@@ -83,6 +83,7 @@ pub(super) fn authenticate(
                     }
 
                     auth.name = name.clone();
+                    auth.state = AuthState::AwaitingTaskCompletion;
 
                     commands.spawn(UserExists(spawn_user_exists_task(
                         database.0.clone(),
@@ -91,7 +92,7 @@ pub(super) fn authenticate(
                     )));
                 }
             }
-            AuthState::AwaitingPassword => {
+            AuthState::Password => {
                 if let Message::Text(password) = &message.content {
                     if password.len() < 3 || password.len() > 15 {
                         outbox.send_text(
@@ -105,6 +106,8 @@ pub(super) fn authenticate(
                         break;
                     }
 
+                    auth.state = AuthState::AwaitingTaskCompletion;
+
                     commands.spawn(Authenticated(spawn_authenticate_task(
                         database.0.clone(),
                         client.0,
@@ -112,6 +115,9 @@ pub(super) fn authenticate(
                         password.clone(),
                     )));
                 }
+            }
+            AuthState::AwaitingTaskCompletion => {
+                break;
             }
         }
     }
@@ -150,7 +156,7 @@ pub(super) fn handle_user_exists_task(
                 return;
             };
 
-            auth.state = AuthState::AwaitingPassword;
+            auth.state = AuthState::Password;
 
             let message = if exists {
                 format!(
@@ -228,13 +234,6 @@ pub(super) fn handle_authenticate_task(
             };
 
             if let Some(character) = character_model {
-                // Tell the client it's ok to resume echoing input.
-                outbox.send_command(client_id, vec![IAC, WONT, ECHO]);
-                outbox.send_text(
-                    client.0,
-                    format!("{}", "May thy journey here be prosperous.".bright_green()),
-                );
-
                 commands.entity(player_entity).remove::<Authenticating>();
                 commands.entity(player_entity).insert((
                     Character {
@@ -246,6 +245,13 @@ pub(super) fn handle_authenticate_task(
                         coords: IVec3::ZERO,
                     },
                 ));
+
+                // Tell the client it's ok to resume echoing input.
+                outbox.send_command(client_id, vec![IAC, WONT, ECHO]);
+                outbox.send_text(
+                    client.0,
+                    format!("{}", "May thy journey here be prosperous.".bright_green()),
+                );
             } else {
                 outbox.send_text(
                     client.0,
