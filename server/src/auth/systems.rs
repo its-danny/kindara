@@ -60,7 +60,6 @@ pub(super) fn authenticate(
         .iter()
         .filter(|m| matches!(m.content, Message::Text(_)))
     {
-        // TODO: Find a better way to do this.
         let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.0 == message.from) else {
             return;
         };
@@ -68,8 +67,6 @@ pub(super) fn authenticate(
         match &mut auth.state {
             AuthState::Name => {
                 if let Message::Text(name) = &message.content {
-                    // TODO: Needs real validation. Can't be empty, can't contain special
-                    // characters, etc.
                     if name.len() < 3 || name.len() > 15 {
                         outbox.send_text(
                             client.0,

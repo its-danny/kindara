@@ -27,7 +27,7 @@ pub(super) fn look(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((_, position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
@@ -37,7 +37,7 @@ pub(super) fn look(
                 return;
             };
 
-        outbox.send_text(message.from, view_for_tile(tile, sprite));
+        outbox.send_text(client.0, view_for_tile(tile, sprite));
     }
 }
 
@@ -53,7 +53,7 @@ pub(super) fn map(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((_, position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
@@ -86,7 +86,7 @@ pub(super) fn map(
             .collect::<Vec<_>>()
             .join("\n");
 
-        outbox.send_text(message.from, format!("{}\n{}", position.zone, display));
+        outbox.send_text(client.0, format!("{}\n{}", position.zone, display));
     }
 }
 
