@@ -28,14 +28,14 @@ pub(super) fn look(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, character_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, player_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
         let Some((_, tile, sprite)) = tiles
             .iter()
-            .filter(|(p, _, _)| p.zone == character_position.zone)
-            .find(|(p, _, _)| p.coords == character_position.coords) else {
+            .filter(|(p, _, _)| p.zone == player_position.zone)
+            .find(|(p, _, _)| p.coords == player_position.coords) else {
                 return;
             };
 
@@ -56,7 +56,7 @@ pub(super) fn map(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, character_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, player_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
@@ -65,19 +65,19 @@ pub(super) fn map(
 
         let mut map = vec![vec![' '; width]; height];
 
-        let start_x = character_position.coords.x - (width as i32 / 2);
-        let end_x = character_position.coords.x + (width as i32 / 2);
-        let start_y = character_position.coords.y - (height as i32 / 2);
-        let end_y = character_position.coords.y + (height as i32 / 2);
+        let start_x = player_position.coords.x - (width as i32 / 2);
+        let end_x = player_position.coords.x + (width as i32 / 2);
+        let start_y = player_position.coords.y - (height as i32 / 2);
+        let end_y = player_position.coords.y + (height as i32 / 2);
 
         for x in start_x..=end_x {
             for y in start_y..=end_y {
-                if x == character_position.coords.x && y == character_position.coords.y {
+                if x == player_position.coords.x && y == player_position.coords.y {
                     map[(y - start_y) as usize][(x - start_x) as usize] = '@';
                 } else if let Some((_, _, sprite)) = tiles
                     .iter()
-                    .filter(|(p, _, _)| p.zone == character_position.zone)
-                    .find(|(p, _, _)| p.coords == IVec3::new(x, y, character_position.coords.z))
+                    .filter(|(p, _, _)| p.zone == player_position.zone)
+                    .find(|(p, _, _)| p.coords == IVec3::new(x, y, player_position.coords.z))
                 {
                     map[(y - start_y) as usize][(x - start_x) as usize] =
                         sprite.character.chars().next().unwrap_or(' ');
@@ -91,10 +91,7 @@ pub(super) fn map(
             .collect::<Vec<_>>()
             .join("\n");
 
-        outbox.send_text(
-            client.0,
-            format!("{}\n{}", character_position.zone, display),
-        );
+        outbox.send_text(client.0, format!("{}\n{}", player_position.zone, display));
     }
 }
 
@@ -114,19 +111,19 @@ pub(super) fn movement(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, mut character_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
         if let Some(offset) = offset_for_direction(direction) {
             let destination = tiles
                 .iter()
-                .filter(|(p, _, _, _)| p.zone == character_position.zone)
-                .find(|(p, _, _, _)| p.coords == character_position.coords + offset);
+                .filter(|(p, _, _, _)| p.zone == player_position.zone)
+                .find(|(p, _, _, _)| p.coords == player_position.coords + offset);
 
             if let Some((tile_position, tile, sprite, impassable)) = destination {
                 if impassable.is_none() {
-                    character_position.coords = tile_position.coords;
+                    player_position.coords = tile_position.coords;
 
                     outbox.send_text(client.0, view_for_tile(tile, sprite))
                 } else {
@@ -151,7 +148,7 @@ pub(super) fn enter(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((client, mut character_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
             return;
         };
 
@@ -159,22 +156,22 @@ pub(super) fn enter(
 
         let transition = transitions
             .iter()
-            .filter(|(p, _)| p.zone == character_position.zone)
+            .filter(|(p, _)| p.zone == player_position.zone)
             .find(|(p, t)| {
-                p.coords == character_position.coords
+                p.coords == player_position.coords
                     && target
                         .as_ref()
                         .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
             });
 
         if let Some((_, transition)) = transition {
-            character_position.zone = transition.zone;
-            character_position.coords = transition.coords;
+            player_position.zone = transition.zone;
+            player_position.coords = transition.coords;
 
             if let Some((_, tile, sprite)) = tiles
                 .iter()
-                .filter(|(p, _, _)| p.zone == character_position.zone)
-                .find(|(p, _, _)| p.coords == character_position.coords)
+                .filter(|(p, _, _)| p.zone == player_position.zone)
+                .find(|(p, _, _)| p.coords == player_position.coords)
             {
                 outbox.send_text(client.0, view_for_tile(tile, sprite))
             }
@@ -193,7 +190,7 @@ pub(super) fn teleport(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((_, mut character_position, character)) = players.iter_mut().find(|(c, _, _)| c.0 == message.from) else {
+        let Some((_, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.0 == message.from) else {
             return;
         };
 
@@ -221,13 +218,13 @@ pub(super) fn teleport(
         );
 
         if region != "here" {
-            character_position.zone = match region {
+            player_position.zone = match region {
                 "movement" => Zone::Movement,
                 "void" => Zone::Void,
                 _ => Zone::Void,
             }
         }
 
-        character_position.coords = IVec3::new(x, y, z);
+        player_position.coords = IVec3::new(x, y, z);
     }
 }
