@@ -3,7 +3,7 @@
   children: [
     (
       value: Inline((
-        name: "entry",
+        name: "world-testing-movement-entry",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -13,12 +13,15 @@
             name: "A testing room",
             description: "This looks like a good place to test movement.",
           ),
+          "server::visual::components::Sprite": (
+            character: "|",
+          ),
         }
       )),
     ),
     (
       value: Inline((
-        name: "test-2",
+        name: "world-testing-movement-south",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -27,6 +30,45 @@
           "server::spatial::components::Tile": (
             name: "South of the testing room",
             description: "This is still a good place to test movement.",
+          ),
+          "server::visual::components::Sprite": (
+            character: ">",
+          ),
+        }
+      )),
+    ),
+    (
+      value: Inline((
+        name: "world-testing-movement-stairwell",
+        schematics: {
+          "server::spatial::components::Position": (
+            zone: Movement,
+            coords: IVec3 ( x: 0, y: 1, z: -1 ),
+          ),
+          "server::spatial::components::Tile": (
+            name: "The bottom of a stairwell",
+            description: "I wonder what's down here.",
+          ),
+          "server::visual::components::Sprite": (
+            character: "<",
+          ),
+        }
+      )),
+    ),
+    (
+      value: Inline((
+        name: "world-testing-movement-below",
+        schematics: {
+          "server::spatial::components::Position": (
+            zone: Movement,
+            coords: IVec3 ( x: 0, y: 2, z: -1 ),
+          ),
+          "server::spatial::components::Tile": (
+            name: "Under the testing room",
+            description: "It's a dark and scary place down here.",
+          ),
+          "server::visual::components::Sprite": (
+            character: "|",
           ),
         }
       )),
