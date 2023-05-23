@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
-use crate::player::components::Character;
+use crate::player::components::{Character, Client};
 
 pub(super) fn who(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<&Character>,
+    players: Query<(&Client, &Character)>,
 ) {
     let regex = Regex::new(r"^who$").unwrap();
 
@@ -15,11 +15,15 @@ pub(super) fn who(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
+        let Some((client, _)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+            return;
+        };
+
         let online = players
             .iter()
-            .map(|character| character.name.clone())
+            .map(|(_, character)| character.name.clone())
             .collect::<Vec<_>>();
 
-        outbox.send_text(message.from, online.join(", "));
+        outbox.send_text(client.0, online.join(", "));
     }
 }
