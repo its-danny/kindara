@@ -1,9 +1,9 @@
 (
-  name: "world-testing-movement",
+  name: "world.testing.movement",
   children: [
     (
       value: Inline((
-        name: "world-testing-movement-entry",
+        name: "world.testing.movement.0.0.0",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -21,7 +21,7 @@
     ),
     (
       value: Inline((
-        name: "world-testing-movement-south",
+        name: "world.testing.movement.0.1.0",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -39,7 +39,7 @@
     ),
     (
       value: Inline((
-        name: "world-testing-movement-stairwell",
+        name: "world.testing.movement.0.1.-1",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -57,7 +57,7 @@
     ),
     (
       value: Inline((
-        name: "world-testing-movement-below",
+        name: "world.testing.movement.0.2.-1",
         schematics: {
           "server::spatial::components::Position": (
             zone: Movement,
@@ -68,9 +68,27 @@
             description: "It's a dark and scary place down here.",
           ),
           "server::visual::components::Sprite": (
-            character: "|",
+            character: "=",
           ),
-        }
+        },
+        children: [
+           (
+             value: Inline((
+                name: "world.testing.movement.0.2.-1.transition",
+                schematics: {
+                "server::spatial::components::Position": (
+                  zone: Movement,
+                  coords: IVec3 ( x: 0, y: 2, z: -1 ),
+                ),
+                "server::spatial::components::Transition": (
+                  tags: ["void"],
+                  zone: Void,
+                  coords: IVec3 ( x: 0, y: 0, z: 0 ),
+                )
+              }
+            ))
+          )
+        ] 
       )),
     ),
   ]

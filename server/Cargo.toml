@@ -9,7 +9,6 @@ bcrypt = "0.14.0"
 bevy = { version = "0.10.1", default-features = false }
 bevy-nest = { git = "https://github.com/its-danny/bevy-nest" }
 bevy_proto = { version = "0.10.0", default-features = false, features = [
-  "auto_name",
   "ron",
 ] }
 chrono = "0.4.24"

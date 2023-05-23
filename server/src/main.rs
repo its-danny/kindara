@@ -16,7 +16,7 @@ use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
     auth::plugin::AuthPlugin, db::pool::DatabasePool, social::plugin::SocialPlugin,
-    spatial::plugin::SpatialPlugin, world::plugin::WorldPlugin,
+    spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
@@ -50,16 +50,13 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(LogPlugin::default())
         // Prototypes
         .add_plugin(ProtoPlugin::new())
-        .register_type::<spatial::components::Position>()
-        .register_type::<spatial::components::Zone>()
-        .register_type::<spatial::components::Tile>()
-        .register_type::<visual::components::Sprite>()
         // Our plugins
         .add_plugin(NestPlugin)
         .add_plugin(WorldPlugin)
         .add_plugin(AuthPlugin)
         .add_plugin(SpatialPlugin)
         .add_plugin(SocialPlugin)
+        .add_plugin(VisualPlugin)
         // Get it started
         .add_startup_systems((load_prototypes, setup_network))
         .run();

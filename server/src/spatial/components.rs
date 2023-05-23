@@ -10,7 +10,7 @@ pub struct Position {
     pub coords: IVec3,
 }
 
-#[derive(PartialEq, Reflect, FromReflect)]
+#[derive(Copy, Clone, PartialEq, Reflect, FromReflect)]
 pub enum Zone {
     Void,
     Movement,
@@ -34,3 +34,11 @@ pub struct Tile {
 
 #[derive(Component)]
 pub struct Impassable;
+
+#[derive(Component, Schematic, Reflect, FromReflect)]
+#[reflect(Schematic)]
+pub struct Transition {
+    pub tags: Vec<String>,
+    pub zone: Zone,
+    pub coords: IVec3,
+}

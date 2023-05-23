@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    components::{Impassable, Position, Tile, Zone},
+    components::{Impassable, Position, Tile, Transition, Zone},
     utils::view_for_tile,
 };
 
@@ -155,6 +155,48 @@ pub(super) fn movement(
                 outbox.send_text(client.0, view_for_tile(tile, sprite))
             } else {
                 outbox.send_text(client.0, "Something blocks your path.");
+            }
+        }
+    }
+}
+
+// USAGE: (enter) [target]
+pub(super) fn enter(
+    mut inbox: EventReader<Inbox>,
+    mut outbox: EventWriter<Outbox>,
+    mut players: Query<(&Client, &mut Position)>,
+    transitions: Query<(&Position, &Transition), Without<Client>>,
+    tiles: Query<(&Position, &Tile, &Sprite), Without<Client>>,
+) {
+    let regex = Regex::new(r"^(enter)( .+)?$").unwrap();
+
+    for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
+        Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
+        _ => None,
+    }) {
+        let Some((client, mut position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+            return;
+        };
+
+        let target = captures.get(2).map(|m| m.as_str());
+
+        let transition = transitions.iter().find(|(p, t)| {
+            p.zone == position.zone
+                && p.coords == position.coords
+                && target
+                    .as_ref()
+                    .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
+        });
+
+        if let Some((_, transition)) = transition {
+            position.zone = transition.zone;
+            position.coords = transition.coords;
+
+            if let Some((_, tile, sprite)) = tiles
+                .iter()
+                .find(|(p, _, _)| p.zone == position.zone && p.coords == position.coords)
+            {
+                outbox.send_text(client.0, view_for_tile(tile, sprite))
             }
         }
     }
