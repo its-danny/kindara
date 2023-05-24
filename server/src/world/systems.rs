@@ -5,15 +5,15 @@ use crate::spatial::components::{Position, Tile};
 
 use super::resources::TileMap;
 
-pub(super) fn spawn_void(mut commands: ProtoCommands) {
+pub fn spawn_void(mut commands: ProtoCommands) {
     commands.spawn("world.void");
 }
 
-pub(super) fn spawn_testing_movement(mut commands: ProtoCommands) {
+pub fn spawn_testing_movement(mut commands: ProtoCommands) {
     commands.spawn("world.testing.movement");
 }
 
-pub(super) fn on_tile_added(
+pub fn on_tile_added(
     mut tile_map: ResMut<TileMap>,
     tiles: Query<(Entity, &Position), Added<Tile>>,
 ) {
@@ -22,7 +22,7 @@ pub(super) fn on_tile_added(
     }
 }
 
-pub(super) fn on_tile_removed(
+pub fn on_tile_removed(
     mut tile_map: ResMut<TileMap>,
     tiles: Query<(Entity, &Position)>,
     mut removals: RemovedComponents<Tile>,

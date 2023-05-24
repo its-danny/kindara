@@ -7,7 +7,7 @@ edition = "2021"
 async-std = { version = "1.12.0", features = ["attributes"] }
 bcrypt = "0.14.0"
 bevy = { version = "0.10.1", default-features = false }
-bevy-nest = { git = "https://github.com/its-danny/bevy-nest" }
+bevy-nest = "0.1.0"
 bevy_proto = { version = "0.10.0", default-features = false, features = [
   "ron",
 ] }

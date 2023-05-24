@@ -9,14 +9,17 @@ use sqlx::{Pool, Postgres};
 
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
-    player::components::{Character, Client},
+    player::{
+        bundles::PlayerBundle,
+        components::{Character, Client},
+    },
     spatial::components::{Position, Zone},
 };
 
 use super::components::{AuthState, Authenticating};
 
 // Entry point for the authentication process.
-pub(super) fn on_network_event(
+pub fn on_network_event(
     mut commands: Commands,
     mut events: EventReader<NetworkEvent>,
     mut outbox: EventWriter<Outbox>,
@@ -49,7 +52,7 @@ pub(super) fn on_network_event(
 
 // Due to the async nature of database queries, we need to use AsyncComputeTaskPool to spawn tasks
 // so as to not block the main thread. Those tasks are then handled via the handle_*_task systems below.
-pub(super) fn authenticate(
+pub fn authenticate(
     mut commands: Commands,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
@@ -121,7 +124,7 @@ pub(super) fn authenticate(
 }
 
 #[derive(Component)]
-pub(super) struct UserExists(Task<Result<(bool, ClientId), sqlx::Error>>);
+pub struct UserExists(Task<Result<(bool, ClientId), sqlx::Error>>);
 
 // See `handle_user_exists_task` for the next step in the authentication process.
 fn spawn_user_exists_task(
@@ -141,7 +144,7 @@ fn spawn_user_exists_task(
 }
 
 // This system handles the result of `spawn_user_exists_task`.
-pub(super) fn handle_user_exists_task(
+pub fn handle_user_exists_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut UserExists)>,
     mut outbox: EventWriter<Outbox>,
@@ -174,7 +177,7 @@ pub(super) fn handle_user_exists_task(
 }
 
 #[derive(Component)]
-pub(super) struct Authenticated(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
+pub struct Authenticated(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
 // See `handle_authenticate_task` for the next step in the authentication process.
 fn spawn_authenticate_task(
@@ -214,7 +217,7 @@ fn spawn_authenticate_task(
 }
 
 // This system handles the result of `spawn_authenticate_task`.
-pub(super) fn handle_authenticate_task(
+pub fn handle_authenticate_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut Authenticated)>,
     clients: Query<(Entity, &Client), With<Authenticating>>,
@@ -231,17 +234,19 @@ pub(super) fn handle_authenticate_task(
             };
 
             if let Some(character) = character_model {
-                commands.entity(player_entity).remove::<Authenticating>();
-                commands.entity(player_entity).insert((
-                    Character {
-                        name: character.name,
-                        role: character.role,
-                    },
-                    Position {
-                        zone: Zone::Movement,
-                        coords: IVec3::ZERO,
-                    },
-                ));
+                commands
+                    .entity(player_entity)
+                    .remove::<Authenticating>()
+                    .insert(PlayerBundle {
+                        character: Character {
+                            name: character.name,
+                            role: character.role,
+                        },
+                        position: Position {
+                            zone: Zone::Movement,
+                            coords: IVec3::ZERO,
+                        },
+                    });
 
                 // Tell the client it's ok to resume echoing input.
                 outbox.send_command(client_id, vec![IAC, WONT, ECHO]);

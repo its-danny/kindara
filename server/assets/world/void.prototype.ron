@@ -6,16 +6,18 @@
       value: Inline((
         name: "world.void.0.0.0",
         schematics: {
-          "server::spatial::components::Position": (
-            zone: Void,
-            coords: IVec3 ( x: 0, y: 0, z: 0 ),
-          ),
-          "server::spatial::components::Tile": (
-            name: "The Void",
-            description: "A vast, empty void.",
-          ),
-          "server::visual::components::Sprite": (
-            character: "x",
+          "server::spatial::bundles::TileBundle": (
+            position: (
+              zone: Void,
+              coords: IVec3 ( x: 0, y: 0, z: 0 ),
+            ),
+            tile: (
+              name: "The Void",
+              description: "A vast, empty void.",
+            ),
+            sprite: (
+              character: "x",
+            ),
           ),
         }
       )),
