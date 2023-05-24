@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub(super) struct Authenticating {
-    pub(super) state: AuthState,
-    pub(super) name: String,
+pub struct Authenticating {
+    pub state: AuthState,
+    pub name: String,
 }
 
 impl Default for Authenticating {
@@ -16,7 +16,7 @@ impl Default for Authenticating {
 }
 
 #[derive(PartialEq, Eq)]
-pub(super) enum AuthState {
+pub enum AuthState {
     /// Waiting for the client to send their name.
     Name,
     /// Waiting for the client to send their password.

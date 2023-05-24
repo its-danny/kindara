@@ -5,16 +5,18 @@
       value: Inline((
         name: "world.testing.movement.0.0.0",
         schematics: {
-          "server::spatial::components::Position": (
-            zone: Movement,
-            coords: IVec3 ( x: 0, y: 0, z: 0 ),
-          ),
-          "server::spatial::components::Tile": (
-            name: "A testing room",
-            description: "This looks like a good place to test movement.",
-          ),
-          "server::visual::components::Sprite": (
-            character: "|",
+          "server::spatial::bundles::TileBundle": (
+            position: (
+              zone: Movement,
+              coords: IVec3 ( x: 0, y: 0, z: 0 ),
+            ),
+            tile: (
+              name: "A testing room",
+              description: "This looks like a good place to test movement.",
+            ),
+            sprite: (
+              character: "|",
+            ),
           ),
         }
       )),
@@ -23,16 +25,18 @@
       value: Inline((
         name: "world.testing.movement.0.1.0",
         schematics: {
-          "server::spatial::components::Position": (
-            zone: Movement,
-            coords: IVec3 ( x: 0, y: 1, z: 0 ),
-          ),
-          "server::spatial::components::Tile": (
-            name: "South of the testing room",
-            description: "This is still a good place to test movement.",
-          ),
-          "server::visual::components::Sprite": (
-            character: ">",
+          "server::spatial::bundles::TileBundle": (
+            position: (
+              zone: Movement,
+              coords: IVec3 ( x: 0, y: 1, z: 0 ),
+            ),
+            tile: (
+              name: "South of the testing room",
+              description: "This is still a good place to test movement.",
+            ),
+            sprite: (
+              character: ">",
+            ),
           ),
         }
       )),
@@ -41,16 +45,18 @@
       value: Inline((
         name: "world.testing.movement.0.1.-1",
         schematics: {
-          "server::spatial::components::Position": (
-            zone: Movement,
-            coords: IVec3 ( x: 0, y: 1, z: -1 ),
-          ),
-          "server::spatial::components::Tile": (
-            name: "The bottom of a stairwell",
-            description: "I wonder what's down here.",
-          ),
-          "server::visual::components::Sprite": (
-            character: "<",
+          "server::spatial::bundles::TileBundle": (
+            position: (
+              zone: Movement,
+              coords: IVec3 ( x: 0, y: 1, z: -1 ),
+            ),
+            tile: (
+              name: "The bottom of a stairwell",
+              description: "I wonder what's down here.",
+            ),
+            sprite: (
+              character: "<",
+            ),
           ),
         }
       )),
@@ -59,16 +65,18 @@
       value: Inline((
         name: "world.testing.movement.0.2.-1",
         schematics: {
-          "server::spatial::components::Position": (
-            zone: Movement,
-            coords: IVec3 ( x: 0, y: 2, z: -1 ),
-          ),
-          "server::spatial::components::Tile": (
-            name: "Under the testing room",
-            description: "It's a dark and scary place down here.",
-          ),
-          "server::visual::components::Sprite": (
-            character: "=",
+          "server::spatial::bundles::TileBundle": (
+            position: (
+              zone: Movement,
+              coords: IVec3 ( x: 0, y: 2, z: -1 ),
+            ),
+            tile: (
+              name: "Under the testing room",
+              description: "It's a dark and scary place down here.",
+            ),
+            sprite: (
+              character: "=",
+            ),
           ),
         },
         children: [
@@ -76,14 +84,16 @@
              value: Inline((
                 name: "world.testing.movement.0.2.-1.transition",
                 schematics: {
-                "server::spatial::components::Position": (
-                  zone: Movement,
-                  coords: IVec3 ( x: 0, y: 2, z: -1 ),
-                ),
-                "server::spatial::components::Transition": (
-                  tags: ["void"],
-                  zone: Void,
-                  coords: IVec3 ( x: 0, y: 0, z: 0 ),
+                "server::spatial::bundles::TransitionBundle": (
+                  position: (
+                    zone: Movement,
+                    coords: IVec3 ( x: 0, y: 2, z: -1 ),
+                  ),
+                  transition: (
+                    tags: ["void"],
+                    zone: Void,
+                    coords: IVec3 ( x: 0, y: 0, z: 0 ),
+                  )
                 )
               }
             ))

@@ -1,8 +1,6 @@
 use bevy::prelude::*;
-use bevy_proto::prelude::*;
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
-#[reflect(Schematic)]
+#[derive(Component, Reflect, FromReflect)]
 pub struct Sprite {
     pub character: String,
 }

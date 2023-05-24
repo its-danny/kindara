@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::player::components::{Character, Client};
 
-pub(super) fn who(
+pub fn who(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character)>,
