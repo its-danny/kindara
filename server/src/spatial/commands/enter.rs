@@ -19,7 +19,7 @@ pub fn enter(
     transitions: Query<(&Position, &Transition), Without<Client>>,
     tiles: Query<(&Position, &Tile, &Sprite), Without<Client>>,
 ) {
-    let regex = Regex::new(r"^(enter)( .+)?$").unwrap();
+    let regex = Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap();
 
     for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
@@ -29,16 +29,14 @@ pub fn enter(
             return;
         };
 
-        let target = captures.get(2).map(|m| m.as_str());
+        let target = captures.name("transition").map(|m| m.as_str());
 
         let transition = transitions
             .iter()
             .filter(|(p, _)| p.zone == player_position.zone)
             .find(|(p, t)| {
                 p.coords == player_position.coords
-                    && target
-                        .as_ref()
-                        .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
+                    && target.map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
             });
 
         if let Some((_, transition)) = transition {
@@ -89,6 +87,7 @@ mod tests {
             .build(&mut app);
 
         TransitionBuilder::new()
+            .tags(&vec!["movement"])
             .target_zone(Zone::Movement)
             .target_coords(IVec3::ZERO)
             .build(&mut app);
@@ -105,7 +104,7 @@ mod tests {
 
         app.world.resource_mut::<Events<Inbox>>().send(Inbox {
             from: client_id,
-            content: Message::Text("enter".into()),
+            content: Message::Text("enter movement".into()),
         });
 
         app.update();

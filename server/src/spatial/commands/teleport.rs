@@ -15,7 +15,9 @@ pub fn teleport(
     mut inbox: EventReader<Inbox>,
     mut players: Query<(&Client, &mut Position, &Character)>,
 ) {
-    let regex = Regex::new(r"^(teleport|tp) (here|(.+)) \(((\d) (\d) (\d))\)$").unwrap();
+    let regex =
+        Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$")
+            .unwrap();
 
     for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
@@ -29,17 +31,17 @@ pub fn teleport(
             return;
         }
 
-        let region = captures.get(2).map(|m| m.as_str()).unwrap_or("here");
+        let region = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
         let x = captures
-            .get(5)
+            .name("x")
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .unwrap_or_default();
         let y = captures
-            .get(6)
+            .name("y")
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .unwrap_or_default();
         let z = captures
-            .get(7)
+            .name("z")
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .unwrap_or_default();
 
