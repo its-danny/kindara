@@ -112,7 +112,6 @@ mod tests {
             .expect("Expected response");
 
         assert_eq!(response.to, client_id);
-        assert!(matches!(response.content, Message::Text(_)));
 
         let response = match &response.content {
             Message::Text(text) => text,
