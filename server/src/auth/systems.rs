@@ -220,15 +220,15 @@ fn spawn_authenticate_task(
 pub fn handle_authenticate_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut Authenticated)>,
-    clients: Query<(Entity, &Client), With<Authenticating>>,
+    mut clients: Query<(Entity, &Client, &mut Authenticating)>,
     mut outbox: EventWriter<Outbox>,
 ) {
     for (task_entity, mut task) in &mut tasks {
         if let Some(Ok((character_model, client_id))) =
             future::block_on(future::poll_once(&mut task.0))
         {
-            let Some((player_entity, client)) =
-                clients.iter().find(|(_, c)| c.0 == client_id)
+            let Some((player_entity, client, mut auth)) =
+                clients.iter_mut().find(|(_, c, _)| c.0 == client_id)
             else {
                 return;
             };
@@ -255,6 +255,8 @@ pub fn handle_authenticate_task(
                     format!("{}", "May thy journey here be prosperous.".bright_green()),
                 );
             } else {
+                auth.state = AuthState::Password;
+
                 outbox.send_text(
                     client.0,
                     "The secret word thou hast given is not the right one.",
