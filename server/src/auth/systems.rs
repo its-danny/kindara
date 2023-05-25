@@ -3,8 +3,10 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_nest::prelude::*;
+use censor::Censor;
 use futures_lite::future;
 use owo_colors::OwoColorize;
+use regex::Regex;
 use sqlx::{Pool, Postgres};
 
 use crate::{
@@ -17,6 +19,35 @@ use crate::{
 };
 
 use super::components::{AuthState, Authenticating};
+
+fn name_is_valid(name: &str) -> Result<(), String> {
+    if name.len() < 3 || name.len() > 25 {
+        return Err("Name must be between 3 and 25 characters".to_string());
+    }
+
+    let regex = Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap();
+
+    if !regex.is_match(name) {
+        return Err("Name must be alphanumeric".to_string());
+    }
+
+    let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
+    let censor = Censor::Standard + Censor::Sex + ban_list;
+
+    if censor.check(name) {
+        return Err("Name contains banned words".to_string());
+    }
+
+    Ok(())
+}
+
+fn password_is_valid(password: &str) -> Result<(), String> {
+    if password.len() >= 3 && password.len() <= 30 {
+        Ok(())
+    } else {
+        Err("Password must be between 3 and 30 characters".to_string())
+    }
+}
 
 // Entry point for the authentication process.
 pub fn on_network_event(
@@ -70,14 +101,8 @@ pub fn authenticate(
         match &mut auth.state {
             AuthState::Name => {
                 if let Message::Text(name) = &message.content {
-                    if name.len() < 3 || name.len() > 15 {
-                        outbox.send_text(
-                            client.0,
-                            format!(
-                                "{}",
-                                "Name must be between 3 and 15 characters".bright_red()
-                            ),
-                        );
+                    if let Err(err) = name_is_valid(name) {
+                        outbox.send_text(client.0, err);
 
                         break;
                     }
@@ -94,14 +119,8 @@ pub fn authenticate(
             }
             AuthState::Password => {
                 if let Message::Text(password) = &message.content {
-                    if password.len() < 3 || password.len() > 15 {
-                        outbox.send_text(
-                            client.0,
-                            format!(
-                                "{}",
-                                "Password must be between 3 and 15 characters".bright_red()
-                            ),
-                        );
+                    if let Err(err) = password_is_valid(password) {
+                        outbox.send_text(client.0, err);
 
                         break;
                     }
@@ -265,5 +284,20 @@ pub fn handle_authenticate_task(
 
             commands.entity(task_entity).remove::<Authenticated>();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_name_valid() {
+        assert!(name_is_valid("Caesar").is_ok());
+        assert!(name_is_valid("Caesar Augustus").is_ok());
+        assert!(name_is_valid("Caesar   Augustus").is_err());
+        assert!(name_is_valid("Caesar Octavian Augustus").is_err());
+        assert!(name_is_valid("shit god").is_err());
+        assert!(name_is_valid("admin").is_err());
     }
 }

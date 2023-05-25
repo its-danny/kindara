@@ -11,6 +11,7 @@ bevy-nest = "0.1.0"
 bevy_proto = { version = "0.10.0", default-features = false, features = [
   "ron",
 ] }
+censor = "0.3.0"
 chrono = "0.4.24"
 dotenvy = "0.15.7"
 futures-lite = "1.13.0"
