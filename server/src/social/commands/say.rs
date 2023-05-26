@@ -39,7 +39,7 @@ pub fn say(
             if position.zone == other_position.zone && position.coords == other_position.coords {
                 outbox.send_text(
                     other_client.0,
-                    format!("{} says \"{}\"", character.name.bright_cyan(), message),
+                    format!("{} says \"{message}\"", character.name.bright_cyan()),
                 );
             }
         }

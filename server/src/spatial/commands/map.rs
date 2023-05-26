@@ -60,6 +60,6 @@ pub fn map(
             .collect::<Vec<_>>()
             .join("\n");
 
-        outbox.send_text(client.0, format!("{}\n{}", player_position.zone, display));
+        outbox.send_text(client.0, format!("{}\n{display}", player_position.zone));
     }
 }
