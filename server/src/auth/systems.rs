@@ -23,20 +23,20 @@ use super::components::{AuthState, Authenticating};
 
 fn name_is_valid(name: &str) -> Result<(), &'static str> {
     if name.len() < 3 || name.len() > 25 {
-        return Err("Name must be between 3 and 25 characters");
+        return Err("Name must be between 3 and 25 characters.");
     }
 
     let regex = Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap();
 
     if !regex.is_match(name) {
-        return Err("Name must be alphanumeric");
+        return Err("Name must be alphanumeric.");
     }
 
     let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
     let censor = Censor::Standard + Censor::Sex + ban_list;
 
     if censor.check(name) {
-        return Err("Name contains banned words");
+        return Err("Name contains banned words.");
     }
 
     Ok(())
@@ -46,7 +46,7 @@ fn password_is_valid(password: &str) -> Result<(), &'static str> {
     if password.len() >= 3 && password.len() <= 30 {
         Ok(())
     } else {
-        Err("Password must be between 3 and 30 characters")
+        Err("Password must be between 3 and 30 characters.")
     }
 }
 
