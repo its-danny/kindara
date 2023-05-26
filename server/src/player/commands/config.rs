@@ -102,7 +102,7 @@ pub fn handle_save_config_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut SaveConfig)>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<&Client>,
+    players: Query<&Client, With<Character>>,
 ) {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
