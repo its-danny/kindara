@@ -3,7 +3,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    player::components::Client,
+    player::components::{Character, Client},
     spatial::{
         components::{Position, Tile, Transition},
         utils::view_for_tile,
@@ -15,7 +15,7 @@ use crate::{
 pub fn enter(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Position)>,
+    mut players: Query<(&Client, &mut Position), With<Character>>,
     transitions: Query<(&Position, &Transition), Without<Client>>,
     tiles: Query<(&Position, &Tile, &Sprite), Without<Client>>,
 ) {
