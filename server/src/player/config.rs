@@ -20,9 +20,9 @@ impl CharacterConfig {
     pub fn set(&mut self, option: &str, value: &str) -> Result<(), &'static str> {
         match option {
             "brief" => {
-                self.brief = value.parse().map_err(|_| "Invalid value")?;
+                self.brief = value.parse().map_err(|_| "Invalid value.")?;
             }
-            _ => return Err("Invalid option"),
+            _ => return Err("Invalid option."),
         }
 
         Ok(())

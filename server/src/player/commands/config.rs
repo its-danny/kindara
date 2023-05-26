@@ -110,7 +110,7 @@ pub fn handle_save_config_task(
                 return;
             };
 
-            outbox.send_text(client.0, "Config saved");
+            outbox.send_text(client.0, "Config saved.");
 
             commands.entity(entity).remove::<SaveConfig>();
         }
