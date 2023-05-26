@@ -1,5 +1,7 @@
 use chrono::NaiveDateTime;
-use sqlx::FromRow;
+use sqlx::{types::Json, FromRow};
+
+use crate::player::config::CharacterConfig;
 
 #[derive(FromRow)]
 pub struct CharacterModel {
@@ -10,4 +12,5 @@ pub struct CharacterModel {
     pub role: i16,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub config: Json<CharacterConfig>,
 }

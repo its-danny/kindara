@@ -1,0 +1,1 @@
+ALTER TABLE characters ADD COLUMN config JSONB NOT NULL DEFAULT '{}';

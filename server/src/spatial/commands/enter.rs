@@ -48,7 +48,7 @@ pub fn enter(
                 .filter(|(p, _, _)| p.zone == player_position.zone)
                 .find(|(p, _, _)| p.coords == player_position.coords)
             {
-                outbox.send_text(client.0, view_for_tile(tile, sprite))
+                outbox.send_text(client.0, view_for_tile(tile, sprite, false))
             }
         }
     }

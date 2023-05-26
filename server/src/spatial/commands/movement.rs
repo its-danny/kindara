@@ -17,7 +17,7 @@ pub fn movement(
     tile_map: Res<TileMap>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Position), With<Character>>,
+    mut players: Query<(&Client, &mut Position, &Character)>,
     tiles: Query<(&Position, &Tile, &Sprite, Option<&Impassable>), Without<Character>>,
 ) {
     let regex = Regex::new(
@@ -29,7 +29,7 @@ pub fn movement(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.0 == message.from) else {
             return;
         };
 
@@ -46,7 +46,10 @@ pub fn movement(
         if impassable.is_none() {
             player_position.coords = tile_position.coords;
 
-            outbox.send_text(client.0, view_for_tile(tile, sprite))
+            outbox.send_text(
+                client.0,
+                view_for_tile(tile, sprite, character.config.brief),
+            )
         } else {
             outbox.send_text(client.0, "Something blocks your path.");
         }

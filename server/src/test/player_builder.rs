@@ -5,11 +5,13 @@ use crate::{
     player::{
         bundles::PlayerBundle,
         components::{Character, Client},
+        config::CharacterConfig,
     },
     spatial::components::{Position, Zone},
 };
 
 pub struct PlayerBuilder {
+    id: i64,
     name: String,
     role: i16,
     zone: Zone,
@@ -19,11 +21,17 @@ pub struct PlayerBuilder {
 impl PlayerBuilder {
     pub fn new() -> Self {
         Self {
+            id: 0,
             name: "Ramose".into(),
             role: 0,
             zone: Zone::Void,
             coords: IVec3::ZERO,
         }
+    }
+
+    pub fn id(mut self, id: i64) -> Self {
+        self.id = id;
+        self
     }
 
     pub fn name(mut self, name: &str) -> Self {
@@ -55,8 +63,10 @@ impl PlayerBuilder {
                 Client(client_id),
                 PlayerBundle {
                     character: Character {
+                        id: self.id,
                         name: self.name,
                         role: self.role,
+                        config: CharacterConfig::default(),
                     },
                     position: Position {
                         zone: self.zone,

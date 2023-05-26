@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+ascii_table = "4.0.2"
 async-std = { version = "1.12.0", features = ["attributes"] }
 bcrypt = "0.14.0"
 bevy = { version = "0.10.1", default-features = false }
@@ -17,11 +18,14 @@ dotenvy = "0.15.7"
 futures-lite = "1.13.0"
 owo-colors = "3.5.0"
 regex = "1.8.1"
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = "1.0.96"
 sqlx = { version = "0.7.0-alpha.3", features = [
+  "chrono",
+  "json",
+  "postgres",
   "runtime-async-std",
   "tls-rustls",
-  "postgres",
-  "chrono",
 ] }
 
 [dev-dependencies]

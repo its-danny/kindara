@@ -7,45 +7,46 @@ use censor::Censor;
 use futures_lite::future;
 use owo_colors::OwoColorize;
 use regex::Regex;
-use sqlx::{Pool, Postgres};
+use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
     player::{
         bundles::PlayerBundle,
         components::{Character, Client},
+        config::CharacterConfig,
     },
     spatial::components::{Position, Zone},
 };
 
 use super::components::{AuthState, Authenticating};
 
-fn name_is_valid(name: &str) -> Result<(), String> {
+fn name_is_valid(name: &str) -> Result<(), &'static str> {
     if name.len() < 3 || name.len() > 25 {
-        return Err("Name must be between 3 and 25 characters".to_string());
+        return Err("Name must be between 3 and 25 characters");
     }
 
     let regex = Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap();
 
     if !regex.is_match(name) {
-        return Err("Name must be alphanumeric".to_string());
+        return Err("Name must be alphanumeric");
     }
 
     let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
     let censor = Censor::Standard + Censor::Sex + ban_list;
 
     if censor.check(name) {
-        return Err("Name contains banned words".to_string());
+        return Err("Name contains banned words");
     }
 
     Ok(())
 }
 
-fn password_is_valid(password: &str) -> Result<(), String> {
+fn password_is_valid(password: &str) -> Result<(), &'static str> {
     if password.len() >= 3 && password.len() <= 30 {
         Ok(())
     } else {
-        Err("Password must be between 3 and 30 characters".to_string())
+        Err("Password must be between 3 and 30 characters")
     }
 }
 
@@ -171,7 +172,7 @@ pub fn handle_user_exists_task(
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
-            let Some((_, mut auth)) = clients.iter_mut().find(|(c, _)| c.0 == client_id) else {
+            let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.0 == client_id) else {
                 return;
             };
 
@@ -187,8 +188,8 @@ pub fn handle_user_exists_task(
             };
 
             // Tell the client to stop echoing input.
-            outbox.send_command(client_id, vec![IAC, WILL, ECHO]);
-            outbox.send_text(client_id, message);
+            outbox.send_command(client.0, vec![IAC, WILL, ECHO]);
+            outbox.send_text(client.0, message);
 
             commands.entity(entity).remove::<UserExists>();
         }
@@ -221,10 +222,11 @@ fn spawn_authenticate_task(
                 )
         } else if let Ok(hashed) = bcrypt::hash(&password, bcrypt::DEFAULT_COST) {
             let character = sqlx::query_as::<_, CharacterModel>(
-                "INSERT INTO characters (name, password) VALUES ($1, $2) RETURNING *",
+                "INSERT INTO characters (name, password, config) VALUES ($1, $2, $3) RETURNING *",
             )
             .bind(&name)
             .bind(&hashed)
+            .bind(Json(CharacterConfig::default()))
             .fetch_one(&pool)
             .await?;
 
@@ -258,8 +260,10 @@ pub fn handle_authenticate_task(
                     .remove::<Authenticating>()
                     .insert(PlayerBundle {
                         character: Character {
+                            id: character.id,
                             name: character.name,
                             role: character.role,
+                            config: character.config.0,
                         },
                         position: Position {
                             zone: Zone::Movement,
@@ -268,7 +272,7 @@ pub fn handle_authenticate_task(
                     });
 
                 // Tell the client it's ok to resume echoing input.
-                outbox.send_command(client_id, vec![IAC, WONT, ECHO]);
+                outbox.send_command(client.0, vec![IAC, WONT, ECHO]);
                 outbox.send_text(
                     client.0,
                     format!("{}", "May thy journey here be prosperous.".bright_green()),

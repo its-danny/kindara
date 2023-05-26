@@ -36,7 +36,7 @@ pub fn look(
                     return;
                 };
 
-        outbox.send_text(client.0, view_for_tile(tile, sprite));
+        outbox.send_text(client.0, view_for_tile(tile, sprite, false));
     }
 }
 
