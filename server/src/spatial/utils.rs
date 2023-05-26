@@ -20,6 +20,10 @@ pub fn offset_for_direction(direction: &str) -> Option<IVec3> {
     }
 }
 
-pub fn view_for_tile(tile: &Tile, sprite: &Sprite) -> String {
-    format!("{} {}\n{}", sprite.character, tile.name, tile.description)
+pub fn view_for_tile(tile: &Tile, sprite: &Sprite, brief: bool) -> String {
+    if brief {
+        format!("{} {}", sprite.character, tile.name)
+    } else {
+        format!("{} {}\n{}", sprite.character, tile.name, tile.description)
+    }
 }
