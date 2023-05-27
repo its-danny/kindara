@@ -18,7 +18,7 @@ pub fn say(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((client, position, character)) = players.iter().find(|(c, _, _)| c.0 == message.from) else {
+        let Some((client, position, character)) = players.iter().find(|(c, _, _)| c.id == message.from) else {
             return;
         };
 
@@ -29,18 +29,19 @@ pub fn say(
             .trim();
 
         if message.is_empty() {
-            outbox.send_text(client.0, "Say what?");
+            outbox.send_text(client.id, "Say what?");
 
             return;
         }
 
-        outbox.send_text(client.0, format!("You say \"{message}\""));
+        outbox.send_text(client.id, format!("You say \"{message}\""));
 
-        for (other_client, other_position, _) in players.iter().filter(|(c, _, _)| c.0 != client.0)
+        for (other_client, other_position, _) in
+            players.iter().filter(|(c, _, _)| c.id != client.id)
         {
             if position.zone == other_position.zone && position.coords == other_position.coords {
                 outbox.send_text(
-                    other_client.0,
+                    other_client.id,
                     format!("{} says \"{message}\"", character.name),
                 );
             }

@@ -29,7 +29,7 @@ pub fn movement(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.0 == message.from) else {
+        let Some((client, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.id == message.from) else {
             return;
         };
 
@@ -47,11 +47,11 @@ pub fn movement(
             player_position.coords = tile_position.coords;
 
             outbox.send_text(
-                client.0,
+                client.id,
                 view_for_tile(tile, sprite, character.config.brief),
             )
         } else {
-            outbox.send_text(client.0, "Something blocks your path.");
+            outbox.send_text(client.id, "Something blocks your path.");
         }
     }
 }

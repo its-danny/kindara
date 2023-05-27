@@ -1,5 +1,6 @@
 mod auth;
 mod db;
+mod net;
 mod player;
 mod social;
 mod spatial;
@@ -16,9 +17,9 @@ use dotenvy::dotenv;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
-    auth::plugin::AuthPlugin, db::pool::DatabasePool, player::plugin::PlayerPlugin,
-    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
-    world::plugin::WorldPlugin,
+    auth::plugin::AuthPlugin, db::pool::DatabasePool, net::plugin::NetPlugin,
+    player::plugin::PlayerPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
+    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
@@ -54,6 +55,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(ProtoPlugin::new())
         // Our plugins
         .add_plugin(NestPlugin)
+        .add_plugin(NetPlugin)
         .add_plugin(WorldPlugin)
         .add_plugin(AuthPlugin)
         .add_plugin(PlayerPlugin)

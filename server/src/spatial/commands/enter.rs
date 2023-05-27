@@ -25,7 +25,7 @@ pub fn enter(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
@@ -48,7 +48,7 @@ pub fn enter(
                 .filter(|(p, _, _)| p.zone == player_position.zone)
                 .find(|(p, _, _)| p.coords == player_position.coords)
             {
-                outbox.send_text(client.0, view_for_tile(tile, sprite, false))
+                outbox.send_text(client.id, view_for_tile(tile, sprite, false))
             }
         }
     }

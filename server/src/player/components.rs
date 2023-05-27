@@ -4,7 +4,10 @@ use bevy_nest::server::ClientId;
 use super::config::CharacterConfig;
 
 #[derive(Component)]
-pub struct Client(pub ClientId);
+pub struct Client {
+    pub id: ClientId,
+    pub width: u16,
+}
 
 #[derive(Component)]
 pub struct Character {

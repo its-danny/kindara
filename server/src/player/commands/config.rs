@@ -32,7 +32,7 @@ pub fn config(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
@@ -50,28 +50,28 @@ pub fn config(
                 let options: Vec<Vec<&dyn Display>> =
                     vec![vec![&"brief", &"<true|false>", &character.config.brief]];
 
-                outbox.send_text(client.0, table.format(options));
+                outbox.send_text(client.id, table.format(options));
             }
             (Some(option), None) => {
                 if let Some((description, current_value)) = character.config.get(option) {
                     outbox.send_text(
-                        client.0,
+                        client.id,
                         format!("{description}\nCurrent value: {current_value}"),
                     );
                 } else {
-                    outbox.send_text(client.0, format!("Unknown option: {option}"));
+                    outbox.send_text(client.id, format!("Unknown option: {option}"));
                 }
             }
             (Some(option), Some(value)) => match character.config.set(option, value) {
                 Ok(_) => {
                     commands.spawn(SaveConfig(spawn_save_config_task(
                         database.0.clone(),
-                        client.0,
+                        client.id,
                         character.id,
                         character.config,
                     )));
                 }
-                Err(err) => outbox.send_text(client.0, err),
+                Err(err) => outbox.send_text(client.id, err),
             },
             _ => {}
         }
@@ -106,11 +106,11 @@ pub fn handle_save_config_task(
 ) {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
-            let Some(client) = players.iter().find(|c| c.0 == client_id) else {
+            let Some(client) = players.iter().find(|c| c.id == client_id) else {
                 return;
             };
 
-            outbox.send_text(client.0, "Config saved.");
+            outbox.send_text(client.id, "Config saved.");
 
             commands.entity(entity).remove::<SaveConfig>();
         }

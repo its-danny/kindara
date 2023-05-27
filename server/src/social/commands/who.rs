@@ -15,7 +15,7 @@ pub fn who(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, _)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, _)) = players.iter().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
@@ -24,6 +24,6 @@ pub fn who(
             .map(|(_, character)| character.name.clone())
             .collect::<Vec<_>>();
 
-        outbox.send_text(client.0, online.join(", "));
+        outbox.send_text(client.id, online.join(", "));
     }
 }
