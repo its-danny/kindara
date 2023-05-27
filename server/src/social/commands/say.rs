@@ -35,11 +35,14 @@ pub fn say(
             return;
         }
 
-        for (other_client, other_position, _) in players.iter() {
+        outbox.send_text(client.0, format!("You say \"{message}\""));
+
+        for (other_client, other_position, _) in players.iter().filter(|(c, _, _)| c.0 != client.0)
+        {
             if position.zone == other_position.zone && position.coords == other_position.coords {
                 outbox.send_text(
                     other_client.0,
-                    format!("{} says \"{message}\"", character.name.bright_cyan()),
+                    format!("{} says \"{message}\"", character.name.bright_cyan(),),
                 );
             }
         }
@@ -96,7 +99,7 @@ mod tests {
             _ => panic!("Expected text message"),
         };
 
-        assert!(content.contains("Morrigan") && content.contains(content));
+        assert!(content.contains("You") && content.contains(content));
 
         let recipient_response = outbox_reader
             .iter(outbox_events)
