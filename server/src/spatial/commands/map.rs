@@ -23,12 +23,16 @@ pub fn map(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, player_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
-        let width = 64;
-        let height = 16;
+        let height = 24;
+        let width = if client.width % 2 == 1 {
+            client.width - 1
+        } else {
+            client.width
+        } as usize;
 
         let mut map = vec![vec![' '; width]; height];
 
@@ -60,6 +64,6 @@ pub fn map(
             .collect::<Vec<_>>()
             .join("\n");
 
-        outbox.send_text(client.0, format!("{}\n{display}", player_position.zone));
+        outbox.send_text(client.id, format!("{}\n{display}", player_position.zone));
     }
 }

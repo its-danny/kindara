@@ -49,35 +49,6 @@ fn password_is_valid(password: &str) -> Result<(), &'static str> {
     }
 }
 
-// Entry point for the authentication process.
-pub fn on_network_event(
-    mut commands: Commands,
-    mut events: EventReader<NetworkEvent>,
-    mut outbox: EventWriter<Outbox>,
-    clients: Query<(Entity, &Client)>,
-) {
-    for event in events.iter() {
-        if let NetworkEvent::Connected(id) = event {
-            // This will be the player entity from here on out.
-            commands.spawn((Client(*id), Authenticating::default()));
-
-            // Let the client know we support GMCP.
-            outbox.send_command(*id, vec![IAC, WILL, GMCP]);
-
-            outbox.send_text(
-                *id,
-                "Thou hast arrived in Aureus, wanderer. What name dost thou bear?",
-            );
-        }
-
-        if let NetworkEvent::Disconnected(id) = event {
-            if let Some((entity, _)) = clients.iter().find(|(_, c)| c.0 == *id) {
-                commands.entity(entity).despawn();
-            }
-        }
-    }
-}
-
 // Due to the async nature of database queries, we need to use AsyncComputeTaskPool to spawn tasks
 // so as to not block the main thread. Those tasks are then handled via the handle_*_task systems below.
 pub fn authenticate(
@@ -91,7 +62,7 @@ pub fn authenticate(
         .iter()
         .filter(|m| matches!(m.content, Message::Text(_)))
     {
-        let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
@@ -99,7 +70,7 @@ pub fn authenticate(
             AuthState::Name => {
                 if let Message::Text(name) = &message.content {
                     if let Err(err) = name_is_valid(name) {
-                        outbox.send_text(client.0, err);
+                        outbox.send_text(client.id, err);
 
                         break;
                     }
@@ -109,7 +80,7 @@ pub fn authenticate(
 
                     commands.spawn(UserExists(spawn_user_exists_task(
                         database.0.clone(),
-                        client.0,
+                        client.id,
                         name.clone(),
                     )));
                 }
@@ -117,7 +88,7 @@ pub fn authenticate(
             AuthState::Password => {
                 if let Message::Text(password) = &message.content {
                     if let Err(err) = password_is_valid(password) {
-                        outbox.send_text(client.0, err);
+                        outbox.send_text(client.id, err);
 
                         break;
                     }
@@ -126,7 +97,7 @@ pub fn authenticate(
 
                     commands.spawn(Authenticated(spawn_authenticate_task(
                         database.0.clone(),
-                        client.0,
+                        client.id,
                         auth.name.clone(),
                         password.clone(),
                     )));
@@ -168,7 +139,7 @@ pub fn handle_user_exists_task(
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
-            let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.0 == client_id) else {
+            let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == client_id) else {
                 return;
             };
 
@@ -184,8 +155,8 @@ pub fn handle_user_exists_task(
             };
 
             // Tell the client to stop echoing input.
-            outbox.send_command(client.0, vec![IAC, WILL, ECHO]);
-            outbox.send_text(client.0, message);
+            outbox.send_command(client.id, vec![IAC, WILL, ECHO]);
+            outbox.send_text(client.id, message);
 
             commands.entity(entity).remove::<UserExists>();
         }
@@ -245,7 +216,7 @@ pub fn handle_authenticate_task(
             future::block_on(future::poll_once(&mut task.0))
         {
             let Some((player_entity, client, mut auth)) =
-                clients.iter_mut().find(|(_, c, _)| c.0 == client_id)
+                clients.iter_mut().find(|(_, c, _)| c.id == client_id)
             else {
                 return;
             };
@@ -268,13 +239,13 @@ pub fn handle_authenticate_task(
                     });
 
                 // Tell the client it's ok to resume echoing input.
-                outbox.send_command(client.0, vec![IAC, WONT, ECHO]);
-                outbox.send_text(client.0, "May thy journey here be prosperous.");
+                outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
+                outbox.send_text(client.id, "May thy journey here be prosperous.");
             } else {
                 auth.state = AuthState::Password;
 
                 outbox.send_text(
-                    client.0,
+                    client.id,
                     "The secret word thou hast given is not the right one.",
                 );
             }

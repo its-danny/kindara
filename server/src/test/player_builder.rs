@@ -60,7 +60,10 @@ impl PlayerBuilder {
         let entity = app
             .world
             .spawn((
-                Client(client_id),
+                Client {
+                    id: client_id,
+                    width: u16::MAX,
+                },
                 PlayerBundle {
                     character: Character {
                         id: self.id,

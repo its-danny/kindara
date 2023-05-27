@@ -23,7 +23,7 @@ pub fn teleport(
         Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
         _ => None,
     }) {
-        let Some((_, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.0 == message.from) else {
+        let Some((_, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.id == message.from) else {
             return;
         };
 

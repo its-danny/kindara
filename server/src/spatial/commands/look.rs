@@ -26,7 +26,7 @@ pub fn look(
         Message::Text(text) if regex.is_match(text) => Some((message, text)),
         _ => None,
     }) {
-        let Some((client, player_position)) = players.iter().find(|(c, _)| c.0 == message.from) else {
+        let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
@@ -36,7 +36,7 @@ pub fn look(
                     return;
                 };
 
-        outbox.send_text(client.0, view_for_tile(tile, sprite, false));
+        outbox.send_text(client.id, view_for_tile(tile, sprite, false));
     }
 }
 
