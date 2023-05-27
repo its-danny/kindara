@@ -88,6 +88,6 @@ mod tests {
             _ => panic!("Expected text message"),
         };
 
-        assert!(response.contains("A vast, empty void."));
+        assert_eq!(response, "x Void\nA vast, empty void.");
     }
 }
