@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use owo_colors::OwoColorize;
 use regex::Regex;
 
 use crate::{
@@ -42,7 +41,7 @@ pub fn say(
             if position.zone == other_position.zone && position.coords == other_position.coords {
                 outbox.send_text(
                     other_client.0,
-                    format!("{} says \"{message}\"", character.name.bright_cyan(),),
+                    format!("{} says \"{message}\"", character.name),
                 );
             }
         }
@@ -51,13 +50,12 @@ pub fn say(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         spatial::components::Zone,
         test::{player_builder::PlayerBuilder, tile_builder::TileBuilder},
         world::resources::TileMap,
     };
-
-    use super::*;
 
     #[test]
     fn test_say() {
@@ -99,7 +97,7 @@ mod tests {
             _ => panic!("Expected text message"),
         };
 
-        assert!(content.contains("You") && content.contains(content));
+        assert_eq!(content, "You say \"Hello!\"");
 
         let recipient_response = outbox_reader
             .iter(outbox_events)
@@ -113,6 +111,6 @@ mod tests {
             _ => panic!("Expected text message"),
         };
 
-        assert!(content.contains("Morrigan") && content.contains(content));
+        assert_eq!(content, "Morrigan says \"Hello!\"");
     }
 }

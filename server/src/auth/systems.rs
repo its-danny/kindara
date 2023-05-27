@@ -5,7 +5,6 @@ use bevy::{
 use bevy_nest::prelude::*;
 use censor::Censor;
 use futures_lite::future;
-use owo_colors::OwoColorize;
 use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
 
@@ -67,10 +66,7 @@ pub fn on_network_event(
 
             outbox.send_text(
                 *id,
-                format!(
-                    "Thou hast arrived in {}, wanderer. What name dost thou bear?",
-                    "Aureus".bright_yellow()
-                ),
+                "Thou hast arrived in Aureus, wanderer. What name dost thou bear?",
             );
         }
 
@@ -273,10 +269,7 @@ pub fn handle_authenticate_task(
 
                 // Tell the client it's ok to resume echoing input.
                 outbox.send_command(client.0, vec![IAC, WONT, ECHO]);
-                outbox.send_text(
-                    client.0,
-                    format!("{}", "May thy journey here be prosperous.".bright_green()),
-                );
+                outbox.send_text(client.0, "May thy journey here be prosperous.");
             } else {
                 auth.state = AuthState::Password;
 
