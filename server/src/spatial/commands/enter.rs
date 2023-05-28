@@ -46,25 +46,21 @@ pub fn enter(
                 return;
             };
 
-            let transition = transitions
-                .iter()
-                .filter(|(p, _)| p.zone == player_position.zone)
-                .find(|(p, t)| {
-                    p.coords == player_position.coords
-                        && target
-                            .as_ref()
-                            .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
-                });
+            let transition = transitions.iter().find(|(p, t)| {
+                p.zone == player_position.zone
+                    && p.coords == player_position.coords
+                    && target
+                        .as_ref()
+                        .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
+            });
 
             if let Some((_, transition)) = transition {
                 player_position.zone = transition.zone;
                 player_position.coords = transition.coords;
 
-                if let Some((_, tile, sprite)) = tiles
-                    .iter()
-                    .filter(|(p, _, _)| p.zone == player_position.zone)
-                    .find(|(p, _, _)| p.coords == player_position.coords)
-                {
+                if let Some((_, tile, sprite)) = tiles.iter().find(|(p, _, _)| {
+                    p.zone == player_position.zone && p.coords == player_position.coords
+                }) {
                     outbox.send_text(client.id, view_for_tile(tile, sprite, false))
                 }
             } else {

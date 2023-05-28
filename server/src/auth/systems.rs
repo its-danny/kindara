@@ -16,6 +16,7 @@ use crate::{
         config::CharacterConfig,
     },
     spatial::components::{Position, Zone},
+    text_messages,
 };
 
 use super::components::{AuthState, Authenticating};
@@ -58,50 +59,43 @@ pub fn authenticate(
     database: Res<DatabasePool>,
     mut clients: Query<(&Client, &mut Authenticating)>,
 ) {
-    for message in inbox
-        .iter()
-        .filter(|m| matches!(m.content, Message::Text(_)))
-    {
+    for (message, content) in text_messages!(inbox) {
         let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
             return;
         };
 
         match &mut auth.state {
             AuthState::Name => {
-                if let Message::Text(name) = &message.content {
-                    if let Err(err) = name_is_valid(name) {
-                        outbox.send_text(client.id, err);
+                if let Err(err) = name_is_valid(content) {
+                    outbox.send_text(client.id, err);
 
-                        break;
-                    }
-
-                    auth.name = name.clone();
-                    auth.state = AuthState::AwaitingTaskCompletion;
-
-                    commands.spawn(UserExists(spawn_user_exists_task(
-                        database.0.clone(),
-                        client.id,
-                        name.clone(),
-                    )));
+                    break;
                 }
+
+                auth.name = content.clone();
+                auth.state = AuthState::AwaitingTaskCompletion;
+
+                commands.spawn(UserExists(spawn_user_exists_task(
+                    database.0.clone(),
+                    client.id,
+                    content.clone(),
+                )));
             }
             AuthState::Password => {
-                if let Message::Text(password) = &message.content {
-                    if let Err(err) = password_is_valid(password) {
-                        outbox.send_text(client.id, err);
+                if let Err(err) = password_is_valid(content) {
+                    outbox.send_text(client.id, err);
 
-                        break;
-                    }
-
-                    auth.state = AuthState::AwaitingTaskCompletion;
-
-                    commands.spawn(Authenticated(spawn_authenticate_task(
-                        database.0.clone(),
-                        client.id,
-                        auth.name.clone(),
-                        password.clone(),
-                    )));
+                    break;
                 }
+
+                auth.state = AuthState::AwaitingTaskCompletion;
+
+                commands.spawn(Authenticated(spawn_authenticate_task(
+                    database.0.clone(),
+                    client.id,
+                    auth.name.clone(),
+                    content.clone(),
+                )));
             }
             AuthState::AwaitingTaskCompletion => {
                 break;
