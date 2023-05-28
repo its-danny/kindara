@@ -11,6 +11,7 @@ use crate::{
         enter::parse_enter, look::parse_look, map::parse_map, movement::parse_movement,
         teleport::parse_teleport,
     },
+    text_messages,
 };
 
 use super::events::ParsedCommand;
@@ -21,25 +22,23 @@ pub fn parse_command(
     mut commands: EventWriter<ParsedCommand>,
     players: Query<&Client, With<Character>>,
 ) {
-    for message in inbox.iter() {
+    for (message, content) in text_messages!(inbox) {
         let Some(client) = players.iter().find(|c| c.id == message.from) else {
             return;
         };
 
-        if let Message::Text(content) = &message.content {
-            if parse_config(client, content, &mut commands)
-                || parse_enter(client, content, &mut commands)
-                || parse_look(client, content, &mut commands)
-                || parse_map(client, content, &mut commands)
-                || parse_movement(client, content, &mut commands)
-                || parse_say(client, content, &mut commands)
-                || parse_teleport(client, content, &mut commands)
-                || parse_who(client, content, &mut commands)
-            {
-                return;
-            }
-
-            outbox.send_text(client.id, "Unknown command.");
+        if parse_config(client, content, &mut commands)
+            || parse_enter(client, content, &mut commands)
+            || parse_look(client, content, &mut commands)
+            || parse_map(client, content, &mut commands)
+            || parse_movement(client, content, &mut commands)
+            || parse_say(client, content, &mut commands)
+            || parse_teleport(client, content, &mut commands)
+            || parse_who(client, content, &mut commands)
+        {
+            return;
         }
+
+        outbox.send_text(client.id, "Unknown command.");
     }
 }
