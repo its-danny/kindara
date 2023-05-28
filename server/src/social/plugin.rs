@@ -6,6 +6,6 @@ pub struct SocialPlugin;
 
 impl Plugin for SocialPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(say).add_system(who);
+        app.add_systems((say, who));
     }
 }

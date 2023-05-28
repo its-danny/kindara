@@ -7,73 +7,91 @@ use bevy::{
 };
 use bevy_nest::prelude::*;
 use futures_lite::future;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
     db::pool::DatabasePool,
+    input::events::{Command, ParsedCommand},
     player::{
         components::{Character, Client},
         config::CharacterConfig,
     },
 };
 
-// USAGE: config [option] [value>]
+static REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^config(?:\s+(?P<option>\S+))?(?:\s+(?P<value>.*))?$").unwrap());
+
+pub fn parse_config(
+    client: &Client,
+    content: &str,
+    commands: &mut EventWriter<ParsedCommand>,
+) -> bool {
+    if let Some(captures) = REGEX.captures(content) {
+        let option = captures.name("option").map(|m| m.as_str().to_string());
+        let value = captures.name("value").map(|m| m.as_str().to_string());
+
+        commands.send(ParsedCommand {
+            from: client.id,
+            command: Command::Config((option, value)),
+        });
+
+        true
+    } else {
+        false
+    }
+}
+
 pub fn config(
     database: Res<DatabasePool>,
-    mut commands: Commands,
-    mut inbox: EventReader<Inbox>,
+    mut bevy_commands: Commands,
+    mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Character)>,
 ) {
-    let regex = Regex::new(r"^config(?:\s+(?P<option>\S+))?(?:\s+(?P<value>.*))?$").unwrap();
+    for command in commands.iter() {
+        if let Command::Config((option, value)) = &command.command {
+            let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
+                return;
+            };
 
-    for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
-        Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
-        _ => None,
-    }) {
-        let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == message.from) else {
-            return;
-        };
+            match (option, value) {
+                (None, None) => {
+                    let mut table = AsciiTable::default();
+                    table.set_max_width(64);
+                    table.column(0).set_header("config");
+                    table.column(1).set_header("options");
+                    table.column(2).set_header("value");
 
-        let option = captures.name("option").map(|m| m.as_str());
-        let value = captures.name("value").map(|m| m.as_str());
+                    let options: Vec<Vec<&dyn Display>> =
+                        vec![vec![&"brief", &"<true|false>", &character.config.brief]];
 
-        match (option, value) {
-            (None, None) => {
-                let mut table = AsciiTable::default();
-                table.set_max_width(64);
-                table.column(0).set_header("config");
-                table.column(1).set_header("options");
-                table.column(2).set_header("value");
-
-                let options: Vec<Vec<&dyn Display>> =
-                    vec![vec![&"brief", &"<true|false>", &character.config.brief]];
-
-                outbox.send_text(client.id, table.format(options));
-            }
-            (Some(option), None) => {
-                if let Some((description, current_value)) = character.config.get(option) {
-                    outbox.send_text(
-                        client.id,
-                        format!("{description}\nCurrent value: {current_value}"),
-                    );
-                } else {
-                    outbox.send_text(client.id, format!("Unknown option: {option}"));
+                    outbox.send_text(client.id, table.format(options));
                 }
-            }
-            (Some(option), Some(value)) => match character.config.set(option, value) {
-                Ok(_) => {
-                    commands.spawn(SaveConfig(spawn_save_config_task(
-                        database.0.clone(),
-                        client.id,
-                        character.id,
-                        character.config,
-                    )));
+                (Some(option), None) => {
+                    if let Some((description, current_value)) = character.config.get(option) {
+                        outbox.send_text(
+                            client.id,
+                            format!("{description}\nCurrent value: {current_value}"),
+                        );
+                    } else {
+                        outbox.send_text(client.id, format!("Unknown option: {option}"));
+                    }
                 }
-                Err(err) => outbox.send_text(client.id, err),
-            },
-            _ => {}
+                (Some(option), Some(value)) => match character.config.set(option, value) {
+                    Ok(_) => {
+                        bevy_commands.spawn(SaveConfig(spawn_save_config_task(
+                            database.0.clone(),
+                            client.id,
+                            character.id,
+                            character.config,
+                        )));
+                    }
+                    Err(err) => outbox.send_text(client.id, err),
+                },
+                _ => {}
+            }
         }
     }
 }

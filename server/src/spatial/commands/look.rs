@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
+    input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
     spatial::{
         components::{Position, Tile},
@@ -12,31 +14,46 @@ use crate::{
     world::resources::TileMap,
 };
 
-// USAGE: (look|l)
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(look|l)$").unwrap());
+
+pub fn parse_look(
+    client: &Client,
+    content: &str,
+    commands: &mut EventWriter<ParsedCommand>,
+) -> bool {
+    if REGEX.is_match(content) {
+        commands.send(ParsedCommand {
+            from: client.id,
+            command: Command::Look,
+        });
+
+        true
+    } else {
+        false
+    }
+}
+
 pub fn look(
     tile_map: Res<TileMap>,
-    mut inbox: EventReader<Inbox>,
+    mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Position), With<Character>>,
     tiles: Query<(&Tile, &Sprite)>,
 ) {
-    let regex = Regex::new(r"^(look|l)$").unwrap();
+    for command in commands.iter() {
+        if let Command::Look = &command.command {
+            let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == command.from) else {
+                return;
+            };
 
-    for (message, _) in inbox.iter().filter_map(|message| match &message.content {
-        Message::Text(text) if regex.is_match(text) => Some((message, text)),
-        _ => None,
-    }) {
-        let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == message.from) else {
-            return;
-        };
-
-        let Some((tile, sprite)) = tile_map
+            let Some((tile, sprite)) = tile_map
                 .get(player_position.zone, player_position.coords)
                 .and_then(|e| tiles.get(*e).ok()) else {
                     return;
                 };
 
-        outbox.send_text(client.id, view_for_tile(tile, sprite, false));
+            outbox.send_text(client.id, view_for_tile(tile, sprite, false));
+        }
     }
 }
 
@@ -44,18 +61,14 @@ pub fn look(
 mod tests {
     use crate::{
         spatial::components::Zone,
-        test::{player_builder::PlayerBuilder, tile_builder::TileBuilder},
+        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
     };
 
     use super::*;
 
     #[test]
     fn test_look() {
-        let mut app = App::new();
-
-        app.insert_resource(TileMap::default());
-        app.add_event::<Inbox>();
-        app.add_event::<Outbox>();
+        let mut app = AppBuilder::new();
         app.add_system(look);
 
         let tile = TileBuilder::new().name("Void").build(&mut app);
