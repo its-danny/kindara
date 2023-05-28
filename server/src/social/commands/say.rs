@@ -1,49 +1,66 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
+    input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
     spatial::components::Position,
 };
 
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
+
+pub fn parse_say(
+    client: &Client,
+    content: &str,
+    commands: &mut EventWriter<ParsedCommand>,
+) -> bool {
+    if let Some(captures) = REGEX.captures(content) {
+        let message = captures.name("message").map(|m| m.as_str()).unwrap_or("");
+
+        commands.send(ParsedCommand {
+            from: client.id,
+            command: Command::Say(message.to_string()),
+        });
+
+        true
+    } else {
+        false
+    }
+}
+
 pub fn say(
-    mut inbox: EventReader<Inbox>,
+    mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Position, &Character)>,
 ) {
-    let regex = Regex::new(r"^((say |')(?P<message>.+))$").unwrap();
+    for command in commands.iter() {
+        if let Command::Say(message) = &command.command {
+            let Some((client, position, character)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+                return;
+            };
 
-    for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
-        Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
-        _ => None,
-    }) {
-        let Some((client, position, character)) = players.iter().find(|(c, _, _)| c.id == message.from) else {
-            return;
-        };
+            let message = message.trim();
 
-        let message = captures
-            .name("message")
-            .map(|m| m.as_str())
-            .unwrap_or("")
-            .trim();
+            if message.is_empty() {
+                outbox.send_text(client.id, "Say what?");
 
-        if message.is_empty() {
-            outbox.send_text(client.id, "Say what?");
+                return;
+            }
 
-            return;
-        }
+            outbox.send_text(client.id, format!("You say \"{message}\""));
 
-        outbox.send_text(client.id, format!("You say \"{message}\""));
-
-        for (other_client, other_position, _) in
-            players.iter().filter(|(c, _, _)| c.id != client.id)
-        {
-            if position.zone == other_position.zone && position.coords == other_position.coords {
-                outbox.send_text(
-                    other_client.id,
-                    format!("{} says \"{message}\"", character.name),
-                );
+            for (other_client, other_position, _) in
+                players.iter().filter(|(c, _, _)| c.id != client.id)
+            {
+                if position.zone == other_position.zone && position.coords == other_position.coords
+                {
+                    outbox.send_text(
+                        other_client.id,
+                        format!("{} says \"{message}\"", character.name),
+                    );
+                }
             }
         }
     }
@@ -54,17 +71,13 @@ mod tests {
     use super::*;
     use crate::{
         spatial::components::Zone,
-        test::{player_builder::PlayerBuilder, tile_builder::TileBuilder},
+        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
         world::resources::TileMap,
     };
 
     #[test]
     fn test_say() {
-        let mut app = App::new();
-
-        app.insert_resource(TileMap::default());
-        app.add_event::<Inbox>();
-        app.add_event::<Outbox>();
+        let mut app = AppBuilder::new();
         app.add_system(say);
 
         let tile = TileBuilder::new().build(&mut app);

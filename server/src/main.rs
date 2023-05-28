@@ -1,5 +1,6 @@
 mod auth;
 mod db;
+mod input;
 mod net;
 mod player;
 mod social;
@@ -17,10 +18,16 @@ use dotenvy::dotenv;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
-    auth::plugin::AuthPlugin, db::pool::DatabasePool, net::plugin::NetPlugin,
-    player::plugin::PlayerPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
-    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
+    auth::plugin::AuthPlugin, db::pool::DatabasePool, input::plugin::InputPlugin,
+    net::plugin::NetPlugin, player::plugin::PlayerPlugin, social::plugin::SocialPlugin,
+    spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+#[system_set(base)]
+pub enum Set {
+    Input,
+}
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
     prototypes.load_folder("world/").unwrap();
@@ -42,6 +49,8 @@ async fn main() -> Result<(), sqlx::Error> {
     migrate!("../migrations").run(&pool).await?;
 
     App::new()
+        // Stages
+        .configure_set(Set::Input.before(CoreSet::Update))
         // Resources
         .insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
             1.0 / 60.0,
@@ -54,10 +63,11 @@ async fn main() -> Result<(), sqlx::Error> {
         // Prototypes
         .add_plugin(ProtoPlugin::new())
         // Our plugins
+        .add_plugin(WorldPlugin)
         .add_plugin(NestPlugin)
         .add_plugin(NetPlugin)
-        .add_plugin(WorldPlugin)
         .add_plugin(AuthPlugin)
+        .add_plugin(InputPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(SpatialPlugin)
         .add_plugin(SocialPlugin)

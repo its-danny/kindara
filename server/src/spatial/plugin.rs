@@ -17,10 +17,6 @@ impl Plugin for SpatialPlugin {
             .register_type::<Transition>()
             .register_type::<TransitionBundle>()
             .register_type::<Zone>()
-            .add_system(look)
-            .add_system(map)
-            .add_system(movement)
-            .add_system(enter)
-            .add_system(teleport);
+            .add_systems((look, map, movement, enter, teleport));
     }
 }

@@ -1,8 +1,9 @@
 use bevy::prelude::*;
-use bevy_nest::prelude::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
+    input::events::{Command, ParsedCommand},
     player::{
         components::{Character, Client},
         permissions,
@@ -10,27 +11,16 @@ use crate::{
     spatial::components::{Position, Zone},
 };
 
-// USAGE: (teleport|tp) (here|<zone>) (<x> <y> <z>)
-pub fn teleport(
-    mut inbox: EventReader<Inbox>,
-    mut players: Query<(&Client, &mut Position, &Character)>,
-) {
-    let regex =
-        Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$")
-            .unwrap();
+static REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$").unwrap()
+});
 
-    for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
-        Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
-        _ => None,
-    }) {
-        let Some((_, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.id == message.from) else {
-            return;
-        };
-
-        if !character.can(permissions::TELEPORT) {
-            return;
-        }
-
+pub fn parse_teleport(
+    client: &Client,
+    content: &str,
+    commands: &mut EventWriter<ParsedCommand>,
+) -> bool {
+    if let Some(captures) = REGEX.captures(content) {
         let region = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
         let x = captures
             .name("x")
@@ -45,19 +35,45 @@ pub fn teleport(
             .and_then(|m| m.as_str().parse::<i32>().ok())
             .unwrap_or_default();
 
-        info!(
-            "Teleporting {} to ({}, {}, {}) in {}",
-            character.name, x, y, z, region
-        );
+        commands.send(ParsedCommand {
+            from: client.id,
+            command: Command::Teleport((region.to_string(), (x, y, z))),
+        });
 
-        if region != "here" {
-            player_position.zone = match region {
-                "movement" => Zone::Movement,
-                "void" => Zone::Void,
-                _ => Zone::Void,
+        true
+    } else {
+        false
+    }
+}
+
+pub fn teleport(
+    mut commands: EventReader<ParsedCommand>,
+    mut players: Query<(&Client, &mut Position, &Character)>,
+) {
+    for command in commands.iter() {
+        if let Command::Teleport((zone, (x, y, z))) = &command.command {
+            let Some((_, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
+                return;
+            };
+
+            if !character.can(permissions::TELEPORT) {
+                return;
             }
-        }
 
-        player_position.coords = IVec3::new(x, y, z);
+            info!(
+                "Teleporting {} to ({}, {}, {}) in {}",
+                character.name, x, y, z, zone
+            );
+
+            if zone != "here" {
+                player_position.zone = match zone.as_str() {
+                    "movement" => Zone::Movement,
+                    "void" => Zone::Void,
+                    _ => Zone::Void,
+                }
+            }
+
+            player_position.coords = IVec3::new(*x, *y, *z);
+        }
     }
 }

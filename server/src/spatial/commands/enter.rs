@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
+    input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
     spatial::{
         components::{Position, Tile, Transition},
@@ -10,45 +12,63 @@ use crate::{
     },
     visual::components::Sprite,
 };
+static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap());
 
-// USAGE: (enter) [target]
+pub fn parse_enter(
+    client: &Client,
+    content: &str,
+    commands: &mut EventWriter<ParsedCommand>,
+) -> bool {
+    if let Some(captures) = REGEX.captures(content) {
+        let target = captures.name("transition").map(|m| m.as_str().to_string());
+
+        commands.send(ParsedCommand {
+            from: client.id,
+            command: Command::Enter(target),
+        });
+
+        true
+    } else {
+        false
+    }
+}
+
 pub fn enter(
-    mut inbox: EventReader<Inbox>,
+    mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Position), With<Character>>,
     transitions: Query<(&Position, &Transition), Without<Client>>,
     tiles: Query<(&Position, &Tile, &Sprite), Without<Client>>,
 ) {
-    let regex = Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap();
+    for command in commands.iter() {
+        if let Command::Enter(target) = &command.command {
+            let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
+                return;
+            };
 
-    for (message, captures) in inbox.iter().filter_map(|message| match &message.content {
-        Message::Text(text) => regex.captures(text).map(|caps| (message, caps)),
-        _ => None,
-    }) {
-        let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.id == message.from) else {
-            return;
-        };
-
-        let target = captures.name("transition").map(|m| m.as_str());
-
-        let transition = transitions
-            .iter()
-            .filter(|(p, _)| p.zone == player_position.zone)
-            .find(|(p, t)| {
-                p.coords == player_position.coords
-                    && target.map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
-            });
-
-        if let Some((_, transition)) = transition {
-            player_position.zone = transition.zone;
-            player_position.coords = transition.coords;
-
-            if let Some((_, tile, sprite)) = tiles
+            let transition = transitions
                 .iter()
-                .filter(|(p, _, _)| p.zone == player_position.zone)
-                .find(|(p, _, _)| p.coords == player_position.coords)
-            {
-                outbox.send_text(client.id, view_for_tile(tile, sprite, false))
+                .filter(|(p, _)| p.zone == player_position.zone)
+                .find(|(p, t)| {
+                    p.coords == player_position.coords
+                        && target
+                            .as_ref()
+                            .map_or(true, |tag| t.tags.contains(&tag.trim().to_string()))
+                });
+
+            if let Some((_, transition)) = transition {
+                player_position.zone = transition.zone;
+                player_position.coords = transition.coords;
+
+                if let Some((_, tile, sprite)) = tiles
+                    .iter()
+                    .filter(|(p, _, _)| p.zone == player_position.zone)
+                    .find(|(p, _, _)| p.coords == player_position.coords)
+                {
+                    outbox.send_text(client.id, view_for_tile(tile, sprite, false))
+                }
+            } else {
+                outbox.send_text(client.id, "Enter what?");
             }
         }
     }
@@ -59,7 +79,7 @@ mod tests {
     use crate::{
         spatial::components::Zone,
         test::{
-            player_builder::PlayerBuilder, tile_builder::TileBuilder,
+            app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder,
             transition_builder::TransitionBuilder,
         },
         world::resources::TileMap,
@@ -69,11 +89,7 @@ mod tests {
 
     #[test]
     fn test_enter() {
-        let mut app = App::new();
-
-        app.insert_resource(TileMap::default());
-        app.add_event::<Inbox>();
-        app.add_event::<Outbox>();
+        let mut app = AppBuilder::new();
         app.add_system(enter);
 
         let void_tile = TileBuilder::new()
