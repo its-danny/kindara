@@ -55,6 +55,8 @@ pub fn movement(
             let Some((tile_position, tile, sprite, impassable)) = tile_map
                 .get(player_position.zone, player_position.coords + offset)
                 .and_then(|e| tiles.get(*e).ok()) else {
+                    outbox.send_text(client.id, "You can't go that way.");
+
                     return;
                 };
 
@@ -108,6 +110,25 @@ mod tests {
     }
 
     #[test]
+    fn no_exit() {
+        let mut app = AppBuilder::new();
+
+        app.add_system(movement);
+
+        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+
+        send_message(&mut app, client_id, "south");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "You can't go that way.");
+    }
+
+    #[test]
     fn impassable_tile() {
         let mut app = AppBuilder::new();
 
@@ -120,7 +141,7 @@ mod tests {
             .impassable(true)
             .build(&mut app);
 
-        let (client_id, player) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "south");
 
