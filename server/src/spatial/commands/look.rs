@@ -59,48 +59,34 @@ pub fn look(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        spatial::components::Zone,
-        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::TileBuilder,
+        utils::{get_message_content, send_message},
     };
 
     use super::*;
 
     #[test]
-    fn test_look() {
+    fn sends_tile_info() {
         let mut app = AppBuilder::new();
         app.add_system(look);
 
-        let tile = TileBuilder::new().name("Void").build(&mut app);
-
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::ZERO), tile);
+        TileBuilder::new()
+            .sprite("x")
+            .name("The Void")
+            .description("A vast, empty void.")
+            .build(&mut app);
 
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
-        app.world.resource_mut::<Events<Inbox>>().send(Inbox {
-            from: client_id,
-            content: Message::Text("look".into()),
-        });
+        send_message(&mut app, client_id, "look");
 
         app.update();
 
-        let outbox_events = app.world.resource::<Events<Outbox>>();
-        let mut outbox_reader = outbox_events.get_reader();
+        let content = get_message_content(&mut app, client_id);
 
-        let response = outbox_reader
-            .iter(outbox_events)
-            .next()
-            .expect("Expected response");
-
-        assert_eq!(response.to, client_id);
-
-        let response = match &response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
-
-        assert_eq!(response, "x Void\nA vast, empty void.");
+        assert_eq!(content, "x The Void\nA vast, empty void.");
     }
 }

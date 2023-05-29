@@ -6,3 +6,5 @@ pub mod player_builder;
 pub mod tile_builder;
 #[cfg(test)]
 pub mod transition_builder;
+#[cfg(test)]
+pub mod utils;

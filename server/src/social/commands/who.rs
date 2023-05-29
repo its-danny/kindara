@@ -51,48 +51,26 @@ pub fn who(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        spatial::components::Zone,
-        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
-        world::resources::TileMap,
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        utils::{get_message_content, send_message},
     };
 
     #[test]
-    fn test_who() {
+    fn lists_online_characters() {
         let mut app = AppBuilder::new();
         app.add_system(who);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().name("Ashur").build(&mut app);
+        PlayerBuilder::new().name("Bau").build(&mut app);
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::ZERO), tile);
-
-        let (client_id, _) = PlayerBuilder::new().name("Morrigan").build(&mut app);
-        PlayerBuilder::new().name("Astrid").build(&mut app);
-
-        app.world.resource_mut::<Events<Inbox>>().send(Inbox {
-            from: client_id,
-            content: Message::Text("who".into()),
-        });
+        send_message(&mut app, client_id, "who");
 
         app.update();
 
-        let outbox_events = app.world.resource::<Events<Outbox>>();
-        let mut outbox_reader = outbox_events.get_reader();
+        let content = get_message_content(&mut app, client_id);
 
-        let sender_response = outbox_reader
-            .iter(outbox_events)
-            .find(|r| r.to == client_id)
-            .expect("Expected response");
-
-        assert_eq!(sender_response.to, client_id);
-
-        let content = match &sender_response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
-
-        assert_eq!(content, "Morrigan, Astrid");
+        assert_eq!(content, "Ashur, Bau");
     }
 }
