@@ -69,62 +69,65 @@ pub fn say(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        spatial::components::Zone,
-        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
-        world::resources::TileMap,
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::TileBuilder,
+        utils::{get_message_content, send_message},
     };
 
     #[test]
-    fn test_say() {
+    fn sends_to_sender() {
         let mut app = AppBuilder::new();
         app.add_system(say);
 
-        let tile = TileBuilder::new().build(&mut app);
+        TileBuilder::new().build(&mut app);
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::ZERO), tile);
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
-        let (sender_client_id, _) = PlayerBuilder::new().name("Morrigan").build(&mut app);
-        let (recipient_client_id, _) = PlayerBuilder::new().name("Astrid").build(&mut app);
-
-        app.world.resource_mut::<Events<Inbox>>().send(Inbox {
-            from: sender_client_id,
-            content: Message::Text("say Hello!".into()),
-        });
+        send_message(&mut app, client_id, "say Hello!");
 
         app.update();
 
-        let outbox_events = app.world.resource::<Events<Outbox>>();
-        let mut outbox_reader = outbox_events.get_reader();
-
-        let sender_response = outbox_reader
-            .iter(outbox_events)
-            .find(|r| r.to == sender_client_id)
-            .expect("Expected response");
-
-        assert_eq!(sender_response.to, sender_client_id);
-
-        let content = match &sender_response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
+        let content = get_message_content(&mut app, client_id);
 
         assert_eq!(content, "You say \"Hello!\"");
+    }
 
-        let recipient_response = outbox_reader
-            .iter(outbox_events)
-            .find(|r| r.to == recipient_client_id)
-            .expect("Expected response");
+    #[test]
+    fn sends_to_tile() {
+        let mut app = AppBuilder::new();
+        app.add_system(say);
 
-        assert_eq!(recipient_response.to, recipient_client_id);
+        TileBuilder::new().build(&mut app);
 
-        let content = match &recipient_response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
+        let (sender_client_id, _) = PlayerBuilder::new().name("Flora").build(&mut app);
+        let (recipient_client_id, _) = PlayerBuilder::new().name("Salus").build(&mut app);
 
-        assert_eq!(content, "Morrigan says \"Hello!\"");
+        send_message(&mut app, sender_client_id, "say Hello!");
+
+        app.update();
+
+        let content = get_message_content(&mut app, recipient_client_id);
+
+        assert_eq!(content, "Flora says \"Hello!\"");
+    }
+
+    #[test]
+    fn empty_message() {
+        let mut app = AppBuilder::new();
+        app.add_system(say);
+
+        TileBuilder::new().build(&mut app);
+
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+
+        send_message(&mut app, client_id, "say   ");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Say what?");
     }
 }

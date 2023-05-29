@@ -107,64 +107,100 @@ mod tests {
     use crate::{
         player::permissions::TELEPORT,
         spatial::components::Zone,
-        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
-        world::resources::TileMap,
+        test::{
+            app_builder::AppBuilder,
+            player_builder::PlayerBuilder,
+            tile_builder::TileBuilder,
+            utils::{get_message_content, send_message},
+        },
     };
 
     use super::*;
 
     #[test]
-    fn test_teleport() {
+    fn teleports_zones() {
         let mut app = AppBuilder::new();
         app.add_system(teleport);
 
-        let void_tile = TileBuilder::new()
-            .name("Void")
+        TileBuilder::new()
+            .zone(Zone::Void)
             .coords(IVec3::ZERO)
             .build(&mut app);
 
-        let movement_tile = TileBuilder::new()
-            .name("Movement")
+        TileBuilder::new()
             .zone(Zone::Movement)
+            .coords(IVec3::ZERO)
             .build(&mut app);
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::ZERO), void_tile);
+        let (client_id, player) = PlayerBuilder::new()
+            .role(TELEPORT)
+            .zone(Zone::Void)
+            .build(&mut app);
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Movement, IVec3::ZERO), movement_tile);
+        send_message(&mut app, client_id, "teleport movement (0 0 0)");
+
+        app.update();
+
+        let updated_position = app.world.get::<Position>(player).unwrap();
+
+        assert_eq!(updated_position.zone, Zone::Movement);
+        assert_eq!(updated_position.coords, IVec3::ZERO);
+    }
+
+    #[test]
+    fn teleports_in_zone() {
+        let mut app = AppBuilder::new();
+        app.add_system(teleport);
+
+        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+
+        TileBuilder::new()
+            .coords(IVec3::new(0, 1, 0))
+            .build(&mut app);
 
         let (client_id, player) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
 
-        app.world.resource_mut::<Events<Inbox>>().send(Inbox {
-            from: client_id,
-            content: Message::Text("teleport void (0 0 0)".into()),
-        });
+        send_message(&mut app, client_id, "teleport here (0 1 0)");
 
         app.update();
 
         let updated_position = app.world.get::<Position>(player).unwrap();
 
         assert_eq!(updated_position.zone, Zone::Void);
-        assert_eq!(updated_position.coords, IVec3::ZERO);
+        assert_eq!(updated_position.coords, IVec3::new(0, 1, 0));
+    }
 
-        let outbox_events = app.world.resource::<Events<Outbox>>();
-        let mut outbox_reader = outbox_events.get_reader();
+    #[test]
+    fn invalid_zone() {
+        let mut app = AppBuilder::new();
+        app.add_system(teleport);
 
-        let response = outbox_reader
-            .iter(outbox_events)
-            .next()
-            .expect("Expected response");
+        let (client_id, _) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
 
-        assert_eq!(response.to, client_id);
+        send_message(&mut app, client_id, "teleport invalid (0 0 0)");
 
-        let response = match &response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
+        app.update();
 
-        assert!(response.contains("Void"));
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Invalid zone.");
+    }
+
+    #[test]
+    fn invalid_location() {
+        let mut app = AppBuilder::new();
+        app.add_system(teleport);
+
+        TileBuilder::new().build(&mut app);
+
+        let (client_id, _) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
+
+        send_message(&mut app, client_id, "teleport here (0 1 0)");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Invalid location.");
     }
 }

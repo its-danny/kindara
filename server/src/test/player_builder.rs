@@ -22,7 +22,7 @@ impl PlayerBuilder {
     pub fn new() -> Self {
         Self {
             id: 0,
-            name: "Ramose".into(),
+            name: "Anu".into(),
             role: 0,
             zone: Zone::Void,
             coords: IVec3::ZERO,

@@ -74,43 +74,30 @@ pub fn movement(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        spatial::components::Zone,
-        test::{app_builder::AppBuilder, player_builder::PlayerBuilder, tile_builder::TileBuilder},
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::TileBuilder,
+        utils::{get_message_content, send_message},
     };
 
     use super::*;
 
     #[test]
-    fn test_movement() {
+    fn move_around() {
         let mut app = AppBuilder::new();
 
         app.add_system(movement);
 
-        let tile_north = TileBuilder::new()
-            .name("Northern Void")
-            .coords(IVec3::ZERO)
-            .build(&mut app);
+        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
 
-        let tile_south = TileBuilder::new()
-            .name("Southern Void")
+        TileBuilder::new()
             .coords(IVec3::new(0, 1, 0))
             .build(&mut app);
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::ZERO), tile_north);
-
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((Zone::Void, IVec3::new(0, 1, 0)), tile_south);
-
         let (client_id, player) = PlayerBuilder::new().build(&mut app);
 
-        app.world.resource_mut::<Events<Inbox>>().send(Inbox {
-            from: client_id,
-            content: Message::Text("south".into()),
-        });
+        send_message(&mut app, client_id, "south");
 
         app.update();
 
@@ -118,22 +105,29 @@ mod tests {
             app.world.get::<Position>(player).unwrap().coords,
             IVec3::new(0, 1, 0)
         );
+    }
 
-        let outbox_events = app.world.resource::<Events<Outbox>>();
-        let mut outbox_reader = outbox_events.get_reader();
+    #[test]
+    fn impassable_tile() {
+        let mut app = AppBuilder::new();
 
-        let response = outbox_reader
-            .iter(outbox_events)
-            .next()
-            .expect("Expected response");
+        app.add_system(movement);
 
-        assert_eq!(response.to, client_id);
+        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
 
-        let response = match &response.content {
-            Message::Text(text) => text,
-            _ => panic!("Expected text message"),
-        };
+        TileBuilder::new()
+            .coords(IVec3::new(0, 1, 0))
+            .impassable(true)
+            .build(&mut app);
 
-        assert!(response.contains("Southern Void"));
+        let (client_id, player) = PlayerBuilder::new().build(&mut app);
+
+        send_message(&mut app, client_id, "south");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Something blocks your path.");
     }
 }
