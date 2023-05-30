@@ -32,7 +32,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     env:
-      POSTGRES_PASSWORD=password
+      POSTGRES_PASSWORD: password
     services:
       postgres:
         image: postgres
