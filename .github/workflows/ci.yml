@@ -35,7 +35,7 @@ jobs:
       POSTGRES_PASSWORD: postgres
     services:
       postgres:
-        image: postgres:lastest
+        image: postgres
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
