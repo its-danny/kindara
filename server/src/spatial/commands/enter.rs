@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn enters_by_tag() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
         TileBuilder::new().zone(Zone::Void).build(&mut app);
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn enters_first_if_no_tag() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
         TileBuilder::new().zone(Zone::Void).build(&mut app);
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn no_transition() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
         TileBuilder::new().build(&mut app);
