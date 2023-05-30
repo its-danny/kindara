@@ -69,16 +69,17 @@ pub fn config(
 
                     outbox.send_text(client.id, table.format(options));
                 }
-                (Some(option), None) => {
-                    if let Some((description, current_value)) = character.config.get(option) {
+                (Some(option), None) => match character.config.get(option) {
+                    Ok((current_value, description)) => {
                         outbox.send_text(
                             client.id,
                             format!("{description}\nCurrent value: {current_value}"),
                         );
-                    } else {
-                        outbox.send_text(client.id, format!("Unknown option: {option}"));
                     }
-                }
+                    Err(err) => {
+                        outbox.send_text(client.id, err);
+                    }
+                },
                 (Some(option), Some(value)) => match character.config.set(option, value) {
                     Ok(_) => {
                         bevy_commands.spawn(SaveConfig(spawn_save_config_task(
@@ -132,5 +133,107 @@ pub fn handle_save_config_task(
 
             commands.entity(entity).remove::<SaveConfig>();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::PgPool;
+
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        utils::{get_message_content, get_task, send_message, wait_for_task},
+    };
+
+    use super::*;
+
+    #[sqlx::test]
+    async fn valid(pool: PgPool) -> sqlx::Result<()> {
+        let mut app = AppBuilder::new().database(&pool).build();
+        app.add_systems((config, handle_save_config_task));
+
+        let (client_id, player) = PlayerBuilder::new()
+            .config(CharacterConfig {
+                brief: false,
+                ..Default::default()
+            })
+            .store(&pool)
+            .await?
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "config brief true");
+
+        app.update();
+
+        assert_eq!(
+            app.world.get::<Character>(player).unwrap().config.brief,
+            true
+        );
+
+        wait_for_task(&get_task::<SaveConfig>(&mut app).unwrap().0);
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Config saved.");
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn current_value(pool: PgPool) -> sqlx::Result<()> {
+        let mut app = AppBuilder::new().database(&pool).build();
+        app.add_system(config);
+
+        let (client_id, _) = PlayerBuilder::new()
+            .config(CharacterConfig {
+                brief: false,
+                ..Default::default()
+            })
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "config brief");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert!(content.contains("Current value: false"));
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    fn invalid_option(pool: PgPool) {
+        let mut app = AppBuilder::new().database(&pool).build();
+        app.add_system(config);
+
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+
+        send_message(&mut app, client_id, "config god true");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Invalid option.");
+    }
+
+    #[sqlx::test]
+    fn invalid_value(pool: PgPool) {
+        let mut app = AppBuilder::new().database(&pool).build();
+        app.add_system(config);
+
+        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+
+        send_message(&mut app, client_id, "config brief please");
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Value must be `true` or `false`.");
     }
 }

@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn sends_to_sender() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(say);
 
         TileBuilder::new().build(&mut app);
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn sends_to_tile() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(say);
 
         TileBuilder::new().build(&mut app);
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn empty_message() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(say);
 
         TileBuilder::new().build(&mut app);

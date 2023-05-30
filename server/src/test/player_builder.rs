@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_nest::server::ClientId;
+use sqlx::{types::Json, PgPool};
 
 use crate::{
     player::{
@@ -14,6 +15,7 @@ pub struct PlayerBuilder {
     id: i64,
     name: String,
     role: i16,
+    config: CharacterConfig,
     zone: Zone,
     coords: IVec3,
 }
@@ -24,6 +26,7 @@ impl PlayerBuilder {
             id: 0,
             name: "Anu".into(),
             role: 0,
+            config: CharacterConfig::default(),
             zone: Zone::Void,
             coords: IVec3::ZERO,
         }
@@ -44,6 +47,11 @@ impl PlayerBuilder {
         self
     }
 
+    pub fn config(mut self, config: CharacterConfig) -> Self {
+        self.config = config;
+        self
+    }
+
     pub fn zone(mut self, zone: Zone) -> Self {
         self.zone = zone;
         self
@@ -52,6 +60,18 @@ impl PlayerBuilder {
     pub fn coords(mut self, coords: IVec3) -> Self {
         self.coords = coords;
         self
+    }
+
+    pub async fn store(self, pool: &PgPool) -> Result<Self, sqlx::Error> {
+        sqlx::query("INSERT INTO characters (id, name, password, config) VALUES ($1, $2, $3, $4)")
+            .bind(&self.id)
+            .bind(&self.name)
+            .bind("test")
+            .bind(Json(self.config))
+            .execute(pool)
+            .await?;
+
+        Ok(self)
     }
 
     pub fn build(self, app: &mut App) -> (ClientId, Entity) {
@@ -69,7 +89,7 @@ impl PlayerBuilder {
                         id: self.id,
                         name: self.name,
                         role: self.role,
-                        config: CharacterConfig::default(),
+                        config: self.config,
                     },
                     position: Position {
                         zone: self.zone,
