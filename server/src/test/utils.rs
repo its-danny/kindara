@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::tasks::*;
 use bevy_nest::prelude::*;
 
 pub fn send_message(app: &mut App, from: ClientId, message: &str) {
@@ -18,6 +19,16 @@ pub fn get_message_content(app: &mut App, to: ClientId) -> String {
 
     match &event.content {
         Message::Text(text) => text.clone(),
-        _ => panic!("Expected text message"),
+        _ => panic!("Expected Message::Text"),
+    }
+}
+
+pub fn get_task<T: Component>(app: &mut App) -> Option<&T> {
+    app.world.query::<&mut T>().iter(&app.world).next()
+}
+
+pub fn wait_for_task<T>(task: &Task<T>) {
+    while !task.is_finished() {
+        tick_global_task_pools_on_main_thread();
     }
 }

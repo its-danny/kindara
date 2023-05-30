@@ -46,7 +46,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .connect(&env::var("DATABASE_URL").unwrap())
         .await?;
 
-    migrate!("../migrations").run(&pool).await?;
+    migrate!().run(&pool).await?;
 
     App::new()
         // Stages
