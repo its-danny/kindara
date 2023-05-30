@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn sends_tile_info() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(look);
 
         TileBuilder::new()

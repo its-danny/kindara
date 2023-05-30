@@ -7,24 +7,26 @@ pub struct CharacterConfig {
 }
 
 impl CharacterConfig {
-    pub fn get(&self, option: &str) -> Option<(&'static str, Value)> {
+    pub fn get(&self, option: &str) -> Result<(Value, &'static str), &'static str> {
         match option {
-            "brief" => Some((
-                "If enabled, you will only see room names when moving.",
+            "brief" => Ok((
                 self.brief.into(),
+                "If enabled, you will only see room names when moving.",
             )),
-            _ => None,
+            _ => Err("Invalid option."),
         }
     }
 
     pub fn set(&mut self, option: &str, value: &str) -> Result<(), &'static str> {
         match option {
             "brief" => {
-                self.brief = value.parse().map_err(|_| "Invalid value.")?;
-            }
-            _ => return Err("Invalid option."),
-        }
+                self.brief = value
+                    .parse()
+                    .map_err(|_| "Value must be `true` or `false`.")?;
 
-        Ok(())
+                Ok(())
+            }
+            _ => Err("Invalid option."),
+        }
     }
 }

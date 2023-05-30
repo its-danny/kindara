@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn move_around() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
 
         app.add_system(movement);
 
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn no_exit() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
 
         app.add_system(movement);
 
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn impassable_tile() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
 
         app.add_system(movement);
 

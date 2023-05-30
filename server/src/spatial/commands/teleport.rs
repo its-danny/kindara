@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn teleports_zones() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
         TileBuilder::new()
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn teleports_in_zone() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
         TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn invalid_zone() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
         let (client_id, _) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn invalid_location() {
-        let mut app = AppBuilder::new();
+        let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
         TileBuilder::new().build(&mut app);
