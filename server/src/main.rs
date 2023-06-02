@@ -60,11 +60,11 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugins(MinimalPlugins)
         .add_plugin(AssetPlugin::default())
         .add_plugin(LogPlugin::default())
-        // Prototypes
+        // 3rd party plugins
+        .add_plugin(NestPlugin)
         .add_plugin(ProtoPlugin::new())
         // Our plugins
         .add_plugin(WorldPlugin)
-        .add_plugin(NestPlugin)
         .add_plugin(NetPlugin)
         .add_plugin(AuthPlugin)
         .add_plugin(InputPlugin)
