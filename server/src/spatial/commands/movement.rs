@@ -1,6 +1,7 @@
+use std::sync::OnceLock;
+
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -14,16 +15,18 @@ use crate::{
     world::resources::TileMap,
 };
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(north|n|northeast|ne|east|e|southeast|se|south|s|southwest|sw|west|w|northwest|nw|up|u|down|d)$").unwrap()
-});
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_movement(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if REGEX.is_match(content) {
+    let regex = REGEX.get_or_init(||
+        Regex::new(r"^(north|n|northeast|ne|east|e|southeast|se|south|s|southwest|sw|west|w|northwest|nw|up|u|down|d)$").unwrap()
+    );
+
+    if regex.is_match(content) {
         commands.send(ParsedCommand {
             from: client.id,
             command: Command::Movement(content.to_string()),

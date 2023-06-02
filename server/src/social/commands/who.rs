@@ -1,6 +1,7 @@
+use std::sync::OnceLock;
+
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -8,14 +9,16 @@ use crate::{
     player::components::{Character, Client},
 };
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^who$").unwrap());
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_who(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if REGEX.is_match(content) {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^who$").unwrap());
+
+    if regex.is_match(content) {
         commands.send(ParsedCommand {
             from: client.id,
             command: Command::Who,

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::OnceLock};
 
 use ascii_table::AsciiTable;
 use bevy::{
@@ -7,7 +7,6 @@ use bevy::{
 };
 use bevy_nest::prelude::*;
 use futures_lite::future;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
 
@@ -20,15 +19,18 @@ use crate::{
     },
 };
 
-static REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^config(?:\s+(?P<option>\S+))?(?:\s+(?P<value>.*))?$").unwrap());
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_config(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if let Some(captures) = REGEX.captures(content) {
+    let regex = REGEX.get_or_init(|| {
+        Regex::new(r"^config(?:\s+(?P<option>\S+))?(?:\s+(?P<value>.*))?$").unwrap()
+    });
+
+    if let Some(captures) = regex.captures(content) {
         let option = captures.name("option").map(|m| m.as_str().to_string());
         let value = captures.name("value").map(|m| m.as_str().to_string());
 

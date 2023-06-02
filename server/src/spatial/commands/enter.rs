@@ -1,6 +1,7 @@
+use std::sync::OnceLock;
+
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -12,14 +13,17 @@ use crate::{
     },
     visual::components::Sprite,
 };
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap());
+
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_enter(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if let Some(captures) = REGEX.captures(content) {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap());
+
+    if let Some(captures) = regex.captures(content) {
         let target = captures.name("transition").map(|m| m.as_str().to_string());
 
         commands.send(ParsedCommand {

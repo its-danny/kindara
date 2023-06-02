@@ -1,6 +1,7 @@
+use std::sync::OnceLock;
+
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -9,14 +10,16 @@ use crate::{
     spatial::components::Position,
 };
 
-static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_say(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if let Some(captures) = REGEX.captures(content) {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
+
+    if let Some(captures) = regex.captures(content) {
         let message = captures.name("message").map(|m| m.as_str()).unwrap_or("");
 
         commands.send(ParsedCommand {
