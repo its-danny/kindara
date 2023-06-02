@@ -4,21 +4,19 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-ascii_table = "4.0.2"
-async-std = { version = "1.12.0", features = ["attributes"] }
-bcrypt = "0.14.0"
-bevy = { version = "0.10.1", default-features = false }
-bevy-nest = "0.1.0"
-bevy_proto = { version = "0.10.0", default-features = false, features = [
-  "ron",
-] }
-censor = "0.3.0"
-chrono = "0.4.24"
-dotenvy = "0.15.7"
-futures-lite = "1.13.0"
-regex = "1.8.1"
-serde = { version = "1.0.163", features = ["derive"] }
-serde_json = "1.0.96"
+ascii_table = "4.0"
+async-std = { version = "1.12", features = ["attributes"] }
+bcrypt = "0.14"
+bevy = { version = "0.10", default-features = false }
+bevy-nest = "0.1"
+bevy_proto = { version = "0.10", default-features = false, features = ["ron"] }
+censor = "0.3"
+chrono = "0.4"
+dotenvy = "0.15"
+futures-lite = "1.13"
+regex = "1.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 sqlx = { version = "0.7.0-alpha.3", features = [
   "chrono",
   "json",
@@ -28,4 +26,4 @@ sqlx = { version = "0.7.0-alpha.3", features = [
 ] }
 
 [dev-dependencies]
-rusty-hook = "0.11.2"
+rusty-hook = "0.11"
