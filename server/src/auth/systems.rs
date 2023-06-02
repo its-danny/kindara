@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
@@ -21,15 +23,17 @@ use crate::{
 
 use super::components::{AuthState, Authenticating};
 
+static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
+
 fn name_is_valid(name: &str) -> Result<(), &'static str> {
     if name.len() < 3 || name.len() > 25 {
         return Err("Name must be between 3 and 25 characters.");
     }
 
-    let regex = Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap();
+    let regex = NAME_REGEX.get_or_init(|| Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap());
 
     if !regex.is_match(name) {
-        return Err("Name must be alphanumeric.");
+        return Err("Name can only contain letters and spaces.");
     }
 
     let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
@@ -50,8 +54,6 @@ fn password_is_valid(password: &str) -> Result<(), &'static str> {
     }
 }
 
-// Due to the async nature of database queries, we need to use AsyncComputeTaskPool to spawn tasks
-// so as to not block the main thread. Those tasks are then handled via the handle_*_task systems below.
 pub fn authenticate(
     mut commands: Commands,
     mut inbox: EventReader<Inbox>,
@@ -107,7 +109,6 @@ pub fn authenticate(
 #[derive(Component)]
 pub struct UserExists(Task<Result<(bool, ClientId), sqlx::Error>>);
 
-// See `handle_user_exists_task` for the next step in the authentication process.
 fn spawn_user_exists_task(
     pool: Pool<Postgres>,
     client_id: ClientId,
@@ -124,7 +125,6 @@ fn spawn_user_exists_task(
     })
 }
 
-// This system handles the result of `spawn_user_exists_task`.
 pub fn handle_user_exists_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut UserExists)>,
@@ -148,7 +148,6 @@ pub fn handle_user_exists_task(
                 format!("Hail, {}. Set for thyself a word of secrecy.", auth.name)
             };
 
-            // Tell the client to stop echoing input.
             outbox.send_command(client.id, vec![IAC, WILL, ECHO]);
             outbox.send_text(client.id, message);
 
@@ -160,7 +159,6 @@ pub fn handle_user_exists_task(
 #[derive(Component)]
 pub struct Authenticated(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
-// See `handle_authenticate_task` for the next step in the authentication process.
 fn spawn_authenticate_task(
     pool: Pool<Postgres>,
     client_id: ClientId,
@@ -198,7 +196,6 @@ fn spawn_authenticate_task(
     })
 }
 
-// This system handles the result of `spawn_authenticate_task`.
 pub fn handle_authenticate_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut Authenticated)>,
@@ -232,7 +229,6 @@ pub fn handle_authenticate_task(
                         },
                     });
 
-                // Tell the client it's ok to resume echoing input.
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
                 outbox.send_text(client.id, "May thy journey here be prosperous.");
             } else {
