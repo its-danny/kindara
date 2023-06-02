@@ -1,6 +1,7 @@
+use std::sync::OnceLock;
+
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -17,16 +18,19 @@ use crate::{
     world::resources::TileMap,
 };
 
-static REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$").unwrap()
-});
+static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn parse_teleport(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    if let Some(captures) = REGEX.captures(content) {
+    let regex = REGEX.get_or_init(|| {
+        Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$")
+            .unwrap()
+    });
+
+    if let Some(captures) = regex.captures(content) {
         let region = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
         let x = captures
             .name("x")
