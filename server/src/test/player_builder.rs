@@ -1,8 +1,9 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::EntityMut, prelude::*};
 use bevy_nest::server::ClientId;
 use sqlx::{types::Json, PgPool};
 
 use crate::{
+    auth::components::Authenticating,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client},
@@ -14,10 +15,12 @@ use crate::{
 pub struct PlayerBuilder {
     id: i64,
     name: String,
+    password: String,
     role: i16,
     config: CharacterConfig,
     zone: Zone,
     coords: IVec3,
+    authenticating: bool,
 }
 
 impl PlayerBuilder {
@@ -25,10 +28,12 @@ impl PlayerBuilder {
         Self {
             id: 0,
             name: "Anu".into(),
+            password: bcrypt::hash("secret", bcrypt::DEFAULT_COST).unwrap(),
             role: 0,
             config: CharacterConfig::default(),
             zone: Zone::Void,
             coords: IVec3::ZERO,
+            authenticating: false,
         }
     }
 
@@ -39,6 +44,11 @@ impl PlayerBuilder {
 
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.into();
+        self
+    }
+
+    pub fn password(mut self, password: &str) -> Self {
+        self.password = bcrypt::hash(password, bcrypt::DEFAULT_COST).unwrap();
         self
     }
 
@@ -62,11 +72,16 @@ impl PlayerBuilder {
         self
     }
 
+    pub fn authenticating(mut self, authenticating: bool) -> Self {
+        self.authenticating = authenticating;
+        self
+    }
+
     pub async fn store(self, pool: &PgPool) -> Result<Self, sqlx::Error> {
         sqlx::query("INSERT INTO characters (id, name, password, config) VALUES ($1, $2, $3, $4)")
             .bind(&self.id)
             .bind(&self.name)
-            .bind("test")
+            .bind(&self.password)
             .bind(Json(self.config))
             .execute(pool)
             .await?;
@@ -77,28 +92,28 @@ impl PlayerBuilder {
     pub fn build(self, app: &mut App) -> (ClientId, Entity) {
         let client_id = ClientId::new();
 
-        let entity = app
-            .world
-            .spawn((
-                Client {
-                    id: client_id,
-                    width: u16::MAX,
-                },
-                PlayerBundle {
-                    character: Character {
-                        id: self.id,
-                        name: self.name,
-                        role: self.role,
-                        config: self.config,
-                    },
-                    position: Position {
-                        zone: self.zone,
-                        coords: self.coords,
-                    },
-                },
-            ))
-            .id();
+        let mut entity = app.world.spawn((Client {
+            id: client_id,
+            width: u16::MAX,
+        },));
 
-        (client_id, entity)
+        if self.authenticating {
+            entity.insert(Authenticating::default());
+        } else {
+            entity.insert(PlayerBundle {
+                character: Character {
+                    id: self.id,
+                    name: self.name,
+                    role: self.role,
+                    config: self.config,
+                },
+                position: Position {
+                    zone: self.zone,
+                    coords: self.coords,
+                },
+            });
+        }
+
+        (client_id, entity.id())
     }
 }

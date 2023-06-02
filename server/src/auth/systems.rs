@@ -251,15 +251,186 @@ pub fn handle_authenticate_task(
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        utils::{get_command_content, get_message_content, get_task, send_message, wait_for_task},
+    };
+
     use super::*;
 
     #[test]
-    fn test_is_name_valid() {
+    fn is_name_valid() {
         assert!(name_is_valid("Caesar").is_ok());
         assert!(name_is_valid("Caesar Augustus").is_ok());
         assert!(name_is_valid("Caesar   Augustus").is_err());
         assert!(name_is_valid("Caesar Octavian Augustus").is_err());
         assert!(name_is_valid("shit god").is_err());
         assert!(name_is_valid("admin").is_err());
+    }
+
+    #[test]
+    fn is_password_valid() {
+        assert!(password_is_valid("no").is_err());
+        assert!(password_is_valid("hippopotomonstrosesquippedaliophobia").is_err());
+        assert!(password_is_valid("password").is_ok());
+    }
+
+    #[sqlx::test]
+    async fn new_character(pool: PgPool) -> sqlx::Result<()> {
+        let mut app = AppBuilder::new().database(&pool).build();
+
+        app.add_systems((
+            authenticate,
+            handle_user_exists_task,
+            handle_authenticate_task,
+        ));
+
+        let (client_id, player) = PlayerBuilder::new()
+            .authenticating(true)
+            .name("Icauna")
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "Icauna");
+        app.update();
+
+        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        app.update();
+
+        let command = get_command_content(&mut app, client_id);
+        assert_eq!(command, vec![IAC, WILL, ECHO]);
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(content, "Hail, Icauna. Set for thyself a word of secrecy.");
+
+        send_message(&mut app, client_id, "secret");
+        app.update();
+
+        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        app.update();
+
+        let command = get_command_content(&mut app, client_id);
+        assert_eq!(command, vec![IAC, WONT, ECHO]);
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(content, "May thy journey here be prosperous.");
+
+        assert!(app.world.get::<Authenticating>(player).is_none());
+        assert!(app.world.get::<Character>(player).is_some());
+
+        let (exists,): (bool,) =
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM characters WHERE name = $1)")
+                .bind("Icauna")
+                .fetch_one(&pool)
+                .await?;
+
+        assert!(exists);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    fn existing_character(pool: PgPool) -> sqlx::Result<()> {
+        let mut app = AppBuilder::new().database(&pool).build();
+
+        app.add_systems((
+            authenticate,
+            handle_user_exists_task,
+            handle_authenticate_task,
+        ));
+
+        let (client_id, player) = PlayerBuilder::new()
+            .authenticating(true)
+            .name("Bres")
+            .password("secret")
+            .store(&pool)
+            .await?
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "Bres");
+        app.update();
+
+        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        app.update();
+
+        let command = get_command_content(&mut app, client_id);
+        assert_eq!(command, vec![IAC, WILL, ECHO]);
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(
+            content,
+            "Hail, returned Bres! What is the secret word thou dost keep?"
+        );
+
+        send_message(&mut app, client_id, "secret");
+        app.update();
+
+        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        app.update();
+
+        let command = get_command_content(&mut app, client_id);
+        assert_eq!(command, vec![IAC, WONT, ECHO]);
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(content, "May thy journey here be prosperous.");
+
+        assert!(app.world.get::<Authenticating>(player).is_none());
+        assert!(app.world.get::<Character>(player).is_some());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    fn wrong_password(pool: PgPool) -> sqlx::Result<()> {
+        let mut app = AppBuilder::new().database(&pool).build();
+
+        app.add_systems((
+            authenticate,
+            handle_user_exists_task,
+            handle_authenticate_task,
+        ));
+
+        let (client_id, player) = PlayerBuilder::new()
+            .authenticating(true)
+            .name("Bres")
+            .password("secret")
+            .store(&pool)
+            .await?
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "Bres");
+        app.update();
+
+        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        app.update();
+
+        let command = get_command_content(&mut app, client_id);
+        assert_eq!(command, vec![IAC, WILL, ECHO]);
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(
+            content,
+            "Hail, returned Bres! What is the secret word thou dost keep?"
+        );
+
+        send_message(&mut app, client_id, "wrong");
+        app.update();
+
+        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+        assert_eq!(
+            content,
+            "The secret word thou hast given is not the right one."
+        );
+
+        assert!(app.world.get::<Authenticating>(player).is_some());
+        assert!(app.world.get::<Authenticating>(player).unwrap().state == AuthState::Password);
+        assert!(app.world.get::<Character>(player).is_none());
+
+        Ok(())
     }
 }
