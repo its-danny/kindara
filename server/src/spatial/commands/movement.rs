@@ -100,7 +100,6 @@ mod tests {
         let (client_id, player) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "south");
-
         app.update();
 
         assert_eq!(
@@ -120,7 +119,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "south");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -144,7 +142,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "south");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);

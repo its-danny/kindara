@@ -66,7 +66,6 @@ mod tests {
         PlayerBuilder::new().name("Bau").build(&mut app);
 
         send_message(&mut app, client_id, "who");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);

@@ -102,7 +102,6 @@ mod tests {
         let (client_id, player) = PlayerBuilder::new().zone(Zone::Void).build(&mut app);
 
         send_message(&mut app, client_id, "enter movement");
-
         app.update();
 
         let updated_position = app.world.get::<Position>(player).unwrap();
@@ -132,7 +131,6 @@ mod tests {
         let (client_id, player) = PlayerBuilder::new().zone(Zone::Void).build(&mut app);
 
         send_message(&mut app, client_id, "enter");
-
         app.update();
 
         let updated_position = app.world.get::<Position>(player).unwrap();
@@ -151,7 +149,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "enter the dragon");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);

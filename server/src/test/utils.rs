@@ -12,15 +12,29 @@ pub fn send_message(app: &mut App, from: ClientId, message: &str) {
 pub fn get_message_content(app: &mut App, to: ClientId) -> String {
     let outbox_events = app.world.resource::<Events<Outbox>>();
     let mut outbox_reader = outbox_events.get_reader();
-    let event = outbox_reader
-        .iter(outbox_events)
-        .find(|r| r.to == to)
-        .expect("Expected response");
 
-    match &event.content {
-        Message::Text(text) => text.clone(),
-        _ => panic!("Expected Message::Text"),
-    }
+    outbox_reader
+        .iter(outbox_events)
+        .filter(|e| e.to == to)
+        .find_map(|e| match &e.content {
+            Message::Text(text) => Some(text.clone()),
+            _ => None,
+        })
+        .expect("Expected Message::Text")
+}
+
+pub fn get_command_content(app: &mut App, to: ClientId) -> Vec<u8> {
+    let outbox_events = app.world.resource::<Events<Outbox>>();
+    let mut outbox_reader = outbox_events.get_reader();
+
+    outbox_reader
+        .iter(outbox_events)
+        .filter(|e| e.to == to)
+        .find_map(|e| match &e.content {
+            Message::Command(command) => Some(command.clone()),
+            _ => None,
+        })
+        .expect("Expected Message::Command")
 }
 
 pub fn get_task<T: Component>(app: &mut App) -> Option<&T> {

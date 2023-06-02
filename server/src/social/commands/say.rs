@@ -86,7 +86,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "say Hello!");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -105,7 +104,6 @@ mod tests {
         let (recipient_client_id, _) = PlayerBuilder::new().name("Salus").build(&mut app);
 
         send_message(&mut app, sender_client_id, "say Hello!");
-
         app.update();
 
         let content = get_message_content(&mut app, recipient_client_id);
@@ -123,7 +121,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "say   ");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);

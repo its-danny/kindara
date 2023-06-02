@@ -163,7 +163,6 @@ mod tests {
             .build(&mut app);
 
         send_message(&mut app, client_id, "config brief true");
-
         app.update();
 
         assert_eq!(
@@ -172,7 +171,6 @@ mod tests {
         );
 
         wait_for_task(&get_task::<SaveConfig>(&mut app).unwrap().0);
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -195,7 +193,6 @@ mod tests {
             .build(&mut app);
 
         send_message(&mut app, client_id, "config brief");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -213,7 +210,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "config god true");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -229,7 +225,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "config brief please");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);

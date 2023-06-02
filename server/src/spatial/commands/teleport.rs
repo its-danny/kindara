@@ -138,7 +138,6 @@ mod tests {
             .build(&mut app);
 
         send_message(&mut app, client_id, "teleport movement (0 0 0)");
-
         app.update();
 
         let updated_position = app.world.get::<Position>(player).unwrap();
@@ -161,7 +160,6 @@ mod tests {
         let (client_id, player) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
 
         send_message(&mut app, client_id, "teleport here (0 1 0)");
-
         app.update();
 
         let updated_position = app.world.get::<Position>(player).unwrap();
@@ -178,7 +176,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
 
         send_message(&mut app, client_id, "teleport invalid (0 0 0)");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -196,7 +193,6 @@ mod tests {
         let (client_id, _) = PlayerBuilder::new().role(TELEPORT).build(&mut app);
 
         send_message(&mut app, client_id, "teleport here (0 1 0)");
-
         app.update();
 
         let content = get_message_content(&mut app, client_id);
