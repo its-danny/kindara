@@ -34,7 +34,7 @@ fn load_prototypes(mut prototypes: PrototypesMut) {
 }
 
 fn setup_network(server: Res<Server>) {
-    server.listen("127.0.0.1:3000");
+    server.listen(format!("127.0.0.1:{}", &env::var("SERVER_PORT").unwrap()));
 }
 
 #[async_std::main]
