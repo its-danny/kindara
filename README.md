@@ -4,20 +4,44 @@
   A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
 </div>
 
-## Connected -> Playing
+## Dev
+
+**Requirements:**
+
+- [docker-compose](https://docs.docker.com/compose/)
+- [rust](https://rustup.rs/)
+- [sqlx-cli](https://lib.rs/crates/sqlx-cli)
+- A MUD client, e.g. [blightmud](https://github.com/blightmud/blightmud)
+
+```bash
+cp .env.example .env
+docker-compose up    # Start PostgreSQL
+sqlx create database # Create dev database
+cargo run -p server  # Starts the server at 127.0.0.1:3000
+```
+
+**Resources:**
+
+- https://docs.rs/bevy/latest/bevy/
+- https://bevy-cheatbook.github.io/
+- https://docs.rs/sqlx/latest/sqlx/
+
+### How it works
 
 **When a user first connects:**
 
-- Spawn a new entity with a `Client` and `Authenticating` component.
+- Spawn a new entity with a [`Client`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs)
+and [`Authenticating`](https://github.com/its-danny/aureus/blob/main/server/src/auth/components.rs) component.
 
 **When a user sends a message:**
 
-- If `Authenticating`, all messages are handled by the `auth` systems. When succesfully authenticated,
-this component is removed and a `Character` component is added.
-- If a `Character`, all messages first go through `parse_command` to be turned into their respective `Command` variant
-and sent to `EventWriter<ParsedCommand>`. This system belongs to the `Input` system set that runs _before_ bevys `CoreSet::Update`.
-- On every game tick, command systems will iterate through `EventReader<ParsedCommand>` and act on any
-event that has their `Command` variant.
+- If authenticating, all messages are handled by the [`auth systems`](https://github.com/its-danny/aureus/blob/main/server/src/auth/systems.rs).
+When succesfully authenticated, this component is removed and a
+[`Character`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs) component is added.
+- When not authenticating, all messages first go through [`parse_command`](https://github.com/its-danny/aureus/blob/main/server/src/input/systems.rs)
+to be turned into their respective [`Command`](https://github.com/its-danny/aureus/blob/main/server/src/input/events.rs)
+variant and sent to `EventWriter<ParsedCommand>`. This system belongs to the `Input` system set that runs _before_ bevys `CoreSet::Update`.
+- On every game tick, command systems will iterate through `EventReader<ParsedCommand>` and act on their respective events.
 
 ## License
 
