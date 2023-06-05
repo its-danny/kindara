@@ -29,9 +29,6 @@ pub struct Tile {
     pub description: String,
 }
 
-#[derive(Component)]
-pub struct Impassable;
-
 #[derive(Component, Reflect, FromReflect)]
 pub struct Transition {
     pub tags: Vec<String>,

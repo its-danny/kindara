@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
     spatial::{
-        components::{Impassable, Position, Tile},
+        components::{Position, Tile},
         utils::{offset_for_direction, view_for_tile},
     },
     visual::components::Sprite,
@@ -43,7 +43,7 @@ pub fn movement(
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Position, &Character)>,
     tile_map: Res<TileMap>,
-    tiles: Query<(&Position, &Tile, &Sprite, Option<&Impassable>), Without<Character>>,
+    tiles: Query<(&Position, &Tile, &Sprite), Without<Character>>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
@@ -55,7 +55,7 @@ pub fn movement(
                 return;
             };
 
-            let Some((tile_position, tile, sprite, impassable)) = tile_map
+            let Some((tile_position, tile, sprite)) = tile_map
                 .get(player_position.zone, player_position.coords + offset)
                 .and_then(|e| tiles.get(*e).ok()) else {
                     outbox.send_text(client.id, "You can't go that way.");
@@ -63,16 +63,12 @@ pub fn movement(
                     return;
                 };
 
-            if impassable.is_none() {
-                player_position.coords = tile_position.coords;
+            player_position.coords = tile_position.coords;
 
-                outbox.send_text(
-                    client.id,
-                    view_for_tile(tile, sprite, character.config.brief),
-                )
-            } else {
-                outbox.send_text(client.id, "Something blocks your path.");
-            }
+            outbox.send_text(
+                client.id,
+                view_for_tile(tile, sprite, character.config.brief),
+            )
         }
     }
 }
@@ -127,28 +123,5 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(content, "You can't go that way.");
-    }
-
-    #[test]
-    fn impassable_tile() {
-        let mut app = AppBuilder::new().build();
-
-        app.add_system(movement);
-
-        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
-
-        TileBuilder::new()
-            .coords(IVec3::new(0, 1, 0))
-            .impassable(true)
-            .build(&mut app);
-
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
-
-        send_message(&mut app, client_id, "south");
-        app.update();
-
-        let content = get_message_content(&mut app, client_id);
-
-        assert_eq!(content, "Something blocks your path.");
     }
 }
