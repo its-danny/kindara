@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     spatial::{
         bundles::TileBundle,
-        components::{Impassable, Position, Tile, Zone},
+        components::{Position, Tile, Zone},
     },
     visual::components::Sprite,
     world::resources::TileMap,
@@ -15,7 +15,6 @@ pub struct TileBuilder {
     zone: Zone,
     coords: IVec3,
     sprite: String,
-    impassable: bool,
 }
 
 impl TileBuilder {
@@ -26,7 +25,6 @@ impl TileBuilder {
             zone: Zone::Void,
             coords: IVec3::ZERO,
             sprite: "x".into(),
-            impassable: false,
         }
     }
 
@@ -55,11 +53,6 @@ impl TileBuilder {
         self
     }
 
-    pub fn impassable(mut self, impassable: bool) -> Self {
-        self.impassable = impassable;
-        self
-    }
-
     pub fn build(self, app: &mut App) -> Entity {
         let entity = app
             .world
@@ -77,10 +70,6 @@ impl TileBuilder {
                 },
             })
             .id();
-
-        if self.impassable {
-            app.world.entity_mut(entity).insert(Impassable);
-        }
 
         app.world
             .resource_mut::<TileMap>()
