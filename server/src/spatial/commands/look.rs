@@ -13,7 +13,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_look(
+pub fn handle_look(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -40,14 +40,14 @@ pub fn look(
 ) {
     for command in commands.iter() {
         if let Command::Look = &command.command {
-            let Some((client, parent)) = players.iter().find(|(c, _)| c.id == command.from) else {
+            let Some((client, tile)) = players.iter().find(|(c, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((tile, sprite)) = tiles.get(parent.get()) else {
-                debug!("Could not get parent: {:?}", parent.get());
+            let Ok((tile, sprite)) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };

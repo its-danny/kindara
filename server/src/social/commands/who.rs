@@ -11,7 +11,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_who(
+pub fn handle_who(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,

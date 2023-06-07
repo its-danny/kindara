@@ -21,7 +21,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_config(
+pub fn handle_config(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
