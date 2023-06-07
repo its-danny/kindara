@@ -25,12 +25,13 @@ pub fn handle_teleport(
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
     let regex = REGEX.get_or_init(|| {
-        Regex::new(r"^(teleport|tp) (?P<zone>here|(.+)) \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$")
+        Regex::new(r#"^(teleport|tp) "(?P<zone>here|(.+))" \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$"#)
             .unwrap()
     });
 
     if let Some(captures) = regex.captures(content) {
-        let region = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
+        let zone = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
+
         let x = captures
             .name("x")
             .and_then(|m| m.as_str().parse::<i32>().ok())
@@ -46,7 +47,7 @@ pub fn handle_teleport(
 
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Teleport((region.to_string(), (x, y, z))),
+            command: Command::Teleport((zone.to_lowercase(), (x, y, z))),
         });
 
         true
@@ -60,7 +61,8 @@ pub fn teleport(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Character, &Parent)>,
-    tiles: Query<(Entity, &Tile, &Sprite, &Position)>,
+    tiles: Query<(Entity, &Tile, &Sprite, &Position, &Parent)>,
+    zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
@@ -70,8 +72,14 @@ pub fn teleport(
                 continue;
             };
 
-            let Ok((_, _, _, position)) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
+            let Ok((_, _, _, _, here)) = tiles.get(tile.get()) else {
+                debug!("Could not get tile: {:?}", tile.get());
+
+                continue;
+            };
+
+            let Ok((here, _)) = zones.get(here.get()) else {
+                debug!("Could not get zone: {:?}", here.get());
 
                 continue;
             };
@@ -80,31 +88,34 @@ pub fn teleport(
                 continue;
             }
 
-            let coords = IVec3::new(*x, *y, *z);
+            let position = IVec3::new(*x, *y, *z);
 
-            let zone = match zone.as_str() {
-                "here" => Some(position.zone),
-                "movement" => Some(Zone::Movement),
-                "void" => Some(Zone::Void),
-                _ => None,
-            };
-
-            let Some(zone) = zone else {
+            let Some((zone, zone_tiles )) = zones.iter().find(|(z, _)| {
+                match zone {
+                    name if name == "here" => z.name == here.name,
+                    name => z.name.to_lowercase() == *name,
+                }
+            }) else  {
                 outbox.send_text(client.id, "Invalid zone.");
 
                 continue;
             };
 
-            let Some((target, tile, sprite, _)) = tiles
-                .iter()
-                .find(|(_, _, _, p)| p.zone == zone && p.coords == coords)
-            else {
+            let Some((target, tile, sprite)) = zone_tiles.iter().find_map(|child| {
+                tiles.get(*child)
+                    .ok()
+                    .filter(|(_, _, _, p, _)| p.0 == position)
+                    .map(|(e, t, s, _, _)| (e, t, s))
+            }) else {
                 outbox.send_text(client.id, "Invalid location.");
 
                 continue;
             };
 
-            info!("Teleporting {} to {} in {}", character.name, coords, zone);
+            info!(
+                "Teleporting {} to {} in {}",
+                character.name, position, zone.name
+            );
 
             bevy.entity(player).set_parent(target);
 
@@ -117,11 +128,10 @@ pub fn teleport(
 mod tests {
     use crate::{
         player::permissions::TELEPORT,
-        spatial::components::Zone,
         test::{
             app_builder::AppBuilder,
             player_builder::PlayerBuilder,
-            tile_builder::TileBuilder,
+            tile_builder::{TileBuilder, ZoneBuilder},
             utils::{get_message_content, send_message},
         },
     };
@@ -133,22 +143,22 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
+        let start_zone = ZoneBuilder::new().build(&mut app);
         let start = TileBuilder::new()
-            .zone(Zone::Void)
-            .coords(IVec3::ZERO)
-            .build(&mut app);
+            .position(IVec3::ZERO)
+            .build(&mut app, start_zone);
 
+        let destination_zone = ZoneBuilder::new().name("Uruk").build(&mut app);
         let destination = TileBuilder::new()
-            .zone(Zone::Movement)
-            .coords(IVec3::ZERO)
-            .build(&mut app);
+            .position(IVec3::ZERO)
+            .build(&mut app, destination_zone);
 
         let (client_id, player) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(start)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport movement (0 0 0)");
+        send_message(&mut app, client_id, "teleport \"uruk\" (0 0 0)");
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
@@ -159,18 +169,22 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
-        let start = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+
+        let start = TileBuilder::new()
+            .position(IVec3::ZERO)
+            .build(&mut app, zone);
 
         let destination = TileBuilder::new()
-            .coords(IVec3::new(0, 1, 0))
-            .build(&mut app);
+            .position(IVec3::new(0, 1, 0))
+            .build(&mut app, zone);
 
         let (client_id, player) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(start)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport here (0 1 0)");
+        send_message(&mut app, client_id, "teleport \"here\" (0 1 0)");
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
@@ -181,13 +195,15 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
         let (client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(tile)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport invalid (0 0 0)");
+        send_message(&mut app, client_id, "teleport \"invalid\" (0 0 0)");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
@@ -200,15 +216,15 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
-        TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
 
-        let tile = TileBuilder::new().build(&mut app);
         let (client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(tile)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport here (0 1 0)");
+        send_message(&mut app, client_id, "teleport \"here\" (0 1 0)");
         app.update();
 
         let content = get_message_content(&mut app, client_id);

@@ -265,7 +265,7 @@ mod tests {
     use crate::test::{
         app_builder::AppBuilder,
         player_builder::PlayerBuilder,
-        tile_builder::TileBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_command_content, get_message_content, get_task, send_message, wait_for_task},
     };
 
@@ -298,7 +298,8 @@ mod tests {
             handle_authenticate_task,
         ));
 
-        TileBuilder::new().is_spawn().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        TileBuilder::new().is_spawn().build(&mut app, zone);
 
         let (client_id, player) = PlayerBuilder::new()
             .authenticating(true)
@@ -353,7 +354,8 @@ mod tests {
             handle_authenticate_task,
         ));
 
-        TileBuilder::new().is_spawn().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        TileBuilder::new().is_spawn().build(&mut app, zone);
 
         let (client_id, player) = PlayerBuilder::new()
             .authenticating(true)

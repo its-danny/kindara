@@ -47,7 +47,7 @@ pub fn look(
             };
 
             let Ok((tile, sprite)) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
+                debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
             };
@@ -62,7 +62,7 @@ mod tests {
     use crate::test::{
         app_builder::AppBuilder,
         player_builder::PlayerBuilder,
-        tile_builder::TileBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
 
@@ -73,11 +73,12 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
+        let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
             .description("A vast, empty void.")
-            .build(&mut app);
+            .build(&mut app, zone);
 
         let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 

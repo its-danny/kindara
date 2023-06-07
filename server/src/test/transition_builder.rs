@@ -1,20 +1,17 @@
 use bevy::prelude::*;
+use fake::{Dummy, Fake, Faker};
 
-use crate::spatial::components::{Position, Transition};
+use crate::spatial::components::{Position, Transition, Zone};
 
+#[derive(Dummy)]
 pub struct TransitionBuilder {
-    tile: Entity,
     tags: Vec<String>,
-    target: Entity,
 }
 
+#[allow(dead_code)]
 impl TransitionBuilder {
-    pub fn new(tile: Entity, target: Entity) -> Self {
-        Self {
-            tile,
-            tags: vec![],
-            target,
-        }
+    pub fn new() -> Self {
+        Faker.fake::<Self>()
     }
 
     pub fn tags(mut self, tags: &Vec<&str>) -> Self {
@@ -22,19 +19,26 @@ impl TransitionBuilder {
         self
     }
 
-    pub fn build(self, app: &mut App) -> Entity {
+    pub fn build(self, app: &mut App, tile: Entity, target: Entity) -> Entity {
+        let target_parent = app.world.get::<Parent>(target).expect("Tile has no parent");
+
+        let zone = app
+            .world
+            .get::<Zone>(target_parent.get())
+            .expect("Target parent has no zone");
+
         let position = app
             .world
-            .get::<Position>(self.target)
+            .get::<Position>(target)
             .expect("Target has no position");
 
         app.world
             .spawn(Transition {
                 tags: self.tags,
-                zone: position.zone,
-                coords: position.coords,
+                zone: zone.name.clone(),
+                position: position.0,
             })
-            .set_parent(self.tile)
+            .set_parent(tile)
             .id()
     }
 }
