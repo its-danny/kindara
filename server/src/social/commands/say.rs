@@ -7,11 +7,12 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
+    spatial::components::Tile,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_say(
+pub fn handle_say(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -39,18 +40,18 @@ pub fn say(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent)>,
-    tiles: Query<&Children>,
+    tiles: Query<&Children, With<Tile>>,
 ) {
     for command in commands.iter() {
         if let Command::Say(message) = &command.command {
-            let Some((client, character, parent)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+            let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok(children) = tiles.get(parent.get()) else {
-                debug!("Could not get parent: {:?}", parent.get());
+            let Ok(siblings) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };
@@ -63,7 +64,7 @@ pub fn say(
 
             outbox.send_text(client.id, format!("You say \"{message}\""));
 
-            for (other_client, _, _) in children.iter().filter_map(|c| players.get(*c).ok()) {
+            for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
                 if other_client.id != client.id {
                     outbox.send_text(
                         other_client.id,

@@ -13,7 +13,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_map(
+pub fn handle_map(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -40,14 +40,14 @@ pub fn map(
 ) {
     for command in commands.iter() {
         if let Command::Map = &command.command {
-            let Some((client, parent)) = players.iter().find(|(c, _)| c.id == command.from) else {
+            let Some((client, tile)) = players.iter().find(|(c, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((player_position, _)) = tiles.get(parent.get()) else {
-                debug!("Could not get parent: {:?}", parent.get());
+            let Ok((position, _)) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };
@@ -61,20 +61,20 @@ pub fn map(
 
             let mut map = vec![vec![' '; width]; height];
 
-            let start_x = player_position.coords.x - (width as i32 / 2);
-            let end_x = player_position.coords.x + (width as i32 / 2);
-            let start_y = player_position.coords.y - (height as i32 / 2);
-            let end_y = player_position.coords.y + (height as i32 / 2);
+            let start_x = position.coords.x - (width as i32 / 2);
+            let end_x = position.coords.x + (width as i32 / 2);
+            let start_y = position.coords.y - (height as i32 / 2);
+            let end_y = position.coords.y + (height as i32 / 2);
 
             for x in start_x..=end_x {
                 for y in start_y..=end_y {
-                    if x == player_position.coords.x && y == player_position.coords.y {
+                    if x == position.coords.x && y == position.coords.y {
                         map[(y - start_y) as usize][(x - start_x) as usize] = '@';
                     } else if let Some((_, sprite)) = tiles.iter().find(|(p, _)| {
-                        p.zone == player_position.zone
+                        p.zone == position.zone
                             && p.coords.x == x
                             && p.coords.y == y
-                            && p.coords.z == player_position.coords.z
+                            && p.coords.z == position.coords.z
                     }) {
                         map[(y - start_y) as usize][(x - start_x) as usize] =
                             sprite.character.chars().next().unwrap_or(' ');
@@ -88,7 +88,7 @@ pub fn map(
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            outbox.send_text(client.id, format!("{}\n{display}", player_position.zone));
+            outbox.send_text(client.id, format!("{}\n{display}", position.zone));
         }
     }
 }

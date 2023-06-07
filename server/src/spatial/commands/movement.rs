@@ -16,7 +16,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_movement(
+pub fn handle_movement(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -46,14 +46,14 @@ pub fn movement(
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let Some((player, client, character, parent)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
+            let Some((player, client, character, tile)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((_, player_position, _, _)) = tiles.get(parent.get()) else {
-                debug!("Could not get parent: {:?}", parent.get());
+            let Ok((_, position, _, _)) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };
@@ -63,7 +63,7 @@ pub fn movement(
             };
 
             let Some((target, _, tile, sprite)) = tiles.iter().find(|(_, p, _, _)| {
-                p.zone == player_position.zone && p.coords == player_position.coords + offset
+                p.zone == position.zone && p.coords == position.coords + offset
             }) else {
                 outbox.send_text(client.id, "You can't go that way.");
 

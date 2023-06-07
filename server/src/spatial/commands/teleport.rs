@@ -19,7 +19,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_teleport(
+pub fn handle_teleport(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -64,14 +64,14 @@ pub fn teleport(
 ) {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
-            let Some((player, client, character, parent)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
+            let Some((player, client, character, tile)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((_, _, _, position)) = tiles.get(parent.get()) else {
-                debug!("Could not get parent: {:?}", parent.get());
+            let Ok((_, _, _, position)) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };
@@ -95,7 +95,7 @@ pub fn teleport(
                 continue;
             };
         
-            let Some((entity, tile, sprite, _)) = tiles
+            let Some((target, tile, sprite, _)) = tiles
                 .iter()
                 .find(|(_, _, _, p)| p.zone == zone && p.coords == coords)
             else {
@@ -106,7 +106,7 @@ pub fn teleport(
 
             info!("Teleporting {} to {} in {}", character.name, coords, zone);
 
-            bevy.entity(player).set_parent(entity);
+            bevy.entity(player).set_parent(target);
 
             outbox.send_text(
                 client.id,

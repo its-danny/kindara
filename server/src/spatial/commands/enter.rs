@@ -16,7 +16,7 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn parse_enter(
+pub fn handle_enter(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
@@ -47,14 +47,14 @@ pub fn enter(
 ) {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let Some((player, client, current_tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
+            let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((_, _, _, _, siblings)) = tiles.get(current_tile.get()) else {
-                debug!("Could not get parent: {:?}", current_tile.get());
+            let Ok((_, _, _, _, siblings)) = tiles.get(tile.get()) else {
+                debug!("Could not get parent: {:?}", tile.get());
 
                 continue;
             };
@@ -79,7 +79,7 @@ pub fn enter(
                 continue;
             };
 
-            let Some((target_tile, _, tile, sprite, _)) = tiles.iter().find(|(_, p, _, _, _)| {
+            let Some((target, _, tile, sprite, _)) = tiles.iter().find(|(_, p, _, _, _)| {
                 p.zone == transition.zone && p.coords == transition.coords
             }) else {
                 debug!("Could not find tile for transition: {:?}", transition);
@@ -87,7 +87,7 @@ pub fn enter(
                 continue;
             };
 
-            bevy.entity(player).set_parent(target_tile);
+            bevy.entity(player).set_parent(target);
 
             outbox.send_text(client.id, view_for_tile(tile, sprite, false));
         }

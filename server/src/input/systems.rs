@@ -3,13 +3,13 @@ use bevy_nest::prelude::*;
 
 use crate::{
     player::{
-        commands::config::parse_config,
+        commands::config::handle_config,
         components::{Character, Client},
     },
-    social::commands::{say::parse_say, who::parse_who},
+    social::commands::{say::handle_say, who::handle_who},
     spatial::commands::{
-        enter::parse_enter, look::parse_look, map::parse_map, movement::parse_movement,
-        teleport::parse_teleport,
+        enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
+        teleport::handle_teleport,
     },
 };
 
@@ -34,14 +34,14 @@ pub fn parse_command(
             continue;
         };
 
-        if parse_config(client, content, &mut commands)
-            || parse_enter(client, content, &mut commands)
-            || parse_look(client, content, &mut commands)
-            || parse_map(client, content, &mut commands)
-            || parse_movement(client, content, &mut commands)
-            || parse_say(client, content, &mut commands)
-            || parse_teleport(client, content, &mut commands)
-            || parse_who(client, content, &mut commands)
+        if handle_config(client, content, &mut commands)
+            || handle_enter(client, content, &mut commands)
+            || handle_look(client, content, &mut commands)
+            || handle_map(client, content, &mut commands)
+            || handle_movement(client, content, &mut commands)
+            || handle_say(client, content, &mut commands)
+            || handle_teleport(client, content, &mut commands)
+            || handle_who(client, content, &mut commands)
         {
             continue;
         }
