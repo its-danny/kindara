@@ -91,16 +91,16 @@ pub fn teleport(
 
             let Some(zone) = zone else {
                 outbox.send_text(client.id, "Invalid zone.");
-                
+
                 continue;
             };
-        
+
             let Some((target, tile, sprite, _)) = tiles
                 .iter()
                 .find(|(_, _, _, p)| p.zone == zone && p.coords == coords)
             else {
                 outbox.send_text(client.id, "Invalid location.");
-                
+
                 continue;
             };
 
@@ -108,10 +108,7 @@ pub fn teleport(
 
             bevy.entity(player).set_parent(target);
 
-            outbox.send_text(
-                client.id,
-                view_for_tile(tile, sprite, false),
-            );
+            outbox.send_text(client.id, view_for_tile(tile, sprite, false));
         }
     }
 }
@@ -162,13 +159,16 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(teleport);
 
-        let start =  TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
-        
+        let start = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+
         let destination = TileBuilder::new()
             .coords(IVec3::new(0, 1, 0))
             .build(&mut app);
 
-        let (client_id, player) = PlayerBuilder::new().role(TELEPORT).tile(start).build(&mut app);
+        let (client_id, player) = PlayerBuilder::new()
+            .role(TELEPORT)
+            .tile(start)
+            .build(&mut app);
 
         send_message(&mut app, client_id, "teleport here (0 1 0)");
         app.update();
@@ -182,7 +182,10 @@ mod tests {
         app.add_system(teleport);
 
         let tile = TileBuilder::new().build(&mut app);
-        let (client_id, _) = PlayerBuilder::new().role(TELEPORT).tile(tile).build(&mut app);
+        let (client_id, _) = PlayerBuilder::new()
+            .role(TELEPORT)
+            .tile(tile)
+            .build(&mut app);
 
         send_message(&mut app, client_id, "teleport invalid (0 0 0)");
         app.update();
@@ -200,7 +203,10 @@ mod tests {
         TileBuilder::new().build(&mut app);
 
         let tile = TileBuilder::new().build(&mut app);
-        let (client_id, _) = PlayerBuilder::new().role(TELEPORT).tile(tile).build(&mut app);
+        let (client_id, _) = PlayerBuilder::new()
+            .role(TELEPORT)
+            .tile(tile)
+            .build(&mut app);
 
         send_message(&mut app, client_id, "teleport here (0 1 0)");
         app.update();
