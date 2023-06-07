@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::{Client},
+    player::components::Client,
     spatial::{
         components::{Position, Tile, Transition},
         utils::view_for_tile,
@@ -24,7 +24,9 @@ pub fn handle_enter(
     let regex = REGEX.get_or_init(|| Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap());
 
     if let Some(captures) = regex.captures(content) {
-        let target = captures.name("transition").map(|m| m.as_str().trim().to_string());
+        let target = captures
+            .name("transition")
+            .map(|m| m.as_str().trim().to_string());
 
         commands.send(ParsedCommand {
             from: client.id,
@@ -59,13 +61,18 @@ pub fn enter(
                 continue;
             };
 
-            let transitions = siblings.map(|siblings| {
-                siblings.iter().filter_map(|child| transitions.get(*child).ok()).collect::<Vec<_>>()
-            }).unwrap_or_else(|| vec![]);
+            let transitions = siblings
+                .map(|siblings| {
+                    siblings
+                        .iter()
+                        .filter_map(|child| transitions.get(*child).ok())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_else(Vec::new);
 
             if transitions.is_empty() {
                 outbox.send_text(client.id, "There is nowhere to enter from here.");
-                
+
                 continue;
             }
 
@@ -83,7 +90,7 @@ pub fn enter(
                 p.zone == transition.zone && p.coords == transition.coords
             }) else {
                 debug!("Could not find tile for transition: {:?}", transition);
-                
+
                 continue;
             };
 
@@ -136,7 +143,10 @@ mod tests {
 
         let start = TileBuilder::new().zone(Zone::Void).build(&mut app);
         let first = TileBuilder::new().zone(Zone::Movement).build(&mut app);
-        let second = TileBuilder::new().zone(Zone::Movement).coords(IVec3::new(1, 1, 1)).build(&mut app);
+        let second = TileBuilder::new()
+            .zone(Zone::Movement)
+            .coords(IVec3::new(1, 1, 1))
+            .build(&mut app);
 
         TransitionBuilder::new(start, first).build(&mut app);
         TransitionBuilder::new(start, second).build(&mut app);
