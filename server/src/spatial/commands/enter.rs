@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParsedCommand},
     player::components::Client,
     spatial::{
-        components::{Position, Tile, Transition},
+        components::{Position, Tile, Transition, Zone},
         utils::view_for_tile,
     },
     visual::components::Sprite,
@@ -26,7 +26,7 @@ pub fn handle_enter(
     if let Some(captures) = regex.captures(content) {
         let target = captures
             .name("transition")
-            .map(|m| m.as_str().trim().to_string());
+            .map(|m| m.as_str().trim().to_lowercase());
 
         commands.send(ParsedCommand {
             from: client.id,
@@ -44,8 +44,16 @@ pub fn enter(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Parent)>,
-    tiles: Query<(Entity, &Position, &Tile, &Sprite, Option<&Children>)>,
     transitions: Query<&Transition>,
+    tiles: Query<(
+        Entity,
+        &Position,
+        &Tile,
+        &Sprite,
+        &Parent,
+        Option<&Children>,
+    )>,
+    zones: Query<&Zone>,
 ) {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
@@ -55,8 +63,8 @@ pub fn enter(
                 continue;
             };
 
-            let Ok((_, _, _, _, siblings)) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
+            let Ok((_, _, _, _, _, siblings)) = tiles.get(tile.get()) else {
+                debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
             };
@@ -86,10 +94,19 @@ pub fn enter(
                 continue;
             };
 
-            let Some((target, _, tile, sprite, _)) = tiles.iter().find(|(_, p, _, _, _)| {
-                p.zone == transition.zone && p.coords == transition.coords
+            let Some((target, tile, sprite)) = tiles.iter().find_map(|(e, p, t, s, z, _)| {
+                zones
+                    .get(z.get())
+                    .ok()
+                    .and_then(|zone| {
+                        if zone.name == transition.zone && p.0 == transition.position {
+                            Some((e, t, s))
+                        } else {
+                            None
+                        }
+                    })
             }) else {
-                debug!("Could not find tile for transition: {:?}", transition);
+                debug!("Could not find target tile for transition: {:?}", transition);
 
                 continue;
             };
@@ -103,15 +120,12 @@ pub fn enter(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        spatial::components::Zone,
-        test::{
-            app_builder::AppBuilder,
-            player_builder::PlayerBuilder,
-            tile_builder::TileBuilder,
-            transition_builder::TransitionBuilder,
-            utils::{get_message_content, send_message},
-        },
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
+        transition_builder::TransitionBuilder,
+        utils::{get_message_content, send_message},
     };
 
     use super::*;
@@ -121,16 +135,19 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
-        let start = TileBuilder::new().zone(Zone::Void).build(&mut app);
-        let destination = TileBuilder::new().zone(Zone::Movement).build(&mut app);
+        let start_zone = ZoneBuilder::new().build(&mut app);
+        let start = TileBuilder::new().build(&mut app, start_zone);
 
-        TransitionBuilder::new(start, destination)
-            .tags(&vec!["movement"])
-            .build(&mut app);
+        let destination_zone = ZoneBuilder::new().build(&mut app);
+        let destination = TileBuilder::new().build(&mut app, destination_zone);
+
+        TransitionBuilder::new()
+            .tags(&vec!["the void"])
+            .build(&mut app, start, destination);
 
         let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
-        send_message(&mut app, client_id, "enter movement");
+        send_message(&mut app, client_id, "enter the void");
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
@@ -141,15 +158,17 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
-        let start = TileBuilder::new().zone(Zone::Void).build(&mut app);
-        let first = TileBuilder::new().zone(Zone::Movement).build(&mut app);
-        let second = TileBuilder::new()
-            .zone(Zone::Movement)
-            .coords(IVec3::new(1, 1, 1))
-            .build(&mut app);
+        let start_zone = ZoneBuilder::new().build(&mut app);
+        let start = TileBuilder::new().build(&mut app, start_zone);
 
-        TransitionBuilder::new(start, first).build(&mut app);
-        TransitionBuilder::new(start, second).build(&mut app);
+        let first_zone = ZoneBuilder::new().build(&mut app);
+        let first = TileBuilder::new().build(&mut app, first_zone);
+
+        let second_zone = ZoneBuilder::new().build(&mut app);
+        let second = TileBuilder::new().build(&mut app, second_zone);
+
+        TransitionBuilder::new().build(&mut app, start, first);
+        TransitionBuilder::new().build(&mut app, start, second);
 
         let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
@@ -164,12 +183,15 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
-        let start = TileBuilder::new().zone(Zone::Void).build(&mut app);
-        let destination = TileBuilder::new().zone(Zone::Movement).build(&mut app);
+        let start_zone = ZoneBuilder::new().build(&mut app);
+        let start = TileBuilder::new().build(&mut app, start_zone);
 
-        TransitionBuilder::new(start, destination)
-            .tags(&vec!["movement"])
-            .build(&mut app);
+        let other_zone = ZoneBuilder::new().build(&mut app);
+        let other = TileBuilder::new().build(&mut app, other_zone);
+
+        TransitionBuilder::new()
+            .tags(&vec!["enter the void"])
+            .build(&mut app, start, other);
 
         let (client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
@@ -186,7 +208,8 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
 
         let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 

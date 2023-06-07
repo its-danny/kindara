@@ -1,16 +1,17 @@
-
 (
   name: "world.void",
+  schematics: {
+    "server::spatial::components::Zone": (
+      name: "The Void",
+    ),
+  },
   children: [
     (
       value: Inline((
         name: "world.void.0.0.0",
         schematics: {
           "server::spatial::bundles::TileBundle": (
-            position: (
-              zone: Void,
-              coords: IVec3 ( x: 0, y: 0, z: 0 ),
-            ),
+            position: (IVec3 ( x: 0, y: 0, z: 0 )),
             tile: (
               name: "The Void",
               description: "A vast, empty void.",

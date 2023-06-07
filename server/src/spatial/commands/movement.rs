@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
     spatial::{
-        components::{Position, Tile},
+        components::{Position, Tile, Zone},
         utils::{offset_for_direction, view_for_tile},
     },
     visual::components::Sprite,
@@ -42,7 +42,8 @@ pub fn movement(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Character, &Parent)>,
-    tiles: Query<(Entity, &Position, &Tile, &Sprite)>,
+    tiles: Query<(Entity, &Position, &Tile, &Sprite, &Parent)>,
+    zones: Query<&Children, With<Zone>>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
@@ -52,8 +53,14 @@ pub fn movement(
                 continue;
             };
 
-            let Ok((_, position, _, _)) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
+            let Ok((_, position, _, _, zone)) = tiles.get(tile.get()) else {
+                debug!("Could not get tile: {:?}", tile.get());
+
+                continue;
+            };
+
+            let Ok(zone_tiles) = zones.get(zone.get()) else {
+                debug!("Could not get zone: {:?}", zone.get());
 
                 continue;
             };
@@ -62,8 +69,11 @@ pub fn movement(
                 continue;
             };
 
-            let Some((target, _, tile, sprite)) = tiles.iter().find(|(_, p, _, _)| {
-                p.zone == position.zone && p.coords == position.coords + offset
+            let Some((target, tile, sprite)) = zone_tiles.iter().find_map(|child| {
+                tiles.get(*child)
+                    .ok()
+                    .filter(|(_, p, _, _, _)| p.0 == position.0 + offset)
+                    .map(|(e, _, t, s, _)| (e, t, s))
             }) else {
                 outbox.send_text(client.id, "You can't go that way.");
 
@@ -85,7 +95,7 @@ mod tests {
     use crate::test::{
         app_builder::AppBuilder,
         player_builder::PlayerBuilder,
-        tile_builder::TileBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
 
@@ -97,11 +107,15 @@ mod tests {
 
         app.add_system(movement);
 
-        let start = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+
+        let start = TileBuilder::new()
+            .position(IVec3::ZERO)
+            .build(&mut app, zone);
 
         let destination = TileBuilder::new()
-            .coords(IVec3::new(0, 1, 0))
-            .build(&mut app);
+            .position(IVec3::new(0, 1, 0))
+            .build(&mut app, zone);
 
         let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
@@ -117,7 +131,10 @@ mod tests {
 
         app.add_system(movement);
 
-        let tile = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new()
+            .position(IVec3::ZERO)
+            .build(&mut app, zone);
 
         let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 

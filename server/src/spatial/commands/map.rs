@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParsedCommand},
     player::components::Client,
-    spatial::components::{Position, Tile},
+    spatial::components::{Position, Tile, Zone},
     visual::components::Sprite,
 };
 
@@ -36,7 +36,8 @@ pub fn map(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Parent)>,
-    tiles: Query<(&Position, &Sprite), With<Tile>>,
+    tiles: Query<(&Position, &Sprite, &Parent), With<Tile>>,
+    zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
         if let Command::Map = &command.command {
@@ -46,8 +47,14 @@ pub fn map(
                 continue;
             };
 
-            let Ok((position, _)) = tiles.get(tile.get()) else {
+            let Ok((position, _, zone)) = tiles.get(tile.get()) else {
                 debug!("Could not get parent: {:?}", tile.get());
+
+                continue;
+            };
+
+            let Ok((zone, zone_tiles)) = zones.get(zone.get()) else {
+                debug!("Could not get zone: {:?}", zone.get());
 
                 continue;
             };
@@ -61,20 +68,21 @@ pub fn map(
 
             let mut map = vec![vec![' '; width]; height];
 
-            let start_x = position.coords.x - (width as i32 / 2);
-            let end_x = position.coords.x + (width as i32 / 2);
-            let start_y = position.coords.y - (height as i32 / 2);
-            let end_y = position.coords.y + (height as i32 / 2);
+            let start_x = position.0.x - (width as i32 / 2);
+            let end_x = position.0.x + (width as i32 / 2);
+            let start_y = position.0.y - (height as i32 / 2);
+            let end_y = position.0.y + (height as i32 / 2);
 
             for x in start_x..=end_x {
                 for y in start_y..=end_y {
-                    if x == position.coords.x && y == position.coords.y {
+                    if x == position.0.x && y == position.0.y {
                         map[(y - start_y) as usize][(x - start_x) as usize] = '@';
-                    } else if let Some((_, sprite)) = tiles.iter().find(|(p, _)| {
-                        p.zone == position.zone
-                            && p.coords.x == x
-                            && p.coords.y == y
-                            && p.coords.z == position.coords.z
+                    } else if let Some(sprite) = zone_tiles.iter().find_map(|child| {
+                        tiles
+                            .get(*child)
+                            .ok()
+                            .filter(|(p, _, _)| p.0 == IVec3::new(x, y, position.0.z))
+                            .map(|(_, s, _)| s)
                     }) {
                         map[(y - start_y) as usize][(x - start_x) as usize] =
                             sprite.character.chars().next().unwrap_or(' ');
@@ -88,7 +96,7 @@ pub fn map(
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            outbox.send_text(client.id, format!("{}\n{display}", position.zone));
+            outbox.send_text(client.id, format!("{}\n{display}", zone.name));
         }
     }
 }

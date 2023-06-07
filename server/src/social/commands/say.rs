@@ -51,7 +51,7 @@ pub fn say(
             };
 
             let Ok(siblings) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
+                debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
             };
@@ -82,7 +82,7 @@ mod tests {
     use crate::test::{
         app_builder::AppBuilder,
         player_builder::PlayerBuilder,
-        tile_builder::TileBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
 
@@ -91,7 +91,8 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
 
         let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
@@ -108,12 +109,14 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
 
         let (sender_client_id, _) = PlayerBuilder::new()
             .tile(tile)
             .name("Flora")
             .build(&mut app);
+
         let (recipient_client_id, _) = PlayerBuilder::new()
             .tile(tile)
             .name("Salus")
@@ -132,7 +135,8 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        let tile = TileBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
 
         let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_nest::server::ClientId;
+use fake::{faker::internet::en::Password, faker::name::en::Name, Dummy, Fake, Faker};
 use sqlx::{types::Json, PgPool};
 
 use crate::{
@@ -11,27 +12,27 @@ use crate::{
     },
 };
 
+#[derive(Dummy)]
 pub struct PlayerBuilder {
     id: i64,
+    #[dummy(faker = "Name()")]
     name: String,
+    #[dummy(faker = "Password(3..30)")]
     password: String,
+    #[dummy(expr = "0")]
     role: i16,
+    #[dummy(expr = "CharacterConfig::default()")]
     config: CharacterConfig,
+    #[dummy(expr = "false")]
     authenticating: bool,
+    #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
 
+#[allow(dead_code)]
 impl PlayerBuilder {
     pub fn new() -> Self {
-        Self {
-            id: 0,
-            name: "Anu".into(),
-            password: bcrypt::hash("secret", bcrypt::DEFAULT_COST).unwrap(),
-            role: 0,
-            config: CharacterConfig::default(),
-            authenticating: false,
-            tile: None,
-        }
+        Faker.fake::<Self>()
     }
 
     pub fn id(mut self, id: i64) -> Self {
