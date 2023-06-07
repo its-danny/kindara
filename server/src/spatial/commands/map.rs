@@ -6,10 +6,9 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::{Character, Client},
+    player::components::Client,
     spatial::components::{Position, Tile},
     visual::components::Sprite,
-    world::resources::TileMap,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -34,16 +33,23 @@ pub fn parse_map(
 }
 
 pub fn map(
-    tile_map: Res<TileMap>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Position), With<Character>>,
-    tiles: Query<&Sprite, With<Tile>>,
+    players: Query<(&Client, &Parent)>,
+    tiles: Query<(&Position, &Sprite), With<Tile>>,
 ) {
     for command in commands.iter() {
         if let Command::Map = &command.command {
-            let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                return;
+            let Some((client, parent)) = players.iter().find(|(c, _)| c.id == command.from) else {
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
+            };
+
+            let Ok((player_position, _)) = tiles.get(parent.get()) else {
+                debug!("Could not get parent: {:?}", parent.get());
+
+                continue;
             };
 
             let height = 24;
@@ -64,13 +70,12 @@ pub fn map(
                 for y in start_y..=end_y {
                     if x == player_position.coords.x && y == player_position.coords.y {
                         map[(y - start_y) as usize][(x - start_x) as usize] = '@';
-                    } else if let Some(sprite) = tile_map
-                        .get(
-                            player_position.zone,
-                            IVec3::new(x, y, player_position.coords.z),
-                        )
-                        .and_then(|e| tiles.get(*e).ok())
-                    {
+                    } else if let Some((_, sprite)) = tiles.iter().find(|(p, _)| {
+                        p.zone == player_position.zone
+                            && p.coords.x == x
+                            && p.coords.y == y
+                            && p.coords.z == player_position.coords.z
+                    }) {
                         map[(y - start_y) as usize][(x - start_x) as usize] =
                             sprite.character.chars().next().unwrap_or(' ');
                     }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::spatial::components::{Position, Transition, Zone};
+use crate::spatial::components::{Position, Transition};
 
 pub struct TransitionBuilder {
     tile: Entity,

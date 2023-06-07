@@ -7,7 +7,6 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
-    spatial::components::Position,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -20,11 +19,14 @@ pub fn parse_say(
     let regex = REGEX.get_or_init(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
 
     if let Some(captures) = regex.captures(content) {
-        let message = captures.name("message").map(|m| m.as_str()).unwrap_or("");
+        let message = captures
+            .name("message")
+            .map(|m| m.as_str().trim())
+            .unwrap_or("");
 
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Say(message.to_string()),
+            command: Command::Say(message.into()),
         });
 
         true
@@ -36,29 +38,33 @@ pub fn parse_say(
 pub fn say(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Position, &Character)>,
+    players: Query<(&Client, &Character, &Parent)>,
+    tiles: Query<&Children>,
 ) {
     for command in commands.iter() {
         if let Command::Say(message) = &command.command {
-            let Some((client, position, character)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                return;
+            let Some((client, character, parent)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
             };
 
-            let message = message.trim();
+            let Ok(children) = tiles.get(parent.get()) else {
+                debug!("Could not get parent: {:?}", parent.get());
+
+                continue;
+            };
 
             if message.is_empty() {
                 outbox.send_text(client.id, "Say what?");
 
-                return;
+                continue;
             }
 
             outbox.send_text(client.id, format!("You say \"{message}\""));
 
-            for (other_client, other_position, _) in
-                players.iter().filter(|(c, _, _)| c.id != client.id)
-            {
-                if position.zone == other_position.zone && position.coords == other_position.coords
-                {
+            for (other_client, _, _) in children.iter().filter_map(|c| players.get(*c).ok()) {
+                if other_client.id != client.id {
                     outbox.send_text(
                         other_client.id,
                         format!("{} says \"{message}\"", character.name),
@@ -84,9 +90,9 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        TileBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "say Hello!");
         app.update();
@@ -101,10 +107,16 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        TileBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app);
 
-        let (sender_client_id, _) = PlayerBuilder::new().name("Flora").build(&mut app);
-        let (recipient_client_id, _) = PlayerBuilder::new().name("Salus").build(&mut app);
+        let (sender_client_id, _) = PlayerBuilder::new()
+            .tile(tile)
+            .name("Flora")
+            .build(&mut app);
+        let (recipient_client_id, _) = PlayerBuilder::new()
+            .tile(tile)
+            .name("Salus")
+            .build(&mut app);
 
         send_message(&mut app, sender_client_id, "say Hello!");
         app.update();
@@ -119,9 +131,9 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(say);
 
-        TileBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "say   ");
         app.update();

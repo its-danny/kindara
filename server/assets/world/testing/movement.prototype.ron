@@ -5,6 +5,7 @@
       value: Inline((
         name: "world.testing.movement.0.0.0",
         schematics: {
+          "server::spatial::components::Spawn": (),
           "server::spatial::bundles::TileBundle": (
             position: (
               zone: Movement,

@@ -47,7 +47,7 @@ pub fn parse_config(
 
 pub fn config(
     database: Res<DatabasePool>,
-    mut bevy_commands: Commands,
+    mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Character)>,
@@ -55,7 +55,9 @@ pub fn config(
     for command in commands.iter() {
         if let Command::Config((option, value)) = &command.command {
             let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
-                return;
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
             };
 
             match (option, value) {
@@ -84,7 +86,7 @@ pub fn config(
                 },
                 (Some(option), Some(value)) => match character.config.set(option, value) {
                     Ok(_) => {
-                        bevy_commands.spawn(SaveConfig(spawn_save_config_task(
+                        bevy.spawn(SaveConfig(spawn_save_config_task(
                             database.0.clone(),
                             client.id,
                             character.id,
@@ -120,7 +122,7 @@ fn spawn_save_config_task(
 }
 
 pub fn handle_save_config_task(
-    mut commands: Commands,
+    mut bevy: Commands,
     mut tasks: Query<(Entity, &mut SaveConfig)>,
     mut outbox: EventWriter<Outbox>,
     players: Query<&Client, With<Character>>,
@@ -128,12 +130,14 @@ pub fn handle_save_config_task(
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
             let Some(client) = players.iter().find(|c| c.id == client_id) else {
-                return;
+                debug!("Could not find player for client ID: {:?}", client_id);
+
+                continue;
             };
 
             outbox.send_text(client.id, "Config saved.");
 
-            commands.entity(entity).remove::<SaveConfig>();
+            bevy.entity(entity).remove::<SaveConfig>();
         }
     }
 }

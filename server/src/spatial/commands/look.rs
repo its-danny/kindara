@@ -7,12 +7,8 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParsedCommand},
     player::components::{Character, Client},
-    spatial::{
-        components::{Position, Tile},
-        utils::view_for_tile,
-    },
+    spatial::{components::Tile, utils::view_for_tile},
     visual::components::Sprite,
-    world::resources::TileMap,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -37,23 +33,24 @@ pub fn parse_look(
 }
 
 pub fn look(
-    tile_map: Res<TileMap>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Position), With<Character>>,
+    players: Query<(&Client, &Parent), With<Character>>,
     tiles: Query<(&Tile, &Sprite)>,
 ) {
     for command in commands.iter() {
         if let Command::Look = &command.command {
-            let Some((client, player_position)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                return;
+            let Some((client, parent)) = players.iter().find(|(c, _)| c.id == command.from) else {
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
             };
 
-            let Some((tile, sprite)) = tile_map
-                .get(player_position.zone, player_position.coords)
-                .and_then(|e| tiles.get(*e).ok()) else {
-                    return;
-                };
+            let Ok((tile, sprite)) = tiles.get(parent.get()) else {
+                debug!("Could not get parent: {:?}", parent.get());
+
+                continue;
+            };
 
             outbox.send_text(client.id, view_for_tile(tile, sprite, false));
         }
@@ -76,13 +73,13 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        TileBuilder::new()
+        let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
             .description("A vast, empty void.")
             .build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();
