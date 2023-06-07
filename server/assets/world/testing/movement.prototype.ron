@@ -84,16 +84,10 @@
              value: Inline((
                 name: "world.testing.movement.0.2.-1.transition",
                 schematics: {
-                "server::spatial::bundles::TransitionBundle": (
-                  position: (
-                    zone: Movement,
-                    coords: IVec3 ( x: 0, y: 2, z: -1 ),
-                  ),
-                  transition: (
-                    tags: ["void"],
-                    zone: Void,
-                    coords: IVec3 ( x: 0, y: 0, z: 0 ),
-                  )
+                "server::spatial::components::Transition": (
+                  tags: ["void"],
+                  zone: Void,
+                  coords: IVec3 ( x: 0, y: 0, z: 0 ),
                 )
               }
             ))

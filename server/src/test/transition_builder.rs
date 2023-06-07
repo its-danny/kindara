@@ -1,26 +1,19 @@
 use bevy::prelude::*;
 
-use crate::spatial::{
-    bundles::TransitionBundle,
-    components::{Position, Transition, Zone},
-};
+use crate::spatial::components::{Position, Transition, Zone};
 
 pub struct TransitionBuilder {
+    tile: Entity,
     tags: Vec<String>,
-    target_zone: Zone,
-    target_coords: IVec3,
-    zone: Zone,
-    coords: IVec3,
+    target: Entity,
 }
 
 impl TransitionBuilder {
-    pub fn new() -> Self {
+    pub fn new(tile: Entity, target: Entity) -> Self {
         Self {
+            tile,
             tags: vec![],
-            target_zone: Zone::Void,
-            target_coords: IVec3::ZERO,
-            zone: Zone::Void,
-            coords: IVec3::ZERO,
+            target,
         }
     }
 
@@ -29,39 +22,19 @@ impl TransitionBuilder {
         self
     }
 
-    pub fn target_zone(mut self, zone: Zone) -> Self {
-        self.target_zone = zone;
-        self
-    }
-
-    pub fn target_coords(mut self, coords: IVec3) -> Self {
-        self.target_coords = coords;
-        self
-    }
-
-    pub fn zone(mut self, zone: Zone) -> Self {
-        self.zone = zone;
-        self
-    }
-
-    pub fn coords(mut self, coords: IVec3) -> Self {
-        self.coords = coords;
-        self
-    }
-
     pub fn build(self, app: &mut App) -> Entity {
+        let position = app
+            .world
+            .get::<Position>(self.target)
+            .expect("Target has no position");
+
         app.world
-            .spawn(TransitionBundle {
-                transition: Transition {
-                    tags: self.tags,
-                    zone: self.target_zone,
-                    coords: self.target_coords,
-                },
-                position: Position {
-                    zone: self.zone,
-                    coords: self.coords,
-                },
+            .spawn(Transition {
+                tags: self.tags,
+                zone: position.zone,
+                coords: position.coords,
             })
+            .set_parent(self.tile)
             .id()
     }
 }

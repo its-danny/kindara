@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use bevy::prelude::*;
+use bevy_proto::prelude::*;
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, Reflect, FromReflect)]
 pub enum Zone {
@@ -8,7 +9,7 @@ pub enum Zone {
     Movement,
 }
 
-#[derive(Component, Reflect, FromReflect)]
+#[derive(Debug, Component, Reflect, FromReflect)]
 pub struct Position {
     pub zone: Zone,
     pub coords: IVec3,
@@ -29,7 +30,8 @@ pub struct Tile {
     pub description: String,
 }
 
-#[derive(Component, Reflect, FromReflect)]
+#[derive(Debug, Component, Schematic, Reflect, FromReflect)]
+#[reflect(Schematic)]
 pub struct Transition {
     pub tags: Vec<String>,
     pub zone: Zone,
