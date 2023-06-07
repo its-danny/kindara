@@ -12,7 +12,6 @@ use crate::{
         utils::{offset_for_direction, view_for_tile},
     },
     visual::components::Sprite,
-    world::resources::TileMap,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -39,31 +38,39 @@ pub fn parse_movement(
 }
 
 pub fn movement(
+    mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Position, &Character)>,
-    tile_map: Res<TileMap>,
-    tiles: Query<(&Position, &Tile, &Sprite), Without<Character>>,
+    mut players: Query<(Entity, &Client, &Character, &Parent)>,
+    tiles: Query<(Entity, &Position, &Tile, &Sprite)>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let Some((client, mut player_position, character)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
-                return;
+            let Some((player, client, character, parent)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
+            };
+
+            let Ok((_, player_position, _, _)) = tiles.get(parent.get()) else {
+                debug!("Could not get parent: {:?}", parent.get());
+
+                continue;
             };
 
             let Some(offset) = offset_for_direction(direction) else {
-                return;
+                continue;
             };
 
-            let Some((tile_position, tile, sprite)) = tile_map
-                .get(player_position.zone, player_position.coords + offset)
-                .and_then(|e| tiles.get(*e).ok()) else {
-                    outbox.send_text(client.id, "You can't go that way.");
+            let Some((target, _, tile, sprite)) = tiles.iter().find(|(_, p, _, _)| {
+                p.zone == player_position.zone && p.coords == player_position.coords + offset
+            }) else {
+                outbox.send_text(client.id, "You can't go that way.");
 
-                    return;
-                };
+                continue;
+            };
 
-            player_position.coords = tile_position.coords;
+            bevy.entity(player).set_parent(target);
 
             outbox.send_text(
                 client.id,
@@ -90,21 +97,18 @@ mod tests {
 
         app.add_system(movement);
 
-        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+        let start = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
 
-        TileBuilder::new()
+        let destination = TileBuilder::new()
             .coords(IVec3::new(0, 1, 0))
             .build(&mut app);
 
-        let (client_id, player) = PlayerBuilder::new().build(&mut app);
+        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "south");
         app.update();
 
-        assert_eq!(
-            app.world.get::<Position>(player).unwrap().coords,
-            IVec3::new(0, 1, 0)
-        );
+        assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
     }
 
     #[test]
@@ -113,9 +117,9 @@ mod tests {
 
         app.add_system(movement);
 
-        TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
+        let tile = TileBuilder::new().coords(IVec3::ZERO).build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "south");
         app.update();

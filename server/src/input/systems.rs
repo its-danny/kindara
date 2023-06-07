@@ -11,7 +11,6 @@ use crate::{
         enter::parse_enter, look::parse_look, map::parse_map, movement::parse_movement,
         teleport::parse_teleport,
     },
-    text_messages,
 };
 
 use super::events::ParsedCommand;
@@ -22,9 +21,17 @@ pub fn parse_command(
     mut commands: EventWriter<ParsedCommand>,
     players: Query<&Client, With<Character>>,
 ) {
-    for (message, content) in text_messages!(inbox) {
+    for (message, content) in inbox.iter().filter_map(|m| {
+        if let Message::Text(content) = &m.content {
+            Some((m, content))
+        } else {
+            None
+        }
+    }) {
         let Some(client) = players.iter().find(|c| c.id == message.from) else {
-            return;
+            debug!("Could not find player for client: {:?}", message.from);
+
+            continue;
         };
 
         if parse_config(client, content, &mut commands)
@@ -36,7 +43,7 @@ pub fn parse_command(
             || parse_teleport(client, content, &mut commands)
             || parse_who(client, content, &mut commands)
         {
-            return;
+            continue;
         }
 
         outbox.send_text(client.id, "Unknown command.");

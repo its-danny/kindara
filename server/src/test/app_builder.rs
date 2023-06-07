@@ -5,7 +5,6 @@ use sqlx::PgPool;
 use crate::{
     db::pool::DatabasePool,
     input::{events::ParsedCommand, systems::parse_command},
-    world::resources::TileMap,
     Set,
 };
 
@@ -26,9 +25,8 @@ impl AppBuilder {
     pub fn build(self) -> App {
         let mut app = App::new();
 
-        app.add_plugins(MinimalPlugins)
-            .configure_set(Set::Input.before(CoreSet::Update))
-            .insert_resource(TileMap::default())
+        app.configure_set(Set::Input.before(CoreSet::Update))
+            .add_plugins(MinimalPlugins)
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()

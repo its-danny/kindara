@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::{Character, Client},
+    player::components::{Client},
     spatial::{
         components::{Position, Tile, Transition},
         utils::view_for_tile,
@@ -38,24 +38,23 @@ pub fn parse_enter(
 }
 
 pub fn enter(
+    mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Position), With<Character>>,
-    transitions: Query<&Transition, Without<Client>>,
-    tiles: Query<(&Position, &Tile, &Sprite, Option<&Children>), Without<Client>>,
+    mut players: Query<(Entity, &Client, &Parent)>,
+    tiles: Query<(Entity, &Position, &Tile, &Sprite, Option<&Children>)>,
+    transitions: Query<&Transition>,
 ) {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let Some((client, mut player_position)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
+            let Some((player, client, current_tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Some((_, _, _, siblings)) = tiles.iter().find(|(p, _, _, _)| {
-                p.zone == player_position.zone && p.coords == player_position.coords
-            }) else {
-                debug!("Could not find tile for player position: {:?}", player_position);
+            let Ok((_, _, _, _, siblings)) = tiles.get(current_tile.get()) else {
+                debug!("Could not get parent: {:?}", current_tile.get());
 
                 continue;
             };
@@ -80,7 +79,7 @@ pub fn enter(
                 continue;
             };
 
-            let Some((position, tile, sprite, _)) = tiles.iter().find(|(p, _, _, _)| {
+            let Some((target_tile, _, tile, sprite, _)) = tiles.iter().find(|(_, p, _, _, _)| {
                 p.zone == transition.zone && p.coords == transition.coords
             }) else {
                 debug!("Could not find tile for transition: {:?}", transition);
@@ -88,8 +87,7 @@ pub fn enter(
                 continue;
             };
 
-            player_position.zone = position.zone;
-            player_position.coords = position.coords;
+            bevy.entity(player).set_parent(target_tile);
 
             outbox.send_text(client.id, view_for_tile(tile, sprite, false));
         }
@@ -123,15 +121,12 @@ mod tests {
             .tags(&vec!["movement"])
             .build(&mut app);
 
-        let (client_id, player) = PlayerBuilder::new().zone(Zone::Void).build(&mut app);
+        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter movement");
         app.update();
 
-        let updated_position = app.world.get::<Position>(player).unwrap();
-
-        assert_eq!(updated_position.zone, Zone::Movement);
-        assert_eq!(updated_position.coords, IVec3::ZERO);
+        assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
     }
 
     #[test]
@@ -140,21 +135,18 @@ mod tests {
         app.add_system(enter);
 
         let start = TileBuilder::new().zone(Zone::Void).build(&mut app);
-        let destination = TileBuilder::new().zone(Zone::Movement).build(&mut app);
-        let nope = TileBuilder::new().zone(Zone::Movement).coords(IVec3::new(1, 1, 1)).build(&mut app);
+        let first = TileBuilder::new().zone(Zone::Movement).build(&mut app);
+        let second = TileBuilder::new().zone(Zone::Movement).coords(IVec3::new(1, 1, 1)).build(&mut app);
 
-        TransitionBuilder::new(start, destination).build(&mut app);
-        TransitionBuilder::new(start, nope).build(&mut app);
+        TransitionBuilder::new(start, first).build(&mut app);
+        TransitionBuilder::new(start, second).build(&mut app);
 
-        let (client_id, player) = PlayerBuilder::new().zone(Zone::Void).build(&mut app);
+        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter");
         app.update();
 
-        let updated_position = app.world.get::<Position>(player).unwrap();
-
-        assert_eq!(updated_position.zone, Zone::Movement);
-        assert_eq!(updated_position.coords, IVec3::ZERO);
+        assert_eq!(app.world.get::<Parent>(player).unwrap().get(), first);
     }
 
     #[test]
@@ -169,7 +161,7 @@ mod tests {
             .tags(&vec!["movement"])
             .build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().zone(Zone::Void).build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter at your own risk");
         app.update();
@@ -184,9 +176,9 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(enter);
 
-        TileBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "enter the dragon");
         app.update();

@@ -3,10 +3,9 @@ use bevy::prelude::*;
 use crate::{
     spatial::{
         bundles::TileBundle,
-        components::{Position, Tile, Zone},
+        components::{Position, Spawn, Tile, Zone},
     },
     visual::components::Sprite,
-    world::resources::TileMap,
 };
 
 pub struct TileBuilder {
@@ -14,6 +13,7 @@ pub struct TileBuilder {
     description: String,
     zone: Zone,
     coords: IVec3,
+    is_spawn: bool,
     sprite: String,
 }
 
@@ -24,6 +24,7 @@ impl TileBuilder {
             description: "A vast, empty void.".into(),
             zone: Zone::Void,
             coords: IVec3::ZERO,
+            is_spawn: false,
             sprite: "x".into(),
         }
     }
@@ -48,33 +49,35 @@ impl TileBuilder {
         self
     }
 
+    pub fn is_spawn(mut self) -> Self {
+        self.is_spawn = true;
+        self
+    }
+
     pub fn sprite(mut self, sprite: &str) -> Self {
         self.sprite = sprite.into();
         self
     }
 
     pub fn build(self, app: &mut App) -> Entity {
-        let entity = app
-            .world
-            .spawn(TileBundle {
-                tile: Tile {
-                    name: self.name,
-                    description: self.description,
-                },
-                position: Position {
-                    zone: self.zone,
-                    coords: self.coords,
-                },
-                sprite: Sprite {
-                    character: self.sprite,
-                },
-            })
-            .id();
+        let mut entity = app.world.spawn(TileBundle {
+            tile: Tile {
+                name: self.name,
+                description: self.description,
+            },
+            position: Position {
+                zone: self.zone,
+                coords: self.coords,
+            },
+            sprite: Sprite {
+                character: self.sprite,
+            },
+        });
 
-        app.world
-            .resource_mut::<TileMap>()
-            .insert((self.zone, self.coords), entity);
+        if self.is_spawn {
+            entity.insert(Spawn);
+        }
 
-        entity
+        entity.id()
     }
 }

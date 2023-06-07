@@ -1,4 +1,4 @@
-use bevy::{ecs::world::EntityMut, prelude::*};
+use bevy::prelude::*;
 use bevy_nest::server::ClientId;
 use sqlx::{types::Json, PgPool};
 
@@ -9,7 +9,6 @@ use crate::{
         components::{Character, Client},
         config::CharacterConfig,
     },
-    spatial::components::{Position, Zone},
 };
 
 pub struct PlayerBuilder {
@@ -18,9 +17,8 @@ pub struct PlayerBuilder {
     password: String,
     role: i16,
     config: CharacterConfig,
-    zone: Zone,
-    coords: IVec3,
     authenticating: bool,
+    tile: Option<Entity>,
 }
 
 impl PlayerBuilder {
@@ -31,9 +29,8 @@ impl PlayerBuilder {
             password: bcrypt::hash("secret", bcrypt::DEFAULT_COST).unwrap(),
             role: 0,
             config: CharacterConfig::default(),
-            zone: Zone::Void,
-            coords: IVec3::ZERO,
             authenticating: false,
+            tile: None,
         }
     }
 
@@ -62,18 +59,13 @@ impl PlayerBuilder {
         self
     }
 
-    pub fn zone(mut self, zone: Zone) -> Self {
-        self.zone = zone;
-        self
-    }
-
-    pub fn coords(mut self, coords: IVec3) -> Self {
-        self.coords = coords;
-        self
-    }
-
     pub fn authenticating(mut self, authenticating: bool) -> Self {
         self.authenticating = authenticating;
+        self
+    }
+
+    pub fn tile(mut self, tile: Entity) -> Self {
+        self.tile = Some(tile);
         self
     }
 
@@ -94,7 +86,7 @@ impl PlayerBuilder {
 
         let mut entity = app.world.spawn((Client {
             id: client_id,
-            width: u16::MAX,
+            width: 80,
         },));
 
         if self.authenticating {
@@ -107,11 +99,11 @@ impl PlayerBuilder {
                     role: self.role,
                     config: self.config,
                 },
-                position: Position {
-                    zone: self.zone,
-                    coords: self.coords,
-                },
             });
+        }
+
+        if let Some(tile) = self.tile {
+            entity.set_parent(tile);
         }
 
         (client_id, entity.id())

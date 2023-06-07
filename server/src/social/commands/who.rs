@@ -38,7 +38,9 @@ pub fn who(
     for command in commands.iter() {
         if let Command::Who = &command.command {
             let Some((client, _)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                return;
+                debug!("Could not find player for client: {:?}", command.from);
+
+                continue;
             };
 
             let online = players

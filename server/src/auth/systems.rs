@@ -17,8 +17,7 @@ use crate::{
         components::{Character, Client},
         config::CharacterConfig,
     },
-    spatial::components::{Position, Zone},
-    text_messages,
+    spatial::components::{Spawn, Tile},
 };
 
 use super::components::{AuthState, Authenticating};
@@ -55,15 +54,23 @@ fn password_is_valid(password: &str) -> Result<(), &'static str> {
 }
 
 pub fn authenticate(
-    mut commands: Commands,
+    mut bevy: Commands,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     database: Res<DatabasePool>,
     mut clients: Query<(&Client, &mut Authenticating)>,
 ) {
-    for (message, content) in text_messages!(inbox) {
+    for (message, content) in inbox.iter().filter_map(|m| {
+        if let Message::Text(content) = &m.content {
+            Some((m, content))
+        } else {
+            None
+        }
+    }) {
         let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
-            return;
+            debug!("Could not find player for client: {:?}", message.from);
+
+            continue;
         };
 
         match &mut auth.state {
@@ -71,13 +78,13 @@ pub fn authenticate(
                 if let Err(err) = name_is_valid(content) {
                     outbox.send_text(client.id, err);
 
-                    break;
+                    continue;
                 }
 
                 auth.name = content.clone();
                 auth.state = AuthState::AwaitingTaskCompletion;
 
-                commands.spawn(UserExists(spawn_user_exists_task(
+                bevy.spawn(UserExists(spawn_user_exists_task(
                     database.0.clone(),
                     client.id,
                     content.clone(),
@@ -87,21 +94,19 @@ pub fn authenticate(
                 if let Err(err) = password_is_valid(content) {
                     outbox.send_text(client.id, err);
 
-                    break;
+                    continue;
                 }
 
                 auth.state = AuthState::AwaitingTaskCompletion;
 
-                commands.spawn(Authenticated(spawn_authenticate_task(
+                bevy.spawn(Authenticate(spawn_authenticate_task(
                     database.0.clone(),
                     client.id,
                     auth.name.clone(),
                     content.clone(),
                 )));
             }
-            AuthState::AwaitingTaskCompletion => {
-                break;
-            }
+            AuthState::AwaitingTaskCompletion => {}
         }
     }
 }
@@ -126,7 +131,7 @@ fn spawn_user_exists_task(
 }
 
 pub fn handle_user_exists_task(
-    mut commands: Commands,
+    mut bevy: Commands,
     mut tasks: Query<(Entity, &mut UserExists)>,
     mut outbox: EventWriter<Outbox>,
     mut clients: Query<(&Client, &mut Authenticating)>,
@@ -134,30 +139,33 @@ pub fn handle_user_exists_task(
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
             let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == client_id) else {
-                return;
+                debug!("Could not find player for client ID: {:?}", client_id);
+
+                continue;
             };
 
             auth.state = AuthState::Password;
 
-            let message = if exists {
-                format!(
-                    "Hail, returned {}! What is the secret word thou dost keep?",
-                    auth.name
-                )
-            } else {
-                format!("Hail, {}. Set for thyself a word of secrecy.", auth.name)
-            };
-
             outbox.send_command(client.id, vec![IAC, WILL, ECHO]);
-            outbox.send_text(client.id, message);
+            outbox.send_text(
+                client.id,
+                if exists {
+                    format!(
+                        "Hail, returned {}! What is the secret word thou dost keep?",
+                        auth.name
+                    )
+                } else {
+                    format!("Hail, {}. Set for thyself a word of secrecy.", auth.name)
+                },
+            );
 
-            commands.entity(entity).remove::<UserExists>();
+            bevy.entity(entity).remove::<UserExists>();
         }
     }
 }
 
 #[derive(Component)]
-pub struct Authenticated(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
+pub struct Authenticate(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
 fn spawn_authenticate_task(
     pool: Pool<Postgres>,
@@ -197,10 +205,11 @@ fn spawn_authenticate_task(
 }
 
 pub fn handle_authenticate_task(
-    mut commands: Commands,
-    mut tasks: Query<(Entity, &mut Authenticated)>,
+    mut bevy: Commands,
+    mut tasks: Query<(Entity, &mut Authenticate)>,
     mut clients: Query<(Entity, &Client, &mut Authenticating)>,
     mut outbox: EventWriter<Outbox>,
+    spawn_tiles: Query<Entity, (With<Tile>, With<Spawn>)>,
 ) {
     for (task_entity, mut task) in &mut tasks {
         if let Some(Ok((character_model, client_id))) =
@@ -209,12 +218,19 @@ pub fn handle_authenticate_task(
             let Some((player_entity, client, mut auth)) =
                 clients.iter_mut().find(|(_, c, _)| c.id == client_id)
             else {
-                return;
+                debug!("Could not find player for client ID: {:?}", client_id);
+
+                continue;
             };
 
             if let Some(character) = character_model {
-                commands
-                    .entity(player_entity)
+                let Some(spawn) = spawn_tiles.iter().next() else {
+                    debug!("Could not find spawn tile");
+
+                    continue;
+                };
+
+                bevy.entity(player_entity)
                     .remove::<Authenticating>()
                     .insert(PlayerBundle {
                         character: Character {
@@ -223,11 +239,8 @@ pub fn handle_authenticate_task(
                             role: character.role,
                             config: character.config.0,
                         },
-                        position: Position {
-                            zone: Zone::Movement,
-                            coords: IVec3::ZERO,
-                        },
-                    });
+                    })
+                    .set_parent(spawn);
 
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
                 outbox.send_text(client.id, "May thy journey here be prosperous.");
@@ -240,7 +253,7 @@ pub fn handle_authenticate_task(
                 );
             }
 
-            commands.entity(task_entity).remove::<Authenticated>();
+            bevy.entity(task_entity).remove::<Authenticate>();
         }
     }
 }
@@ -252,6 +265,7 @@ mod tests {
     use crate::test::{
         app_builder::AppBuilder,
         player_builder::PlayerBuilder,
+        tile_builder::TileBuilder,
         utils::{get_command_content, get_message_content, get_task, send_message, wait_for_task},
     };
 
@@ -284,6 +298,8 @@ mod tests {
             handle_authenticate_task,
         ));
 
+        TileBuilder::new().is_spawn().build(&mut app);
+
         let (client_id, player) = PlayerBuilder::new()
             .authenticating(true)
             .name("Icauna")
@@ -304,7 +320,7 @@ mod tests {
         send_message(&mut app, client_id, "secret");
         app.update();
 
-        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -337,6 +353,8 @@ mod tests {
             handle_authenticate_task,
         ));
 
+        TileBuilder::new().is_spawn().build(&mut app);
+
         let (client_id, player) = PlayerBuilder::new()
             .authenticating(true)
             .name("Bres")
@@ -363,7 +381,7 @@ mod tests {
         send_message(&mut app, client_id, "secret");
         app.update();
 
-        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -414,7 +432,7 @@ mod tests {
         send_message(&mut app, client_id, "wrong");
         app.update();
 
-        wait_for_task(&get_task::<Authenticated>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
         app.update();
 
         let content = get_message_content(&mut app, client_id);
