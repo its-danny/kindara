@@ -43,6 +43,11 @@ to be turned into their respective [`Command`](https://github.com/its-danny/aure
 variant and sent to `EventWriter<ParsedCommand>`. This system belongs to the `Input` system set that runs _before_ bevys `CoreSet::Update`.
 - On every game tick, command systems will iterate through `EventReader<ParsedCommand>` and act on their respective events.
 
+**Positions**
+
+A `Tile` is the only entity with a `Position` and its position is relative to the `Zone` it belongs to. All other positioned entites
+are children of a tile.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/aureus/blob/main/LICENSE-APACHE)
