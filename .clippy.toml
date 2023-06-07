@@ -1,0 +1,3 @@
+# Bevys Query eats up a lot of type complexity, so increasing
+# this to make clippy quiet.
+type-complexity-threshold = 1000
