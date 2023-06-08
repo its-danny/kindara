@@ -5,16 +5,12 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParsedCommand, ProxyCommand},
     player::{
-        components::{Character, Client},
+        components::{Character, Client, Online},
         permissions,
     },
-    spatial::{
-        components::{Position, Tile, Zone},
-        utils::view_for_tile,
-    },
-    visual::components::Sprite,
+    spatial::components::{Position, Tile, Zone},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -59,9 +55,10 @@ pub fn handle_teleport(
 pub fn teleport(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
+    mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Character, &Parent)>,
-    tiles: Query<(Entity, &Tile, &Sprite, &Position, &Parent)>,
+    mut players: Query<(Entity, &Client, &Character, &Parent), With<Online>>,
+    tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
@@ -72,7 +69,7 @@ pub fn teleport(
                 continue;
             };
 
-            let Ok((_, _, _, _, here)) = tiles.get(tile.get()) else {
+            let Ok((_, _, here)) = tiles.get(tile.get()) else {
                 debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
@@ -90,7 +87,7 @@ pub fn teleport(
 
             let position = IVec3::new(*x, *y, *z);
 
-            let Some((zone, zone_tiles )) = zones.iter().find(|(z, _)| {
+            let Some((zone, zone_tiles)) = zones.iter().find(|(z, _)| {
                 match zone {
                     name if name == "here" => z.name == here.name,
                     name => z.name.to_lowercase() == *name,
@@ -101,11 +98,11 @@ pub fn teleport(
                 continue;
             };
 
-            let Some((target, tile, sprite)) = zone_tiles.iter().find_map(|child| {
+            let Some(target) = zone_tiles.iter().find_map(|child| {
                 tiles.get(*child)
                     .ok()
-                    .filter(|(_, _, _, p, _)| p.0 == position)
-                    .map(|(e, t, s, _, _)| (e, t, s))
+                    .filter(|( _, p, _)| p.0 == position)
+                    .map(|(e, _, _)| e)
             }) else {
                 outbox.send_text(client.id, "Invalid location.");
 
@@ -119,7 +116,10 @@ pub fn teleport(
 
             bevy.entity(player).set_parent(target);
 
-            outbox.send_text(client.id, view_for_tile(tile, sprite, false));
+            proxy.send(ProxyCommand(ParsedCommand {
+                from: client.id,
+                command: Command::Look,
+            }));
         }
     }
 }

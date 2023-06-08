@@ -14,7 +14,7 @@ use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
     player::{
         bundles::PlayerBundle,
-        components::{Character, Client},
+        components::{Character, Client, Online},
         config::CharacterConfig,
     },
     spatial::components::{Spawn, Tile},
@@ -24,41 +24,12 @@ use super::components::{AuthState, Authenticating};
 
 static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
 
-fn name_is_valid(name: &str) -> Result<(), &'static str> {
-    if name.len() < 3 || name.len() > 25 {
-        return Err("Name must be between 3 and 25 characters.");
-    }
-
-    let regex = NAME_REGEX.get_or_init(|| Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap());
-
-    if !regex.is_match(name) {
-        return Err("Name can only contain letters and spaces.");
-    }
-
-    let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
-    let censor = Censor::Standard + Censor::Sex + ban_list;
-
-    if censor.check(name) {
-        return Err("Name contains banned words.");
-    }
-
-    Ok(())
-}
-
-fn password_is_valid(password: &str) -> Result<(), &'static str> {
-    if password.len() >= 3 && password.len() <= 30 {
-        Ok(())
-    } else {
-        Err("Password must be between 3 and 30 characters.")
-    }
-}
-
 pub fn authenticate(
     mut bevy: Commands,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     database: Res<DatabasePool>,
-    mut clients: Query<(&Client, &mut Authenticating)>,
+    mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
 ) {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
@@ -68,7 +39,7 @@ pub fn authenticate(
         }
     }) {
         let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
-            debug!("Could not find player for client: {:?}", message.from);
+            debug!("Could not find authentication state for client ID: {:?}", message.from);
 
             continue;
         };
@@ -134,12 +105,12 @@ pub fn handle_user_exists_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut UserExists)>,
     mut outbox: EventWriter<Outbox>,
-    mut clients: Query<(&Client, &mut Authenticating)>,
+    mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
             let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == client_id) else {
-                debug!("Could not find player for client ID: {:?}", client_id);
+                debug!("Could not find authentication state for client ID: {:?}", client_id);
 
                 continue;
             };
@@ -207,7 +178,7 @@ fn spawn_authenticate_task(
 pub fn handle_authenticate_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut Authenticate)>,
-    mut clients: Query<(Entity, &Client, &mut Authenticating)>,
+    mut clients: Query<(Entity, &Client, &mut Authenticating), Without<Online>>,
     mut outbox: EventWriter<Outbox>,
     spawn_tiles: Query<Entity, (With<Tile>, With<Spawn>)>,
 ) {
@@ -218,7 +189,7 @@ pub fn handle_authenticate_task(
             let Some((player_entity, client, mut auth)) =
                 clients.iter_mut().find(|(_, c, _)| c.id == client_id)
             else {
-                debug!("Could not find player for client ID: {:?}", client_id);
+                debug!("Could not find authentication state for client ID: {:?}", client_id);
 
                 continue;
             };
@@ -232,14 +203,17 @@ pub fn handle_authenticate_task(
 
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
-                    .insert(PlayerBundle {
-                        character: Character {
-                            id: character.id,
-                            name: character.name,
-                            role: character.role,
-                            config: character.config.0,
+                    .insert((
+                        Online,
+                        PlayerBundle {
+                            character: Character {
+                                id: character.id,
+                                name: character.name,
+                                role: character.role,
+                                config: character.config.0,
+                            },
                         },
-                    })
+                    ))
                     .set_parent(spawn);
 
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
@@ -255,6 +229,35 @@ pub fn handle_authenticate_task(
 
             bevy.entity(task_entity).remove::<Authenticate>();
         }
+    }
+}
+
+fn name_is_valid(name: &str) -> Result<(), &'static str> {
+    if name.len() < 3 || name.len() > 25 {
+        return Err("Name must be between 3 and 25 characters.");
+    }
+
+    let regex = NAME_REGEX.get_or_init(|| Regex::new(r"^[a-zA-Z]+(\s[a-zA-Z]+)?$").unwrap());
+
+    if !regex.is_match(name) {
+        return Err("Name can only contain letters and spaces.");
+    }
+
+    let ban_list = Censor::custom(vec!["admin", "mod", "moderator", "gm", "god", "immortal"]);
+    let censor = Censor::Standard + Censor::Sex + ban_list;
+
+    if censor.check(name) {
+        return Err("Name contains banned words.");
+    }
+
+    Ok(())
+}
+
+fn password_is_valid(password: &str) -> Result<(), &'static str> {
+    if password.len() >= 3 && password.len() <= 30 {
+        Ok(())
+    } else {
+        Err("Password must be between 3 and 30 characters.")
     }
 }
 

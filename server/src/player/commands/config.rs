@@ -14,7 +14,7 @@ use crate::{
     db::pool::DatabasePool,
     input::events::{Command, ParsedCommand},
     player::{
-        components::{Character, Client},
+        components::{Character, Client, Online},
         config::CharacterConfig,
     },
 };
@@ -50,7 +50,7 @@ pub fn config(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Character)>,
+    mut players: Query<(&Client, &mut Character), With<Online>>,
 ) {
     for command in commands.iter() {
         if let Command::Config((option, value)) = &command.command {
@@ -125,7 +125,7 @@ pub fn handle_save_config_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut SaveConfig)>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<&Client, With<Character>>,
+    players: Query<&Client, With<Online>>,
 ) {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {

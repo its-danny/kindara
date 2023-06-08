@@ -21,7 +21,15 @@
               character: "|",
             ),
           ),
-        }
+        },
+        children: [
+          (
+            value: Inline((
+              name: "world.testing.movement.0.0.0.vase",
+              templates: ["../../items/testing/vase"],
+            ))
+          )
+        ]
       )),
     ),
     (

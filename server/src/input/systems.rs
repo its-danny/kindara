@@ -4,7 +4,7 @@ use bevy_nest::prelude::*;
 use crate::{
     player::{
         commands::config::handle_config,
-        components::{Character, Client},
+        components::{Client, Online},
     },
     social::commands::{say::handle_say, who::handle_who},
     spatial::commands::{
@@ -13,13 +13,13 @@ use crate::{
     },
 };
 
-use super::events::ParsedCommand;
+use super::events::{ParsedCommand, ProxyCommand};
 
 pub fn parse_command(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     mut commands: EventWriter<ParsedCommand>,
-    players: Query<&Client, With<Character>>,
+    players: Query<&Client, With<Online>>,
 ) {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
@@ -47,5 +47,16 @@ pub fn parse_command(
         }
 
         outbox.send_text(client.id, "Unknown command.");
+    }
+}
+
+pub fn handle_proxy_command(
+    mut proxy: EventReader<ProxyCommand>,
+    mut commands: EventWriter<ParsedCommand>,
+) {
+    for proxied in proxy.iter() {
+        info!("Sending proxied command: {:?}", proxied.0);
+
+        commands.send(proxied.0.clone());
     }
 }

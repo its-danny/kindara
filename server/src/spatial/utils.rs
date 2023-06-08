@@ -1,9 +1,5 @@
 use bevy::prelude::*;
 
-use crate::visual::components::Sprite;
-
-use super::components::Tile;
-
 pub fn offset_for_direction(direction: &str) -> Option<IVec3> {
     match direction {
         "north" | "n" => Some(IVec3::new(0, -1, 0)),
@@ -17,13 +13,5 @@ pub fn offset_for_direction(direction: &str) -> Option<IVec3> {
         "up" | "u" => Some(IVec3::new(0, 0, 1)),
         "down" | "d" => Some(IVec3::new(0, 0, -1)),
         _ => None,
-    }
-}
-
-pub fn view_for_tile(tile: &Tile, sprite: &Sprite, brief: bool) -> String {
-    if brief {
-        format!("{} {}", sprite.character, tile.name)
-    } else {
-        format!("{} {}\n{}", sprite.character, tile.name, tile.description)
     }
 }

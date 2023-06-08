@@ -4,7 +4,10 @@ use sqlx::PgPool;
 
 use crate::{
     db::pool::DatabasePool,
-    input::{events::ParsedCommand, systems::parse_command},
+    input::{
+        events::{ParsedCommand, ProxyCommand},
+        systems::parse_command,
+    },
     Set,
 };
 
@@ -30,6 +33,7 @@ impl AppBuilder {
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()
+            .add_event::<ProxyCommand>()
             .add_system(parse_command.in_base_set(Set::Input));
 
         if let Some(database) = self.database {

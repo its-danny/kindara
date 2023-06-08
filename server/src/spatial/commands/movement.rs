@@ -5,13 +5,12 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
-    player::components::{Character, Client},
+    input::events::{Command, ParsedCommand, ProxyCommand},
+    player::components::{Client, Online},
     spatial::{
         components::{Position, Tile, Zone},
-        utils::{offset_for_direction, view_for_tile},
+        utils::offset_for_direction,
     },
-    visual::components::Sprite,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -40,20 +39,21 @@ pub fn handle_movement(
 pub fn movement(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
+    mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Character, &Parent)>,
-    tiles: Query<(Entity, &Position, &Tile, &Sprite, &Parent)>,
+    mut players: Query<(Entity, &Client, &Parent), With<Online>>,
+    tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let Some((player, client, character, tile)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
+            let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
                 debug!("Could not find player for client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok((_, position, _, _, zone)) = tiles.get(tile.get()) else {
+            let Ok((_, position, zone)) = tiles.get(tile.get()) else {
                 debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
@@ -69,11 +69,11 @@ pub fn movement(
                 continue;
             };
 
-            let Some((target, tile, sprite)) = zone_tiles.iter().find_map(|child| {
+            let Some(target) = zone_tiles.iter().find_map(|child| {
                 tiles.get(*child)
                     .ok()
-                    .filter(|(_, p, _, _, _)| p.0 == position.0 + offset)
-                    .map(|(e, _, t, s, _)| (e, t, s))
+                    .filter(|(_, p, _)| p.0 == position.0 + offset)
+                    .map(|(e, _, _)| e)
             }) else {
                 outbox.send_text(client.id, "You can't go that way.");
 
@@ -82,10 +82,10 @@ pub fn movement(
 
             bevy.entity(player).set_parent(target);
 
-            outbox.send_text(
-                client.id,
-                view_for_tile(tile, sprite, character.config.brief),
-            )
+            proxy.send(ProxyCommand(ParsedCommand {
+                from: client.id,
+                command: Command::Look,
+            }));
         }
     }
 }

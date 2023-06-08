@@ -7,7 +7,7 @@ use crate::{
     auth::components::Authenticating,
     player::{
         bundles::PlayerBundle,
-        components::{Character, Client},
+        components::{Character, Client, Online},
         config::CharacterConfig,
     },
 };
@@ -93,6 +93,7 @@ impl PlayerBuilder {
         if self.authenticating {
             entity.insert(Authenticating::default());
         } else {
+            entity.insert(Online);
             entity.insert(PlayerBundle {
                 character: Character {
                     id: self.id,

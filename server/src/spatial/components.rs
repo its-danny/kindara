@@ -4,7 +4,7 @@ use bevy_proto::prelude::*;
 #[derive(Component, Reflect, FromReflect)]
 pub struct Position(pub IVec3);
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Debug, Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Zone {
     pub name: String,
