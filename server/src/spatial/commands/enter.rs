@@ -5,13 +5,9 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
-    player::components::Client,
-    spatial::{
-        components::{Position, Tile, Transition, Zone},
-        utils::view_for_tile,
-    },
-    visual::components::Sprite,
+    input::events::{Command, ParsedCommand, ProxyCommand},
+    player::components::{Client, Online},
+    spatial::components::{Position, Tile, Transition, Zone},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -42,17 +38,11 @@ pub fn handle_enter(
 pub fn enter(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
+    mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Parent)>,
+    mut players: Query<(Entity, &Client, &Parent), With<Online>>,
     transitions: Query<&Transition>,
-    tiles: Query<(
-        Entity,
-        &Position,
-        &Tile,
-        &Sprite,
-        &Parent,
-        Option<&Children>,
-    )>,
+    tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Zone>,
 ) {
     for command in commands.iter() {
@@ -63,7 +53,7 @@ pub fn enter(
                 continue;
             };
 
-            let Ok((_, _, _, _, _, siblings)) = tiles.get(tile.get()) else {
+            let Ok((_, _, _, siblings)) = tiles.get(tile.get()) else {
                 debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
@@ -94,13 +84,13 @@ pub fn enter(
                 continue;
             };
 
-            let Some((target, tile, sprite)) = tiles.iter().find_map(|(e, p, t, s, z, _)| {
+            let Some(target) = tiles.iter().find_map(|(e, p, z, _)| {
                 zones
                     .get(z.get())
                     .ok()
                     .and_then(|zone| {
                         if zone.name == transition.zone && p.0 == transition.position {
-                            Some((e, t, s))
+                            Some(e)
                         } else {
                             None
                         }
@@ -113,7 +103,10 @@ pub fn enter(
 
             bevy.entity(player).set_parent(target);
 
-            outbox.send_text(client.id, view_for_tile(tile, sprite, false));
+            proxy.send(ProxyCommand(ParsedCommand {
+                from: client.id,
+                command: Command::Look,
+            }));
         }
     }
 }

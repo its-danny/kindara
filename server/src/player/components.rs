@@ -23,6 +23,9 @@ impl Character {
     }
 }
 
+#[derive(Component)]
+pub struct Online;
+
 #[cfg(test)]
 mod tests {
     use crate::player::permissions::*;

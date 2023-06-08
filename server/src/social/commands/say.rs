@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::{Character, Client},
+    player::components::{Character, Client, Online},
     spatial::components::Tile,
 };
 
@@ -39,7 +39,7 @@ pub fn handle_say(
 pub fn say(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Character, &Parent)>,
+    players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
     for command in commands.iter() {

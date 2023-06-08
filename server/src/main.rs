@@ -1,6 +1,7 @@
 mod auth;
 mod db;
 mod input;
+mod items;
 mod net;
 mod player;
 mod social;
@@ -11,7 +12,12 @@ mod world;
 
 use std::{env, time::Duration};
 
-use bevy::{app::ScheduleRunnerSettings, asset::AssetPlugin, log::LogPlugin, prelude::*};
+use bevy::{
+    app::ScheduleRunnerSettings,
+    asset::AssetPlugin,
+    log::{Level, LogPlugin},
+    prelude::*,
+};
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
 use dotenvy::dotenv;
@@ -19,8 +25,9 @@ use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
     auth::plugin::AuthPlugin, db::pool::DatabasePool, input::plugin::InputPlugin,
-    net::plugin::NetPlugin, player::plugin::PlayerPlugin, social::plugin::SocialPlugin,
-    spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
+    items::plugin::ItemPlugin, net::plugin::NetPlugin, player::plugin::PlayerPlugin,
+    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
+    world::plugin::WorldPlugin,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -59,7 +66,10 @@ async fn main() -> Result<(), sqlx::Error> {
         // Bevy plugins
         .add_plugins(MinimalPlugins)
         .add_plugin(AssetPlugin::default())
-        .add_plugin(LogPlugin::default())
+        .add_plugin(LogPlugin {
+            level: Level::DEBUG,
+            ..Default::default()
+        })
         // 3rd party plugins
         .add_plugin(NestPlugin)
         .add_plugin(ProtoPlugin::new())
@@ -70,6 +80,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(InputPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(SpatialPlugin)
+        .add_plugin(ItemPlugin)
         .add_plugin(SocialPlugin)
         .add_plugin(VisualPlugin)
         // Get it started

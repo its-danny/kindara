@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::{Character, Client},
+    player::components::{Character, Client, Online},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -33,7 +33,7 @@ pub fn handle_who(
 pub fn who(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Character)>,
+    players: Query<(&Client, &Character), With<Online>>,
 ) {
     for command in commands.iter() {
         if let Command::Who = &command.command {

@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    player::components::Client,
+    player::components::{Client, Online},
     spatial::components::{Position, Tile, Zone},
     visual::components::Sprite,
 };
@@ -35,7 +35,7 @@ pub fn handle_map(
 pub fn map(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Parent)>,
+    players: Query<(&Client, &Parent), With<Online>>,
     tiles: Query<(&Position, &Sprite, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
 ) {
