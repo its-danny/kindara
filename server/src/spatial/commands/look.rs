@@ -1,14 +1,12 @@
 use std::sync::OnceLock;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use indefinite::indefinite;
-use inflector::string::pluralize::to_plural;
 use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    items::components::Item,
+    items::{components::Item, utils::item_name_list},
     player::components::{Character, Client, Online},
     spatial::{
         components::{Position, Tile, Zone},
@@ -146,58 +144,29 @@ fn get_players_line(
 }
 
 fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
-    let counted_item_names: HashMap<String, u16> = siblings
+    let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
-        .filter_map(|child| items.get(*child).ok())
+        .filter_map(|sibling| items.get(*sibling).ok())
         .map(|item| item.name_on_ground.clone())
-        .fold(HashMap::new(), |mut map, name| {
-            *map.entry(name).or_default() += 1;
+        .collect::<Vec<String>>();
 
-            map
-        });
-
-    if counted_item_names.is_empty() {
+    if items_found.is_empty() {
         return "".into();
     }
 
-    let mut item_names = counted_item_names
-        .iter()
-        .map(|(name, count)| {
-            if *count > 1 {
-                format!("{} {}", count, to_plural(name))
-            } else {
-                indefinite(name)
-            }
-        })
-        .collect::<Vec<_>>();
+    let item_names = item_name_list(&items_found);
 
-    item_names.sort();
-
-    let item_names_concat = match item_names.len() {
-        1 => item_names[0].clone(),
-        2 => format!("{} and {}", item_names[0], item_names[1]),
-        _ => {
-            let last = item_names.pop().unwrap_or_default();
-
-            format!("{}, and {}", item_names.join(", "), last)
-        }
-    };
-
-    let item_names_formatted = format!(
+    let formatted = format!(
         "{}{}",
-        item_names_concat
-            .chars()
-            .next()
-            .unwrap_or_default()
-            .to_uppercase(),
-        &item_names_concat[1..]
+        item_names.chars().next().unwrap_or_default().to_uppercase(),
+        &item_names[1..]
     );
 
     format!(
         "\n\n{} {} on the ground.",
-        item_names_formatted,
-        if counted_item_names.values().sum::<u16>() == 1 {
+        formatted,
+        if items_found.len() == 1 {
             "lies"
         } else {
             "lie"
