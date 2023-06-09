@@ -68,13 +68,14 @@ pub fn look(
 
             let exits = get_exits(position, zone_tiles, &tiles);
             let items_line = get_items_line(siblings, &items);
+            let players_line = get_players_line(client, siblings, &players);
 
             let output = if character.config.brief {
                 format!("{} {}{}", sprite.character, tile.name, exits)
             } else {
                 format!(
-                    "{} {}{}\n{}{}",
-                    sprite.character, tile.name, exits, tile.description, items_line,
+                    "{} {}{}\n{}{}{}",
+                    sprite.character, tile.name, exits, tile.description, items_line, players_line,
                 )
             };
 
@@ -108,8 +109,44 @@ fn get_exits(
     format!(" [{}]", exits.join(", "))
 }
 
+fn get_players_line(
+    client: &Client,
+    siblings: Option<&Children>,
+    players: &Query<(&Client, &Character, &Parent), With<Online>>,
+) -> String {
+    let mut player_names = siblings
+        .iter()
+        .flat_map(|children| children.iter())
+        .filter_map(|child| players.get(*child).ok())
+        .filter(|(c, _, _)| c.id != client.id)
+        .map(|(_, character, _)| character.name.clone())
+        .collect::<Vec<String>>();
+
+    if player_names.is_empty() {
+        return "".into();
+    }
+
+    player_names.sort();
+
+    let player_names_concat = match player_names.len() {
+        1 => player_names[0].clone(),
+        2 => format!("{} and {}", player_names[0], player_names[1]),
+        _ => {
+            let last = player_names.pop().unwrap_or_default();
+
+            format!("{}, and {}", player_names.join(", "), last)
+        }
+    };
+
+    format!(
+        "\n\n{} {} here.",
+        player_names_concat,
+        if player_names.len() == 1 { "is" } else { "are" }
+    )
+}
+
 fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
-    let item_names: HashMap<String, u16> = siblings
+    let counted_item_names: HashMap<String, u16> = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|child| items.get(*child).ok())
@@ -120,11 +157,11 @@ fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
             map
         });
 
-    if item_names.is_empty() {
+    if counted_item_names.is_empty() {
         return "".into();
     }
 
-    let mut item_names_list = item_names
+    let mut item_names = counted_item_names
         .iter()
         .map(|(name, count)| {
             if *count > 1 {
@@ -135,30 +172,32 @@ fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
         })
         .collect::<Vec<_>>();
 
-    item_names_list.sort();
+    item_names.sort();
 
-    let item_names_sentence = if item_names_list.len() > 1 {
-        let last = item_names_list.pop().unwrap_or_default();
+    let item_names_concat = match item_names.len() {
+        1 => item_names[0].clone(),
+        2 => format!("{} and {}", item_names[0], item_names[1]),
+        _ => {
+            let last = item_names.pop().unwrap_or_default();
 
-        format!("{}, and {}", item_names_list.join(", "), last)
-    } else {
-        item_names_list.join(", ")
+            format!("{}, and {}", item_names.join(", "), last)
+        }
     };
 
     let item_names_formatted = format!(
         "{}{}",
-        item_names_sentence
+        item_names_concat
             .chars()
             .next()
             .unwrap_or_default()
             .to_uppercase(),
-        &item_names_sentence[1..]
+        &item_names_concat[1..]
     );
 
     format!(
         "\n\n{} {} on the ground.",
         item_names_formatted,
-        if item_names.values().sum::<u16>() == 1 {
+        if counted_item_names.values().sum::<u16>() == 1 {
             "lies"
         } else {
             "lie"
@@ -228,6 +267,71 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(content, "x The Void [N, U]\nA vast, empty void.");
+    }
+
+    #[test]
+    fn other_player() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(look);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new()
+            .sprite("x")
+            .name("The Void")
+            .description("A vast, empty void.")
+            .build(&mut app, zone);
+
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        PlayerBuilder::new()
+            .tile(tile)
+            .name("Astrid")
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "look");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(
+            content,
+            "x The Void\nA vast, empty void.\n\nAstrid is here."
+        );
+    }
+
+    #[test]
+    fn multiple_other_player() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(look);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new()
+            .sprite("x")
+            .name("The Void")
+            .description("A vast, empty void.")
+            .build(&mut app, zone);
+
+        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        PlayerBuilder::new()
+            .tile(tile)
+            .name("Astrid")
+            .build(&mut app);
+
+        PlayerBuilder::new()
+            .tile(tile)
+            .name("Ramos")
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "look");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(
+            content,
+            "x The Void\nA vast, empty void.\n\nAstrid and Ramos are here."
+        );
     }
 
     #[test]
@@ -324,7 +428,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\nA rock, and a stick lie on the ground."
+            "x The Void\nA vast, empty void.\n\nA rock and a stick lie on the ground."
         );
     }
 }
