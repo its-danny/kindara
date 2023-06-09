@@ -3,7 +3,7 @@ use bevy_nest::server::ClientId;
 
 use super::config::CharacterConfig;
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 pub struct Client {
     pub id: ClientId,
     pub width: u16,

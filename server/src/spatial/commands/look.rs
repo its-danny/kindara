@@ -49,7 +49,7 @@ pub fn look(
     for command in commands.iter() {
         if let Command::Look = &command.command {
             let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -229,7 +229,7 @@ mod tests {
             .description("A vast, empty void.")
             .build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();
@@ -259,7 +259,7 @@ mod tests {
             .position(IVec3::new(0, 0, 1))
             .build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();
@@ -281,7 +281,7 @@ mod tests {
             .description("A vast, empty void.")
             .build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         PlayerBuilder::new()
             .tile(tile)
@@ -311,7 +311,7 @@ mod tests {
             .description("A vast, empty void.")
             .build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         PlayerBuilder::new()
             .tile(tile)
@@ -351,7 +351,7 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();
@@ -385,7 +385,7 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();
@@ -419,7 +419,7 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "look");
         app.update();

@@ -42,7 +42,7 @@ pub fn map(
     for command in commands.iter() {
         if let Command::Map = &command.command {
             let Some((client, tile)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };

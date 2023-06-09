@@ -12,6 +12,7 @@ use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
+    items::components::Inventory,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client, Online},
@@ -39,7 +40,7 @@ pub fn authenticate(
         }
     }) {
         let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
-            debug!("Could not find authentication state for client ID: {:?}", message.from);
+            debug!("Could not find authentication state for Client ID: {:?}", message.from);
 
             continue;
         };
@@ -110,7 +111,7 @@ pub fn handle_user_exists_task(
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
             let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == client_id) else {
-                debug!("Could not find authentication state for client ID: {:?}", client_id);
+                debug!("Could not find authentication state for Client ID: {:?}", client_id);
 
                 continue;
             };
@@ -189,7 +190,7 @@ pub fn handle_authenticate_task(
             let Some((player_entity, client, mut auth)) =
                 clients.iter_mut().find(|(_, c, _)| c.id == client_id)
             else {
-                debug!("Could not find authentication state for client ID: {:?}", client_id);
+                debug!("Could not find authentication state for Client ID: {:?}", client_id);
 
                 continue;
             };
@@ -214,7 +215,10 @@ pub fn handle_authenticate_task(
                             },
                         },
                     ))
-                    .set_parent(spawn);
+                    .set_parent(spawn)
+                    .with_children(|parent| {
+                        parent.spawn(Inventory);
+                    });
 
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
                 outbox.send_text(client.id, "May thy journey here be prosperous.");
@@ -304,7 +308,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         TileBuilder::new().is_spawn().build(&mut app, zone);
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .authenticating(true)
             .name("Icauna")
             .build(&mut app);
@@ -360,7 +364,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         TileBuilder::new().is_spawn().build(&mut app, zone);
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .authenticating(true)
             .name("Bres")
             .password("secret")
@@ -411,7 +415,7 @@ mod tests {
             handle_authenticate_task,
         ));
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .authenticating(true)
             .name("Bres")
             .password("secret")

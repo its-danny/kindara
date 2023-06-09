@@ -4,10 +4,12 @@ use bevy_nest::server::ClientId;
 pub enum Command {
     Config((Option<String>, Option<String>)),
     Enter(Option<String>),
+    Inventory,
     Look,
     Map,
     Movement(String),
     Say(String),
+    Take(String),
     Teleport((String, (i32, i32, i32))),
     Who,
 }

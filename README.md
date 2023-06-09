@@ -36,8 +36,8 @@ and [`Authenticating`](https://github.com/its-danny/aureus/blob/main/server/src/
 **When a user sends a message:**
 
 - If authenticating, all messages are handled by the [`auth systems`](https://github.com/its-danny/aureus/blob/main/server/src/auth/systems.rs).
-When succesfully authenticated, this component is removed and a
-[`Character`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs) component is added.
+When succesfully authenticated, this component is removed and an
+[`Online`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs) component is added.
 - When not authenticating, all messages first go through [`parse_command`](https://github.com/its-danny/aureus/blob/main/server/src/input/systems.rs)
 to be turned into their respective [`Command`](https://github.com/its-danny/aureus/blob/main/server/src/input/events.rs)
 variant and sent to `EventWriter<ParsedCommand>`. This system belongs to the `Input` system set that runs _before_ bevys `CoreSet::Update`.
