@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParsedCommand},
     items::{
-        components::{Inventory, Item},
+        components::{CanTake, Inventory, Item},
         utils::item_name_list,
     },
     player::components::{Client, Online},
@@ -50,7 +50,7 @@ pub fn take(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Entity, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item)>,
+    items: Query<(Entity, &Item), With<CanTake>>,
 ) {
     for command in commands.iter() {
         if let Command::Take((target, all)) = &command.command {
@@ -126,8 +126,17 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("rock").tile(tile).build(&mut app);
+        ItemBuilder::new()
+            .name("stick")
+            .can_take(true)
+            .tile(tile)
+            .build(&mut app);
+
+        ItemBuilder::new()
+            .name("rock")
+            .can_take(true)
+            .tile(tile)
+            .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
@@ -160,6 +169,7 @@ mod tests {
         ItemBuilder::new()
             .name("stick")
             .tags(vec!["weapon"])
+            .can_take(true)
             .tile(tile)
             .build(&mut app);
 
@@ -191,9 +201,23 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("rock").tile(tile).build(&mut app);
+        ItemBuilder::new()
+            .name("stick")
+            .can_take(true)
+            .tile(tile)
+            .build(&mut app);
+
+        ItemBuilder::new()
+            .name("stick")
+            .can_take(true)
+            .tile(tile)
+            .build(&mut app);
+
+        ItemBuilder::new()
+            .name("rock")
+            .can_take(true)
+            .tile(tile)
+            .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
