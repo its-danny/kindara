@@ -1,0 +1,12 @@
+
+(
+    name: "items.testing.flower",
+    schematics: {
+        "server::items::components::Item": (
+            name: "Flower",
+            name_on_ground: "delicate flower",
+            description: "An indigo blossom radiant with gradient hues, its golden heart shimmering amidst delicate petals.",
+            tags: ["flower", "delicate"]
+        )
+    }
+)

@@ -16,13 +16,12 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_take(
+pub fn handle_drop(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    let regex =
-        REGEX.get_or_init(|| Regex::new(r"^(take|get) ((?P<all>all) )?(?P<target>.+)$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^drop ((?P<all>all) )?(?P<target>.+)$").unwrap());
 
     if let Some(captures) = regex.captures(content) {
         let target = captures
@@ -34,7 +33,7 @@ pub fn handle_take(
 
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Take((target, all)),
+            command: Command::Drop((target, all)),
         });
 
         true
@@ -43,37 +42,38 @@ pub fn handle_take(
     }
 }
 
-pub fn take(
+pub fn drop(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
-    inventories: Query<Entity, With<Inventory>>,
-    tiles: Query<&Children, With<Tile>>,
+    inventories: Query<Option<&Children>, With<Inventory>>,
+    tiles: Query<Entity, With<Tile>>,
     items: Query<(Entity, &Item)>,
 ) {
     for command in commands.iter() {
-        if let Command::Take((target, all)) = &command.command {
+        if let Command::Drop((target, all)) = &command.command {
             let Some((client, tile, children)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
 
-            let Ok(siblings) = tiles.get(tile.get()) else {
+            let Ok(tile) = tiles.get(tile.get()) else {
                 debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
             };
 
-            let Some(inventory) = children.iter().find_map(|child| inventories.get(*child).ok()) else {
+            let Some(items_in_inventory) = children.iter().find_map(|child| inventories.get(*child).ok()) else {
                 debug!("Could not get inventory for client: {:?}", client);
 
                 continue;
             };
 
-            let mut items_found = siblings
+            let mut items_found = items_in_inventory
                 .iter()
+                .flat_map(|children| children.iter())
                 .filter_map(|sibling| items.get(*sibling).ok())
                 .filter(|(_, item)| {
                     item.name.to_lowercase() == target.to_lowercase()
@@ -87,7 +87,7 @@ pub fn take(
             }
 
             items_found.iter().for_each(|(entity, _)| {
-                bevy.entity(*entity).set_parent(inventory);
+                bevy.entity(*entity).set_parent(tile);
             });
 
             let item_names = item_name_list(
@@ -98,9 +98,9 @@ pub fn take(
             );
 
             if item_names.is_empty() {
-                outbox.send_text(client.id, format!("You don't see a {target} here."));
+                outbox.send_text(client.id, format!("You don't have a {target}."));
             } else {
-                outbox.send_text(client.id, format!("You take {item_names}."));
+                outbox.send_text(client.id, format!("You drop {item_names}."));
             }
         }
     }
@@ -121,104 +121,106 @@ mod tests {
     #[test]
     fn by_name() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_system(drop);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("rock").tile(tile).build(&mut app);
+        let stick = ItemBuilder::new().name("stick").build(&mut app);
+        let rock = ItemBuilder::new().name("rock").build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
             .has_inventory(true)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "take stick");
+        app.world.entity_mut(inventory.unwrap()).add_child(stick);
+        app.world.entity_mut(inventory.unwrap()).add_child(rock);
+
+        send_message(&mut app, client_id, "drop stick");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take a stick."));
+        assert_eq!(content, format!("You drop a stick."));
 
         assert_eq!(
             app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
             1
         );
-
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 2);
     }
 
     #[test]
     fn by_tag() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_system(drop);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
-
-        ItemBuilder::new()
-            .name("stick")
-            .tags(vec!["weapon"])
-            .tile(tile)
-            .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
             .has_inventory(true)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "take weapon");
+        let stick = ItemBuilder::new()
+            .name("stick")
+            .tags(vec!["weapon"])
+            .build(&mut app);
+
+        app.world.entity_mut(inventory.unwrap()).add_child(stick);
+
+        send_message(&mut app, client_id, "drop stick");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take a stick."));
+        assert_eq!(content, format!("You drop a stick."));
 
-        assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            1
-        );
-
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 1);
+        assert!(app.world.get::<Children>(inventory.unwrap()).is_none(),);
     }
 
     #[test]
     fn all() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_system(drop);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
-
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("stick").tile(tile).build(&mut app);
-        ItemBuilder::new().name("rock").tile(tile).build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
             .has_inventory(true)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "take all stick");
+        let stick = ItemBuilder::new().name("stick").build(&mut app);
+        app.world.entity_mut(inventory.unwrap()).add_child(stick);
+
+        let another_stick = ItemBuilder::new().name("stick").build(&mut app);
+        app.world
+            .entity_mut(inventory.unwrap())
+            .add_child(another_stick);
+
+        let rock = ItemBuilder::new().name("rock").build(&mut app);
+        app.world.entity_mut(inventory.unwrap()).add_child(rock);
+
+        send_message(&mut app, client_id, "drop all stick");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take 2 sticks."));
+        assert_eq!(content, format!("You drop 2 sticks."));
 
         assert_eq!(
             app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            2
+            1
         );
-
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 2);
     }
 
     #[test]
     fn not_found() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_system(drop);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -228,12 +230,12 @@ mod tests {
             .has_inventory(true)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "take sword");
+        send_message(&mut app, client_id, "drop sword");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You don't see a sword here."));
+        assert_eq!(content, format!("You don't have a sword."));
 
         assert!(app.world.get::<Children>(inventory.unwrap()).is_none());
     }
