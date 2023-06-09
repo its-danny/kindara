@@ -64,7 +64,7 @@ pub fn teleport(
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
             let Some((player, client, character, tile)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -153,7 +153,7 @@ mod tests {
             .position(IVec3::ZERO)
             .build(&mut app, destination_zone);
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(start)
             .build(&mut app);
@@ -179,7 +179,7 @@ mod tests {
             .position(IVec3::new(0, 1, 0))
             .build(&mut app, zone);
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(start)
             .build(&mut app);
@@ -198,7 +198,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new()
+        let (_, client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(tile)
             .build(&mut app);
@@ -219,7 +219,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new()
+        let (_, client_id, _) = PlayerBuilder::new()
             .role(TELEPORT)
             .tile(tile)
             .build(&mut app);

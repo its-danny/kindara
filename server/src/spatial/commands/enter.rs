@@ -48,7 +48,7 @@ pub fn enter(
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
             let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -138,7 +138,7 @@ mod tests {
             .tags(&vec!["the void"])
             .build(&mut app, start, destination);
 
-        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
+        let (player, client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter the void");
         app.update();
@@ -163,7 +163,7 @@ mod tests {
         TransitionBuilder::new().build(&mut app, start, first);
         TransitionBuilder::new().build(&mut app, start, second);
 
-        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
+        let (player, client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter");
         app.update();
@@ -186,7 +186,7 @@ mod tests {
             .tags(&vec!["enter the void"])
             .build(&mut app, start, other);
 
-        let (client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "enter at your own risk");
         app.update();
@@ -204,7 +204,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "enter the dragon");
         app.update();

@@ -48,7 +48,7 @@ pub fn movement(
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
             let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -117,7 +117,7 @@ mod tests {
             .position(IVec3::new(0, 1, 0))
             .build(&mut app, zone);
 
-        let (client_id, player) = PlayerBuilder::new().tile(start).build(&mut app);
+        let (player, client_id, _) = PlayerBuilder::new().tile(start).build(&mut app);
 
         send_message(&mut app, client_id, "south");
         app.update();
@@ -136,7 +136,7 @@ mod tests {
             .position(IVec3::ZERO)
             .build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "south");
         app.update();

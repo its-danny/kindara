@@ -14,7 +14,7 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
         }
     }) {
         let Some(mut client) = clients.iter_mut().find(|c| c.id == message.from) else {
-            debug!("Could not find player for client: {:?}", message.from);
+            debug!("Could not find authenticated client: {:?}", message.from);
 
             continue;
         };

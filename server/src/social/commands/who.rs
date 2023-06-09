@@ -38,7 +38,7 @@ pub fn who(
     for command in commands.iter() {
         if let Command::Who = &command.command {
             let Some((client, _)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -67,7 +67,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(who);
 
-        let (client_id, _) = PlayerBuilder::new().name("Ashur").build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().name("Ashur").build(&mut app);
         PlayerBuilder::new().name("Bau").build(&mut app);
 
         send_message(&mut app, client_id, "who");

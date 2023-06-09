@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
+    items::commands::{inventory::handle_inventory, take::handle_take},
     player::{
         commands::config::handle_config,
         components::{Client, Online},
@@ -29,17 +30,19 @@ pub fn parse_command(
         }
     }) {
         let Some(client) = players.iter().find(|c| c.id == message.from) else {
-            debug!("Could not find player for client: {:?}", message.from);
+            debug!("Could not find authenticated client: {:?}", message.from);
 
             continue;
         };
 
         if handle_config(client, content, &mut commands)
             || handle_enter(client, content, &mut commands)
+            || handle_inventory(client, content, &mut commands)
             || handle_look(client, content, &mut commands)
             || handle_map(client, content, &mut commands)
             || handle_movement(client, content, &mut commands)
             || handle_say(client, content, &mut commands)
+            || handle_take(client, content, &mut commands)
             || handle_teleport(client, content, &mut commands)
             || handle_who(client, content, &mut commands)
         {

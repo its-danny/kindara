@@ -5,6 +5,7 @@ use sqlx::{types::Json, PgPool};
 
 use crate::{
     auth::components::Authenticating,
+    items::components::Inventory,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client, Online},
@@ -25,6 +26,8 @@ pub struct PlayerBuilder {
     config: CharacterConfig,
     #[dummy(expr = "false")]
     authenticating: bool,
+    #[dummy(expr = "false")]
+    has_inventory: bool,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -65,6 +68,11 @@ impl PlayerBuilder {
         self
     }
 
+    pub fn has_inventory(mut self, has_inventory: bool) -> Self {
+        self.has_inventory = has_inventory;
+        self
+    }
+
     pub fn tile(mut self, tile: Entity) -> Self {
         self.tile = Some(tile);
         self
@@ -82,8 +90,9 @@ impl PlayerBuilder {
         Ok(self)
     }
 
-    pub fn build(self, app: &mut App) -> (ClientId, Entity) {
+    pub fn build(self, app: &mut App) -> (Entity, ClientId, Option<Entity>) {
         let client_id = ClientId::new();
+        let mut inventory: Option<Entity> = None;
 
         let mut entity = app.world.spawn((Client {
             id: client_id,
@@ -93,14 +102,22 @@ impl PlayerBuilder {
         if self.authenticating {
             entity.insert(Authenticating::default());
         } else {
-            entity.insert(Online);
-            entity.insert(PlayerBundle {
-                character: Character {
-                    id: self.id,
-                    name: self.name,
-                    role: self.role,
-                    config: self.config,
+            entity.insert((
+                Online,
+                PlayerBundle {
+                    character: Character {
+                        id: self.id,
+                        name: self.name,
+                        role: self.role,
+                        config: self.config,
+                    },
                 },
+            ));
+        }
+
+        if self.has_inventory {
+            entity.with_children(|parent| {
+                inventory = Some(parent.spawn(Inventory).id());
             });
         }
 
@@ -108,6 +125,6 @@ impl PlayerBuilder {
             entity.set_parent(tile);
         }
 
-        (client_id, entity.id())
+        (entity.id(), client_id, inventory)
     }
 }

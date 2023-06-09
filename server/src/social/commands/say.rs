@@ -45,7 +45,7 @@ pub fn say(
     for command in commands.iter() {
         if let Command::Say(message) = &command.command {
             let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -94,7 +94,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "say Hello!");
         app.update();
@@ -112,12 +112,12 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (sender_client_id, _) = PlayerBuilder::new()
+        let (_, sender_client_id, _) = PlayerBuilder::new()
             .tile(tile)
             .name("Flora")
             .build(&mut app);
 
-        let (recipient_client_id, _) = PlayerBuilder::new()
+        let (_, recipient_client_id, _) = PlayerBuilder::new()
             .tile(tile)
             .name("Salus")
             .build(&mut app);
@@ -138,7 +138,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        let (client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "say   ");
         app.update();

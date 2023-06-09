@@ -8,6 +8,7 @@ pub struct ItemBuilder {
     name: String,
     name_on_ground: String,
     description: String,
+    tags: Vec<String>,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -33,6 +34,11 @@ impl ItemBuilder {
         self
     }
 
+    pub fn tags(mut self, tags: Vec<&str>) -> Self {
+        self.tags = tags.iter().map(|t| t.to_string()).collect();
+        self
+    }
+
     pub fn tile(mut self, tile: Entity) -> Self {
         self.tile = Some(tile);
         self
@@ -43,6 +49,7 @@ impl ItemBuilder {
             name: self.name,
             name_on_ground: self.name_on_ground,
             description: self.description,
+            tags: self.tags,
         });
 
         if let Some(tile) = self.tile {

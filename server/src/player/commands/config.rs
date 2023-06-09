@@ -55,7 +55,7 @@ pub fn config(
     for command in commands.iter() {
         if let Command::Config((option, value)) = &command.command {
             let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find player for client: {:?}", command.from);
+                debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
@@ -130,7 +130,7 @@ pub fn handle_save_config_task(
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
             let Some(client) = players.iter().find(|c| c.id == client_id) else {
-                debug!("Could not find player for client ID: {:?}", client_id);
+                debug!("Could not find authenticated client for Client ID: {:?}", client_id);
 
                 continue;
             };
@@ -159,7 +159,7 @@ mod tests {
         let mut app = AppBuilder::new().database(&pool).build();
         app.add_systems((config, handle_save_config_task));
 
-        let (client_id, player) = PlayerBuilder::new()
+        let (player, client_id, _) = PlayerBuilder::new()
             .config(CharacterConfig {
                 brief: false,
                 ..Default::default()
@@ -191,7 +191,7 @@ mod tests {
         let mut app = AppBuilder::new().database(&pool).build();
         app.add_system(config);
 
-        let (client_id, _) = PlayerBuilder::new()
+        let (_, client_id, _) = PlayerBuilder::new()
             .config(CharacterConfig {
                 brief: false,
                 ..Default::default()
@@ -213,7 +213,7 @@ mod tests {
         let mut app = AppBuilder::new().database(&pool).build();
         app.add_system(config);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "config god true");
         app.update();
@@ -228,7 +228,7 @@ mod tests {
         let mut app = AppBuilder::new().database(&pool).build();
         app.add_system(config);
 
-        let (client_id, _) = PlayerBuilder::new().build(&mut app);
+        let (_, client_id, _) = PlayerBuilder::new().build(&mut app);
 
         send_message(&mut app, client_id, "config brief please");
         app.update();
