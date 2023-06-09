@@ -10,5 +10,9 @@ pub struct Item {
     pub tags: Vec<String>,
 }
 
+#[derive(Component, Schematic, Reflect, FromReflect)]
+#[reflect(Schematic)]
+pub struct CanTake;
+
 #[derive(Component)]
 pub struct Inventory;

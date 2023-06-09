@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
-use crate::items::components::Item;
+use crate::items::components::{CanTake, Item};
 
 #[derive(Dummy)]
 pub struct ItemBuilder {
@@ -9,6 +9,8 @@ pub struct ItemBuilder {
     name_on_ground: String,
     description: String,
     tags: Vec<String>,
+    #[dummy(expr = "false")]
+    can_take: bool,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -39,6 +41,11 @@ impl ItemBuilder {
         self
     }
 
+    pub fn can_take(mut self, can_take: bool) -> Self {
+        self.can_take = can_take;
+        self
+    }
+
     pub fn tile(mut self, tile: Entity) -> Self {
         self.tile = Some(tile);
         self
@@ -54,6 +61,10 @@ impl ItemBuilder {
 
         if let Some(tile) = self.tile {
             entity.set_parent(tile);
+        }
+
+        if self.can_take {
+            entity.insert(CanTake);
         }
 
         entity.id()

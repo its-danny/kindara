@@ -7,6 +7,7 @@
             name_on_ground: "delicate flower",
             description: "An indigo blossom radiant with gradient hues, its golden heart shimmering amidst delicate petals.",
             tags: ["flower", "delicate"]
-        )
+        ),
+        "server::items::components::CanTake": (),
     }
 )
