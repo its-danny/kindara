@@ -25,7 +25,13 @@
         children: [
           (
             value: Inline((
-              name: "world.testing.movement.0.0.0.vase",
+              name: "world.testing.movement.0.0.0.vase-1",
+              templates: ["../../items/testing/vase"],
+            ))
+          ),
+          (
+            value: Inline((
+              name: "world.testing.movement.0.0.0.vase-2",
               templates: ["../../items/testing/vase"],
             ))
           )

@@ -9,7 +9,7 @@ pub enum Command {
     Map,
     Movement(String),
     Say(String),
-    Take(String),
+    Take((String, bool)),
     Teleport((String, (i32, i32, i32))),
     Who,
 }
