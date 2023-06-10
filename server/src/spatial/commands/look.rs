@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use inflector::cases::titlecase::to_title_case;
 use regex::Regex;
+use vari::vformat;
 
 use crate::{
     input::events::{Command, ParsedCommand},
@@ -113,7 +114,7 @@ pub fn look(
                 output = if character.config.brief {
                     format!("{} {}{}", sprite.character, tile.name, exits)
                 } else {
-                    format!(
+                    vformat!(
                         "{} {}{}\n{}{}{}",
                         sprite.character,
                         tile.name,
@@ -175,12 +176,20 @@ fn get_players_line(
     player_names.sort();
 
     let player_names_concat = match player_names.len() {
-        1 => player_names[0].clone(),
-        2 => format!("{} and {}", player_names[0], player_names[1]),
+        1 => vformat!("[$cyan]{}[$/]", player_names[0]),
+        2 => vformat!(
+            "[$cyan]{}[$/] and [$cyan]{}[$/]",
+            player_names[0],
+            player_names[1]
+        ),
         _ => {
             let last = player_names.pop().unwrap_or_default();
 
-            format!("{}, and {}", player_names.join(", "), last)
+            vformat!(
+                "[$cyan]{}[$/], and [$cyan]{}[$/]",
+                player_names.join(", "),
+                last
+            )
         }
     };
 
@@ -246,6 +255,8 @@ fn items_on_surface(
 
 #[cfg(test)]
 mod tests {
+    use vari::util::NoAnsi;
+
     use crate::{
         items::components::SurfaceKind,
         test::{
@@ -394,7 +405,7 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(
-            content,
+            content.no_ansi(),
             "x The Void\nA vast, empty void.\n\nAstrid is here."
         );
     }
@@ -429,7 +440,7 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(
-            content,
+            content.no_ansi(),
             "x The Void\nA vast, empty void.\n\nAstrid and Ramos are here."
         );
     }
