@@ -15,7 +15,7 @@
             position: (IVec3 ( x: 0, y: 0, z: 0 )),
             tile: (
               name: "A testing room",
-              description: "This looks like a good place to test movement. A vase sits in the corner.",
+              description: "This looks like a good place to test movement. A [$yellow]vase[$/] sits in the corner.",
             ),
             sprite: (
               character: "|",

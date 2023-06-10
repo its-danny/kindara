@@ -9,6 +9,7 @@ use censor::Censor;
 use futures_lite::future;
 use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
+use vari::vformat;
 
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
@@ -48,7 +49,7 @@ pub fn authenticate(
         match &mut auth.state {
             AuthState::Name => {
                 if let Err(err) = name_is_valid(content) {
-                    outbox.send_text(client.id, err);
+                    outbox.send_text(client.id, vformat!("[$red]{err}[$/]"));
 
                     continue;
                 }
@@ -64,7 +65,7 @@ pub fn authenticate(
             }
             AuthState::Password => {
                 if let Err(err) = password_is_valid(content) {
-                    outbox.send_text(client.id, err);
+                    outbox.send_text(client.id, vformat!("[$red]{err}[$/]"));
 
                     continue;
                 }
