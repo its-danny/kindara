@@ -15,7 +15,7 @@
             position: (IVec3 ( x: 0, y: 0, z: 0 )),
             tile: (
               name: "A testing room",
-              description: "This looks like a good place to test movement.",
+              description: "This looks like a good place to test movement. A vase sits in the corner.",
             ),
             sprite: (
               character: "|",
@@ -27,13 +27,15 @@
             value: Inline((
               name: "world.testing.movement.0.0.0.vase-1",
               templates: ["../../items/testing/vase"],
-            ))
-          ),
-          (
-            value: Inline((
-              name: "world.testing.movement.0.0.0.vase-2",
-              templates: ["../../items/testing/vase"],
-            ))
+              children: [
+                (
+                  value: Inline((
+                    name: "world.testing.movement.0.0.0.flower-1",
+                    templates: ["../../items/testing/flower"],
+                  ))
+                ),
+              ],
+            )),
           ),
           (
             value: Inline((

@@ -84,7 +84,7 @@ pub fn movement(
 
             proxy.send(ProxyCommand(ParsedCommand {
                 from: client.id,
-                command: Command::Look,
+                command: Command::Look(None),
             }));
         }
     }

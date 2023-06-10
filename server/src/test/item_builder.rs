@@ -1,16 +1,18 @@
 use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
-use crate::items::components::{CanTake, Item};
+use crate::items::components::{CanTake, Item, Surface, SurfaceType};
 
 #[derive(Dummy)]
 pub struct ItemBuilder {
     name: String,
-    name_on_ground: String,
+    short_name: String,
     description: String,
     tags: Vec<String>,
     #[dummy(expr = "false")]
     can_take: bool,
+    #[dummy(expr = "false")]
+    is_surface: bool,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -26,8 +28,8 @@ impl ItemBuilder {
         self
     }
 
-    pub fn name_on_ground(mut self, name_on_ground: &str) -> Self {
-        self.name_on_ground = name_on_ground.to_string();
+    pub fn short_name(mut self, short_name: &str) -> Self {
+        self.short_name = short_name.to_string();
         self
     }
 
@@ -46,6 +48,11 @@ impl ItemBuilder {
         self
     }
 
+    pub fn is_surface(mut self, is_surface: bool) -> Self {
+        self.is_surface = is_surface;
+        self
+    }
+
     pub fn tile(mut self, tile: Entity) -> Self {
         self.tile = Some(tile);
         self
@@ -54,9 +61,10 @@ impl ItemBuilder {
     pub fn build(self, app: &mut App) -> Entity {
         let mut entity = app.world.spawn(Item {
             name: self.name,
-            name_on_ground: self.name_on_ground,
+            short_name: self.short_name,
             description: self.description,
             tags: self.tags,
+            visible: true,
         });
 
         if let Some(tile) = self.tile {
@@ -65,6 +73,13 @@ impl ItemBuilder {
 
         if self.can_take {
             entity.insert(CanTake);
+        }
+
+        if self.is_surface {
+            entity.insert(Surface {
+                kind: SurfaceType::Floor,
+                limit: 100,
+            });
         }
 
         entity.id()

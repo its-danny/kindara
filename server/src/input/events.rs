@@ -6,7 +6,7 @@ pub enum Command {
     Drop((String, bool)),
     Enter(Option<String>),
     Inventory,
-    Look,
+    Look(Option<String>),
     Map,
     Movement(String),
     Say(String),
