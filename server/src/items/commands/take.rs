@@ -77,7 +77,7 @@ pub fn take(
                 .filter_map(|sibling| items.get(*sibling).ok())
                 .filter(|(_, item)| {
                     item.name.to_lowercase() == target.to_lowercase()
-                        || item.name_on_ground.to_lowercase() == target.to_lowercase()
+                        || item.short_name.to_lowercase() == target.to_lowercase()
                         || item.tags.contains(&target.to_lowercase())
                 })
                 .collect::<Vec<(Entity, &Item)>>();

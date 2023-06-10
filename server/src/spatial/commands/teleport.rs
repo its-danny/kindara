@@ -118,7 +118,7 @@ pub fn teleport(
 
             proxy.send(ProxyCommand(ParsedCommand {
                 from: client.id,
-                command: Command::Look,
+                command: Command::Look(None),
             }));
         }
     }

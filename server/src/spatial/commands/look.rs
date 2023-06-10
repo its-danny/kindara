@@ -6,7 +6,10 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    items::{components::Item, utils::item_name_list},
+    items::{
+        components::{Item, Surface},
+        utils::item_name_list,
+    },
     player::components::{Character, Client, Online},
     spatial::{
         components::{Position, Tile, Zone},
@@ -22,12 +25,16 @@ pub fn handle_look(
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(look|l)$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(look|l)(?P<target> .+)?$").unwrap());
 
-    if regex.is_match(content) {
+    if let Some(captures) = regex.captures(content) {
+        let target = captures
+            .name("target")
+            .map(|m| m.as_str().trim().to_lowercase());
+
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Look,
+            command: Command::Look(target),
         });
 
         true
@@ -37,7 +44,7 @@ pub fn handle_look(
 }
 
 pub fn look(
-    items: Query<&Item>,
+    items: Query<(&Item, Option<&Surface>, Option<&Children>)>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
@@ -45,7 +52,7 @@ pub fn look(
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
-        if let Command::Look = &command.command {
+        if let Command::Look(target) = &command.command {
             let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
@@ -58,24 +65,67 @@ pub fn look(
                 continue;
             };
 
-            let Ok((_, zone_tiles)) = zones.get(zone.get()) else {
-                debug!("Could not get zone: {:?}", zone.get());
+            let output: String;
 
-                continue;
-            };
+            if let Some(target) = target {
+                let item = siblings
+                    .iter()
+                    .flat_map(|siblings| siblings.iter())
+                    .filter_map(|sibling| items.get(*sibling).ok())
+                    .find(|(item, _, _)| {
+                        item.name.to_lowercase() == target.to_lowercase()
+                            || item.short_name.to_lowercase() == target.to_lowercase()
+                            || item.tags.contains(&target.to_lowercase())
+                    });
 
-            let exits = get_exits(position, zone_tiles, &tiles);
-            let items_line = get_items_line(siblings, &items);
-            let players_line = get_players_line(client, siblings, &players);
+                if let Some((item, surface, children)) = item {
+                    let surface_line = surface
+                        .and_then(|s| children.map(|c| (s, c)))
+                        .map(|(surface, children)| {
+                            let on_surface = items_on_surface(&items, children);
+                            if on_surface.is_empty() {
+                                "".into()
+                            } else {
+                                let location = match surface.kind {
+                                    crate::items::components::SurfaceType::Floor => "On",
+                                    crate::items::components::SurfaceType::Wall => "Against",
+                                    crate::items::components::SurfaceType::Ceiling => "On",
+                                    crate::items::components::SurfaceType::Interior => "In",
+                                };
+                                format!(" {} the {} is {}.", location, item.short_name, on_surface)
+                            }
+                        })
+                        .unwrap_or("".into());
 
-            let output = if character.config.brief {
-                format!("{} {}{}", sprite.character, tile.name, exits)
+                    output = format!("{}\n{}{}", item.name, item.description, surface_line);
+                } else {
+                    output = format!("You don't see a {target} here.");
+                }
             } else {
-                format!(
-                    "{} {}{}\n{}{}{}",
-                    sprite.character, tile.name, exits, tile.description, items_line, players_line,
-                )
-            };
+                let Ok((_, zone_tiles)) = zones.get(zone.get()) else {
+                    debug!("Could not get zone: {:?}", zone.get());
+
+                    continue;
+                };
+
+                let exits = get_exits(position, zone_tiles, &tiles);
+                let items_line = get_items_line(siblings, &items);
+                let players_line = get_players_line(client, siblings, &players);
+
+                output = if character.config.brief {
+                    format!("{} {}{}", sprite.character, tile.name, exits)
+                } else {
+                    format!(
+                        "{} {}{}\n{}{}{}",
+                        sprite.character,
+                        tile.name,
+                        exits,
+                        tile.description,
+                        items_line,
+                        players_line,
+                    )
+                };
+            }
 
             outbox.send_text(client.id, output);
         }
@@ -143,12 +193,16 @@ fn get_players_line(
     )
 }
 
-fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
+fn get_items_line(
+    siblings: Option<&Children>,
+    items: &Query<(&Item, Option<&Surface>, Option<&Children>)>,
+) -> String {
     let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| items.get(*sibling).ok())
-        .map(|item| item.name_on_ground.clone())
+        .filter(|(item, _, _)| item.visible)
+        .map(|(item, _, _)| item.short_name.clone())
         .collect::<Vec<String>>();
 
     if items_found.is_empty() {
@@ -172,6 +226,24 @@ fn get_items_line(siblings: Option<&Children>, items: &Query<&Item>) -> String {
             "lie"
         }
     )
+}
+
+fn items_on_surface(
+    items: &Query<(&Item, Option<&Surface>, Option<&Children>)>,
+    children: &Children,
+) -> String {
+    let on_surface = children
+        .iter()
+        .filter_map(|child| items.get(*child).ok())
+        .filter(|(item, _, _)| item.visible)
+        .map(|(item, _, _)| item.short_name.clone())
+        .collect::<Vec<String>>();
+
+    if on_surface.is_empty() {
+        return "".into();
+    }
+
+    item_name_list(&on_surface)
 }
 
 #[cfg(test)]
@@ -206,6 +278,64 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(content, "x The Void\nA vast, empty void.");
+    }
+
+    #[test]
+    fn sends_item_info() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(look);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        ItemBuilder::new()
+            .name("Rock")
+            .description("A small rock.")
+            .tile(tile)
+            .build(&mut app);
+
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        send_message(&mut app, client_id, "look rock");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content, "Rock\nA small rock.");
+    }
+
+    #[test]
+    fn items_on_surface() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(look);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        let table = ItemBuilder::new()
+            .name("Dining Table")
+            .short_name("table")
+            .description("A small dining table.")
+            .is_surface(true)
+            .tile(tile)
+            .build(&mut app);
+
+        let plate = ItemBuilder::new()
+            .short_name("dinner plate")
+            .build(&mut app);
+        app.world.entity_mut(table).add_child(plate);
+
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        send_message(&mut app, client_id, "look table");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(
+            content,
+            "Dining Table\nA small dining table. On the table is a dinner plate."
+        );
     }
 
     #[test]
@@ -316,7 +446,7 @@ mod tests {
             .build(&mut app, zone);
 
         ItemBuilder::new()
-            .name_on_ground("rock")
+            .short_name("rock")
             .tile(tile)
             .build(&mut app);
 
@@ -346,11 +476,11 @@ mod tests {
             .build(&mut app, zone);
 
         ItemBuilder::new()
-            .name_on_ground("rock")
+            .short_name("rock")
             .tile(tile)
             .build(&mut app);
         ItemBuilder::new()
-            .name_on_ground("rock")
+            .short_name("rock")
             .tile(tile)
             .build(&mut app);
 
@@ -380,11 +510,11 @@ mod tests {
             .build(&mut app, zone);
 
         ItemBuilder::new()
-            .name_on_ground("rock")
+            .short_name("rock")
             .tile(tile)
             .build(&mut app);
         ItemBuilder::new()
-            .name_on_ground("stick")
+            .short_name("stick")
             .tile(tile)
             .build(&mut app);
 
