@@ -99,7 +99,7 @@ mod tests {
 
         let (_, client_id, _) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "inventory");
@@ -122,7 +122,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         app.world.entity_mut(item).set_parent(inventory.unwrap());

@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
-    items::commands::{drop::handle_drop, inventory::handle_inventory, take::handle_take},
+    items::commands::{
+        drop::handle_drop, inventory::handle_inventory, place::handle_place, take::handle_take,
+    },
     player::{
         commands::config::handle_config,
         components::{Client, Online},
@@ -42,6 +44,7 @@ pub fn parse_command(
             || handle_look(client, content, &mut commands)
             || handle_map(client, content, &mut commands)
             || handle_movement(client, content, &mut commands)
+            || handle_place(client, content, &mut commands)
             || handle_say(client, content, &mut commands)
             || handle_take(client, content, &mut commands)
             || handle_teleport(client, content, &mut commands)

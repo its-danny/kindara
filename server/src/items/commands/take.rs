@@ -76,9 +76,9 @@ pub fn take(
                 .iter()
                 .filter_map(|sibling| items.get(*sibling).ok())
                 .filter(|(_, item)| {
-                    item.name.to_lowercase() == target.to_lowercase()
-                        || item.short_name.to_lowercase() == target.to_lowercase()
-                        || item.tags.contains(&target.to_lowercase())
+                    item.name.to_lowercase() == *target
+                        || item.short_name.to_lowercase() == *target
+                        || item.tags.contains(target)
                 })
                 .collect::<Vec<(Entity, &Item)>>();
 
@@ -128,19 +128,19 @@ mod tests {
 
         ItemBuilder::new()
             .name("stick")
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         ItemBuilder::new()
             .name("rock")
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "take stick");
@@ -169,13 +169,13 @@ mod tests {
         ItemBuilder::new()
             .name("stick")
             .tags(vec!["weapon"])
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "take weapon");
@@ -203,25 +203,25 @@ mod tests {
 
         ItemBuilder::new()
             .name("stick")
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         ItemBuilder::new()
             .name("stick")
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         ItemBuilder::new()
             .name("rock")
-            .can_take(true)
+            .can_take()
             .tile(tile)
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "take all stick");
@@ -249,7 +249,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "take sword");

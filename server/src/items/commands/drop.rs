@@ -76,9 +76,9 @@ pub fn drop(
                 .flat_map(|children| children.iter())
                 .filter_map(|sibling| items.get(*sibling).ok())
                 .filter(|(_, item)| {
-                    item.name.to_lowercase() == target.to_lowercase()
-                        || item.short_name.to_lowercase() == target.to_lowercase()
-                        || item.tags.contains(&target.to_lowercase())
+                    item.name.to_lowercase() == *target
+                        || item.short_name.to_lowercase() == *target
+                        || item.tags.contains(target)
                 })
                 .collect::<Vec<(Entity, &Item)>>();
 
@@ -131,7 +131,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         app.world.entity_mut(inventory.unwrap()).add_child(stick);
@@ -160,7 +160,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         let stick = ItemBuilder::new()
@@ -190,7 +190,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         let stick = ItemBuilder::new().name("stick").build(&mut app);
@@ -227,7 +227,7 @@ mod tests {
 
         let (_, client_id, inventory) = PlayerBuilder::new()
             .tile(tile)
-            .has_inventory(true)
+            .has_inventory()
             .build(&mut app);
 
         send_message(&mut app, client_id, "drop sword");

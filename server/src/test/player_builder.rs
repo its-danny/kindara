@@ -63,13 +63,13 @@ impl PlayerBuilder {
         self
     }
 
-    pub fn authenticating(mut self, authenticating: bool) -> Self {
-        self.authenticating = authenticating;
+    pub fn is_authenticating(mut self) -> Self {
+        self.authenticating = true;
         self
     }
 
-    pub fn has_inventory(mut self, has_inventory: bool) -> Self {
-        self.has_inventory = has_inventory;
+    pub fn has_inventory(mut self) -> Self {
+        self.has_inventory = true;
         self
     }
 

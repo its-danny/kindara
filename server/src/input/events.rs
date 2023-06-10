@@ -9,6 +9,7 @@ pub enum Command {
     Look(Option<String>),
     Map,
     Movement(String),
+    Place((String, String)),
     Say(String),
     Take((String, bool)),
     Teleport((String, (i32, i32, i32))),

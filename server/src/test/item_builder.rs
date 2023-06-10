@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
-use crate::items::components::{CanTake, Item, Surface, SurfaceType};
+use crate::items::components::{CanPlace, CanTake, Item, Size, Surface, SurfaceKind};
 
 #[derive(Dummy)]
 pub struct ItemBuilder {
@@ -9,10 +9,18 @@ pub struct ItemBuilder {
     short_name: String,
     description: String,
     tags: Vec<String>,
+    #[dummy(expr = "Size::Small")]
+    size: Size,
     #[dummy(expr = "false")]
     can_take: bool,
     #[dummy(expr = "false")]
+    can_place: bool,
+    #[dummy(expr = "false")]
     is_surface: bool,
+    #[dummy(expr = "None")]
+    surface_kind: Option<SurfaceKind>,
+    #[dummy(expr = "None")]
+    surface_capacity: Option<u8>,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -43,13 +51,25 @@ impl ItemBuilder {
         self
     }
 
-    pub fn can_take(mut self, can_take: bool) -> Self {
-        self.can_take = can_take;
+    pub fn size(mut self, size: Size) -> Self {
+        self.size = size;
         self
     }
 
-    pub fn is_surface(mut self, is_surface: bool) -> Self {
-        self.is_surface = is_surface;
+    pub fn can_take(mut self) -> Self {
+        self.can_take = true;
+        self
+    }
+
+    pub fn can_place(mut self) -> Self {
+        self.can_place = true;
+        self
+    }
+
+    pub fn is_surface(mut self, kind: SurfaceKind, capacity: u8) -> Self {
+        self.is_surface = true;
+        self.surface_kind = Some(kind);
+        self.surface_capacity = Some(capacity);
         self
     }
 
@@ -64,6 +84,7 @@ impl ItemBuilder {
             short_name: self.short_name,
             description: self.description,
             tags: self.tags,
+            size: self.size,
             visible: true,
         });
 
@@ -75,10 +96,14 @@ impl ItemBuilder {
             entity.insert(CanTake);
         }
 
+        if self.can_place {
+            entity.insert(CanPlace);
+        }
+
         if self.is_surface {
             entity.insert(Surface {
-                kind: SurfaceType::Floor,
-                limit: 100,
+                kind: self.surface_kind.unwrap(),
+                capacity: self.surface_capacity.unwrap(),
             });
         }
 
