@@ -9,7 +9,7 @@ use crate::{
     input::events::{Command, ParsedCommand},
     items::{
         components::{Item, Surface},
-        utils::item_name_list,
+        utils::{item_name_list, item_name_matches},
     },
     player::components::{Character, Client, Online},
     spatial::{
@@ -73,11 +73,7 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(item, _, _)| {
-                        item.name.to_lowercase() == *target
-                            || item.short_name.to_lowercase() == *target
-                            || item.tags.contains(target)
-                    });
+                    .find(|(item, _, _)| item_name_matches(item, target));
 
                 if let Some((item, surface, children)) = item {
                     let surface_line = surface

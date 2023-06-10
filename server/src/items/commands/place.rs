@@ -6,7 +6,10 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
-    items::components::{CanPlace, Inventory, Item, Surface},
+    items::{
+        components::{CanPlace, Inventory, Item, Surface},
+        utils::item_name_matches,
+    },
     player::components::{Client, Online},
     spatial::components::Tile,
 };
@@ -79,11 +82,7 @@ pub fn place(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _)| {
-                    item.name.to_lowercase() == *object
-                        || item.short_name.to_lowercase() == *object
-                        || item.tags.contains(object)
-            }) else {
+                .find(|(_, item, _)| item_name_matches(item, object)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't have a {}.", object),
@@ -104,11 +103,7 @@ pub fn place(
             let Some((target, target_item, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _)| {
-                    item.name.to_lowercase() == *target
-                        || item.short_name.to_lowercase() == *target
-                        || item.tags.contains(target)
-            }) else {
+                .find(|(_, item, _)| item_name_matches(item, target)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't see a {} here.", target),
