@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParsedCommand},
     items::{
         components::{CanTake, Inventory, Item},
-        utils::item_name_list,
+        utils::{item_name_list, item_name_matches},
     },
     player::components::{Client, Online},
     spatial::components::Tile,
@@ -75,11 +75,7 @@ pub fn take(
             let mut items_found = siblings
                 .iter()
                 .filter_map(|sibling| items.get(*sibling).ok())
-                .filter(|(_, item)| {
-                    item.name.to_lowercase() == *target
-                        || item.short_name.to_lowercase() == *target
-                        || item.tags.contains(target)
-                })
+                .filter(|(_, item)| item_name_matches(item, target))
                 .collect::<Vec<(Entity, &Item)>>();
 
             if !*all {
