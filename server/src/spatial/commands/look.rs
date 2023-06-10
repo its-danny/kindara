@@ -2,6 +2,7 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use inflector::cases::titlecase::to_title_case;
 use regex::Regex;
 
 use crate::{
@@ -25,7 +26,7 @@ pub fn handle_look(
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(look|l)(?P<target> .+)?$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(look|l)( (at|in) )?(?P<target>.+)?$").unwrap());
 
     if let Some(captures) = regex.captures(content) {
         let target = captures
@@ -73,9 +74,9 @@ pub fn look(
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
                     .find(|(item, _, _)| {
-                        item.name.to_lowercase() == target.to_lowercase()
-                            || item.short_name.to_lowercase() == target.to_lowercase()
-                            || item.tags.contains(&target.to_lowercase())
+                        item.name.to_lowercase() == *target
+                            || item.short_name.to_lowercase() == *target
+                            || item.tags.contains(target)
                     });
 
                 if let Some((item, surface, children)) = item {
@@ -83,16 +84,17 @@ pub fn look(
                         .and_then(|s| children.map(|c| (s, c)))
                         .map(|(surface, children)| {
                             let on_surface = items_on_surface(&items, children);
+
                             if on_surface.is_empty() {
                                 "".into()
                             } else {
-                                let location = match surface.kind {
-                                    crate::items::components::SurfaceType::Floor => "On",
-                                    crate::items::components::SurfaceType::Wall => "Against",
-                                    crate::items::components::SurfaceType::Ceiling => "On",
-                                    crate::items::components::SurfaceType::Interior => "In",
-                                };
-                                format!(" {} the {} is {}.", location, item.short_name, on_surface)
+                                format!(
+                                    " {} the {} {} {}.",
+                                    to_title_case(&surface.kind.to_string()),
+                                    item.short_name,
+                                    if children.len() > 1 { "are" } else { "is" },
+                                    on_surface
+                                )
                             }
                         })
                         .unwrap_or("".into());
@@ -248,12 +250,15 @@ fn items_on_surface(
 
 #[cfg(test)]
 mod tests {
-    use crate::test::{
-        app_builder::AppBuilder,
-        item_builder::ItemBuilder,
-        player_builder::PlayerBuilder,
-        tile_builder::{TileBuilder, ZoneBuilder},
-        utils::{get_message_content, send_message},
+    use crate::{
+        items::components::SurfaceKind,
+        test::{
+            app_builder::AppBuilder,
+            item_builder::ItemBuilder,
+            player_builder::PlayerBuilder,
+            tile_builder::{TileBuilder, ZoneBuilder},
+            utils::{get_message_content, send_message},
+        },
     };
 
     use super::*;
@@ -316,7 +321,7 @@ mod tests {
             .name("Dining Table")
             .short_name("table")
             .description("A small dining table.")
-            .is_surface(true)
+            .is_surface(SurfaceKind::Floor, 1)
             .tile(tile)
             .build(&mut app);
 

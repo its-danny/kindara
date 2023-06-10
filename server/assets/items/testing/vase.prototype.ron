@@ -5,12 +5,13 @@
             name: "Eternal Vase",
             short_name: "intricate vase",
             description: "Adorned with meticulous hieroglyphs and divine symbols, the slender flower vase embodies an ethereal beauty, its azure and gold hues reflecting the intricate handiwork of an unseen, yet gifted artisan.",
+            size: Small,
             tags: ["vase", "flower vase", "intricate vase", "eternal vase"],
             visible: false,
         ),
         "server::items::components::Surface": (
             kind: Interior,
-            limit: 3,
+            capacity: 3,
         ),
     }
 )

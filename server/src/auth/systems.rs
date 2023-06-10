@@ -309,7 +309,7 @@ mod tests {
         TileBuilder::new().is_spawn().build(&mut app, zone);
 
         let (player, client_id, _) = PlayerBuilder::new()
-            .authenticating(true)
+            .is_authenticating()
             .name("Icauna")
             .build(&mut app);
 
@@ -365,7 +365,7 @@ mod tests {
         TileBuilder::new().is_spawn().build(&mut app, zone);
 
         let (player, client_id, _) = PlayerBuilder::new()
-            .authenticating(true)
+            .is_authenticating()
             .name("Bres")
             .password("secret")
             .store(&pool)
@@ -416,7 +416,7 @@ mod tests {
         ));
 
         let (player, client_id, _) = PlayerBuilder::new()
-            .authenticating(true)
+            .is_authenticating()
             .name("Bres")
             .password("secret")
             .store(&pool)

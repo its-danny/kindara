@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{
-    commands::{drop::*, inventory::*, take::*},
+    commands::{drop::*, inventory::*, place::*, take::*},
     components::*,
 };
 
@@ -13,9 +13,8 @@ impl Plugin for ItemPlugin {
             .register_type::<CanTake>()
             .register_type::<CanPlace>()
             .register_type::<Surface>()
-            .register_type::<SurfaceType>()
-            .register_type::<PlacementSize>()
+            .register_type::<SurfaceKind>()
             .register_type::<Size>()
-            .add_systems((inventory, take, drop));
+            .add_systems((inventory, take, drop, place));
     }
 }

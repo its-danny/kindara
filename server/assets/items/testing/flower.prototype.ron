@@ -7,10 +7,10 @@
             short_name: "delicate flower",
             description: "An indigo blossom radiant with gradient hues, its golden heart shimmering amidst delicate petals.",
             tags: ["flower", "delicate"],
+            size: Small,
             visible: true,
         ),
         "server::items::components::CanTake": (),
         "server::items::components::CanPlace": (),
-        "server::items::components::PlacementSize": (Small),
     }
 )
