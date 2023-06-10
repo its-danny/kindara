@@ -4,7 +4,7 @@ use inflector::string::pluralize::to_plural;
 
 use super::components::Item;
 
-pub fn item_name_matches(item: &Item, name: &String) -> bool {
+pub fn item_name_matches(item: &Item, name: &str) -> bool {
     item.name.eq_ignore_ascii_case(name)
         || item.short_name.eq_ignore_ascii_case(name)
         || item.tags.contains(&name.to_lowercase())
