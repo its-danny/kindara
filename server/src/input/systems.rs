@@ -9,7 +9,9 @@ use crate::{
         commands::config::handle_config,
         components::{Client, Online},
     },
-    social::commands::{say::handle_say, who::handle_who},
+    social::commands::{
+        chat::handle_chat, emote::handle_emote, say::handle_say, who::handle_who, yell::handle_yell,
+    },
     spatial::commands::{
         enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
         teleport::handle_teleport,
@@ -37,8 +39,10 @@ pub fn parse_command(
             continue;
         };
 
-        if handle_config(client, content, &mut commands)
+        if handle_chat(client, content, &mut commands)
+            || handle_config(client, content, &mut commands)
             || handle_drop(client, content, &mut commands)
+            || handle_emote(client, content, &mut commands)
             || handle_enter(client, content, &mut commands)
             || handle_inventory(client, content, &mut commands)
             || handle_look(client, content, &mut commands)
@@ -49,6 +53,7 @@ pub fn parse_command(
             || handle_take(client, content, &mut commands)
             || handle_teleport(client, content, &mut commands)
             || handle_who(client, content, &mut commands)
+            || handle_yell(client, content, &mut commands)
         {
             continue;
         }

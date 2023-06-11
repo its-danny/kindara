@@ -15,7 +15,7 @@
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (
                             name: "Beyond the gate",
-                            description: "A vast cobblestone square unveils itself, alive with the rhythm of everyday life. Marble [$yellow]statues[$/] dominate the square, a celebration of conquest and stoic vigil. Blooms of [$yellow]vibrant[$/] flora punctuate the area and nestled among these, a smaller road forks to the northeast, carrying with it an exotic melody of spices and the distant buzz of eager commerce. Stretching out ahead, a palace anchors the city's horizon in its grandeur.",
+                            description: "A vast cobblestone square unveils itself, alive with the rhythm of everyday life. Marble [$yellow]statues[$/] dominate the square, a celebration of conquest and stoic vigil. Blooms of [$yellow]vibrant flora[$/] punctuate the area and nestled among these, a smaller road forks to the northeast, carrying with it an exotic melody of spices and the distant buzz of eager commerce. Stretching out ahead, a palace anchors the city's horizon in its grandeur.",
                         ),
                         sprite: (
                             character: "=",
