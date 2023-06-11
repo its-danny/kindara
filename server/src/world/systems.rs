@@ -1,9 +1,9 @@
 use bevy_proto::prelude::*;
 
-pub fn spawn_void(mut commands: ProtoCommands) {
-    commands.spawn("world.void");
+pub fn spawn_trinus_castra(mut commands: ProtoCommands) {
+    commands.spawn("world.trinus.trinus-castra");
 }
 
-pub fn spawn_testing_movement(mut commands: ProtoCommands) {
-    commands.spawn("world.testing.movement");
+pub fn spawn_the_roaring_lion(mut commands: ProtoCommands) {
+    commands.spawn("world.trinus.the-roaring-lion");
 }
