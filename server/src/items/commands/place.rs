@@ -55,7 +55,7 @@ pub fn place(
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
     items: Query<(Entity, &Item, Option<&Children>)>,
-    placable: Query<&CanPlace>,
+    placeable: Query<&CanPlace>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -85,13 +85,13 @@ pub fn place(
                 .find(|(_, item, _)| item_name_matches(item, object)) else {
                 outbox.send_text(
                     client.id,
-                    format!("You don't have a {}.", object),
+                    format!("You don't have a {object}."),
                 );
 
                 continue;
             };
 
-            if !placable.contains(object) {
+            if !placeable.contains(object) {
                 outbox.send_text(
                     client.id,
                     format!("You can't place the {}.", object_item.name),
@@ -106,7 +106,7 @@ pub fn place(
                 .find(|(_, item, _)| item_name_matches(item, target)) else {
                 outbox.send_text(
                     client.id,
-                    format!("You don't see a {} here.", target),
+                    format!("You don't see a {target} here."),
                 );
 
                 continue;

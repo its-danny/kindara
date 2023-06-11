@@ -11,7 +11,7 @@ pub enum Command {
     Movement(String),
     Place((String, String)),
     Say(String),
-    Take((String, bool)),
+    Take((String, bool, Option<String>)),
     Teleport((String, (i32, i32, i32))),
     Who,
 }
