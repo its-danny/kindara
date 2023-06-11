@@ -1,0 +1,14 @@
+app = "aureus"
+primary_region = "sea"
+
+[env]
+SERVER_PORT = "6012"
+
+[[services]]
+protocol = "tcp"
+internal_port = 6012
+auto_stop_machines = false
+auto_start_machines = false
+
+[[services.ports]]
+port = 6012
