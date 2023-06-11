@@ -7,10 +7,11 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_void.run_if(prototype_ready("world.void").and_then(run_once())))
-            .add_system(
-                spawn_testing_movement
-                    .run_if(prototype_ready("world.testing.movement").and_then(run_once())),
-            );
+        app.add_systems((
+            spawn_trinus_castra
+                .run_if(prototype_ready("world.trinus.trinus-castra").and_then(run_once())),
+            spawn_the_roaring_lion
+                .run_if(prototype_ready("world.trinus.the-roaring-lion").and_then(run_once())),
+        ));
     }
 }

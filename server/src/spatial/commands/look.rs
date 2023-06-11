@@ -96,7 +96,7 @@ pub fn look(
                         })
                         .unwrap_or("".into());
 
-                    output = format!("{}\n{}{}", item.name, item.description, surface_line);
+                    output = vformat!("{}\n{}{}", item.name, item.description, surface_line);
                 } else {
                     output = format!("You don't see a {target} here.");
                 }
