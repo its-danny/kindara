@@ -37,11 +37,15 @@ pub enum Set {
 }
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
-    prototypes.load_folder("world/").unwrap();
+    if let Err(e) = prototypes.load_folder("world/") {
+        panic!("{e}");
+    }
+
+    info!("Loaded world prototypes");
 }
 
 fn setup_network(server: Res<Server>) {
-    server.listen(format!("127.0.0.1:{}", &env::var("SERVER_PORT").unwrap()));
+    server.listen(format!("0.0.0.0:{}", &env::var("SERVER_PORT").unwrap()));
 }
 
 #[async_std::main]
