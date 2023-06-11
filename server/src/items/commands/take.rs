@@ -2,12 +2,13 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use indefinite::indefinite;
 use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
     items::{
-        components::{CanTake, Inventory, Item},
+        components::{CanTake, Inventory, Item, Surface},
         utils::{item_name_list, item_name_matches},
     },
     player::components::{Client, Online},
@@ -21,8 +22,9 @@ pub fn handle_take(
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    let regex =
-        REGEX.get_or_init(|| Regex::new(r"^(take|get) ((?P<all>all) )?(?P<target>.+)$").unwrap());
+    let regex = REGEX.get_or_init(|| {
+        Regex::new(r"^(take|get) ((?P<all>all) )?(?P<target>.*?)( from)?(?P<source> .+)?$").unwrap()
+    });
 
     if let Some(captures) = regex.captures(content) {
         let target = captures
@@ -32,9 +34,13 @@ pub fn handle_take(
 
         let all = captures.name("all").is_some();
 
+        let source = captures
+            .name("source")
+            .map(|m| m.as_str().trim().to_lowercase());
+
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Take((target, all)),
+            command: Command::Take((target, all, source)),
         });
 
         true
@@ -50,10 +56,12 @@ pub fn take(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Entity, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item), With<CanTake>>,
+    items: Query<(Entity, &Item, Option<&Children>)>,
+    takeable: Query<&CanTake>,
+    surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
-        if let Command::Take((target, all)) = &command.command {
+        if let Command::Take((target, all, source)) = &command.command {
             let Some((client, tile, children)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
@@ -72,44 +80,88 @@ pub fn take(
                 continue;
             };
 
-            let mut items_found = siblings
+            let to_search = if let Some(source) = source {
+                siblings
+                    .iter()
+                    .filter_map(|sibling| items.get(*sibling).ok())
+                    .find(|(sibling, item, _)| {
+                        surfaces.get(*sibling).is_ok() && item_name_matches(item, source)
+                    })
+                    .and_then(|(_, _, children)| children)
+                    .map(|children| {
+                        children
+                            .iter()
+                            .filter_map(|child| items.get(*child).ok())
+                            .collect()
+                    })
+                    .unwrap_or_else(Vec::new)
+            } else {
+                siblings
+                    .iter()
+                    .filter_map(|sibling| items.get(*sibling).ok())
+                    .collect()
+            };
+
+            let mut items_found = to_search
                 .iter()
-                .filter_map(|sibling| items.get(*sibling).ok())
-                .filter(|(_, item)| item_name_matches(item, target))
-                .collect::<Vec<(Entity, &Item)>>();
+                .filter(|(_, item, _)| item_name_matches(item, target))
+                .collect::<Vec<_>>();
+
+            if items_found.is_empty() {
+                let target = if let Some(source) = source {
+                    source
+                } else {
+                    target
+                };
+
+                outbox.send_text(
+                    client.id,
+                    format!("You don't see {} here.", indefinite(target)),
+                );
+
+                continue;
+            }
+
+            if items_found
+                .iter()
+                .any(|(ent, _, _)| takeable.get(*ent).is_err())
+            {
+                outbox.send_text(client.id, "You can't take that.");
+
+                continue;
+            }
 
             if !*all {
                 items_found.truncate(1);
             }
 
-            items_found.iter().for_each(|(entity, _)| {
+            items_found.iter().for_each(|(entity, _, _)| {
                 bevy.entity(*entity).set_parent(inventory);
             });
 
             let item_names = item_name_list(
                 &items_found
                     .iter()
-                    .map(|(_, item)| item.name.clone())
+                    .map(|(_, item, _)| item.name.clone())
                     .collect::<Vec<String>>(),
             );
 
-            if item_names.is_empty() {
-                outbox.send_text(client.id, format!("You don't see a {target} here."));
-            } else {
-                outbox.send_text(client.id, format!("You take {item_names}."));
-            }
+            outbox.send_text(client.id, format!("You take {item_names}."));
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test::{
-        app_builder::AppBuilder,
-        item_builder::ItemBuilder,
-        player_builder::PlayerBuilder,
-        tile_builder::{TileBuilder, ZoneBuilder},
-        utils::{get_message_content, send_message},
+    use crate::{
+        items::components::SurfaceKind,
+        test::{
+            app_builder::AppBuilder,
+            item_builder::ItemBuilder,
+            player_builder::PlayerBuilder,
+            tile_builder::{TileBuilder, ZoneBuilder},
+            utils::{get_message_content, send_message},
+        },
     };
 
     use super::*;
@@ -122,14 +174,8 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new()
+        let stick = ItemBuilder::new()
             .name("stick")
-            .can_take()
-            .tile(tile)
-            .build(&mut app);
-
-        ItemBuilder::new()
-            .name("rock")
             .can_take()
             .tile(tile)
             .build(&mut app);
@@ -144,14 +190,13 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take a stick."));
+        assert_eq!(content, "You take a stick.");
 
-        assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            1
-        );
-
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 2);
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&stick),);
     }
 
     #[test]
@@ -162,7 +207,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new()
+        let stick = ItemBuilder::new()
             .name("stick")
             .tags(vec!["weapon"])
             .can_take()
@@ -179,14 +224,13 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take a stick."));
+        assert_eq!(content, "You take a stick.");
 
-        assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            1
-        );
-
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 1);
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&stick),);
     }
 
     #[test]
@@ -197,13 +241,13 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        ItemBuilder::new()
+        let stick = ItemBuilder::new()
             .name("stick")
             .can_take()
             .tile(tile)
             .build(&mut app);
 
-        ItemBuilder::new()
+        let another_stick = ItemBuilder::new()
             .name("stick")
             .can_take()
             .tile(tile)
@@ -225,14 +269,57 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You take 2 sticks."));
+        assert_eq!(content, "You take 2 sticks.");
 
-        assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            2
-        );
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&stick),);
 
-        assert_eq!(app.world.get::<Children>(tile).unwrap().len(), 2);
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&another_stick),);
+    }
+
+    #[test]
+    fn from_another() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(take);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        let table = ItemBuilder::new()
+            .name("table")
+            .is_surface(SurfaceKind::Floor, 1)
+            .tile(tile)
+            .build(&mut app);
+
+        let plate = ItemBuilder::new().name("plate").can_take().build(&mut app);
+
+        app.world.entity_mut(table).add_child(plate);
+
+        let (_, client_id, inventory) = PlayerBuilder::new()
+            .tile(tile)
+            .has_inventory()
+            .build(&mut app);
+
+        send_message(&mut app, client_id, "take plate from table");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!("You take a plate.", content);
+
+        assert!(app.world.get::<Children>(table).is_none());
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&plate),);
     }
 
     #[test]
@@ -253,7 +340,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You don't see a sword here."));
+        assert_eq!(content, "You don't see a sword here.");
 
         assert!(app.world.get::<Children>(inventory.unwrap()).is_none());
     }

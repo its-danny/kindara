@@ -72,7 +72,7 @@ pub fn inventory(
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            outbox.send_text(client.id, format!("You are carrying: {}", names));
+            outbox.send_text(client.id, format!("You are carrying: {names}"));
         }
     }
 }
@@ -132,6 +132,6 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You are carrying: stick"));
+        assert_eq!(content, "You are carrying: stick");
     }
 }

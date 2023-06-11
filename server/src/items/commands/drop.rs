@@ -138,11 +138,13 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You drop a stick."));
-
+        assert_eq!(content, "You drop a stick.");
         assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            1
+            app.world
+                .get::<Children>(inventory.unwrap())
+                .unwrap()
+                .contains(&stick),
+            false,
         );
     }
 
@@ -171,7 +173,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You drop a stick."));
+        assert_eq!(content, "You drop a stick.");
 
         assert!(app.world.get::<Children>(inventory.unwrap()).is_none(),);
     }
@@ -205,12 +207,29 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You drop 2 sticks."));
+        assert_eq!(content, "You drop 2 sticks.");
 
         assert_eq!(
-            app.world.get::<Children>(inventory.unwrap()).unwrap().len(),
-            1
+            app.world
+                .get::<Children>(inventory.unwrap())
+                .unwrap()
+                .contains(&stick),
+            false
         );
+
+        assert_eq!(
+            app.world
+                .get::<Children>(inventory.unwrap())
+                .unwrap()
+                .contains(&another_stick),
+            false
+        );
+
+        assert!(app
+            .world
+            .get::<Children>(inventory.unwrap())
+            .unwrap()
+            .contains(&rock),);
     }
 
     #[test]
@@ -231,7 +250,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, format!("You don't have a sword."));
+        assert_eq!(content, "You don't have a sword.");
 
         assert!(app.world.get::<Children>(inventory.unwrap()).is_none());
     }
