@@ -5,19 +5,19 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{ChatChannel, Command, ParsedCommand},
     player::components::{Character, Client, Online},
-    spatial::components::Tile,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_say(
+pub fn handle_chat(
     client: &Client,
     content: &str,
     commands: &mut EventWriter<ParsedCommand>,
 ) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
+    let regex = REGEX
+        .get_or_init(|| Regex::new(r"^((?P<channel>chat|c|novice|n) (?P<message>.+))$").unwrap());
 
     if let Some(captures) = regex.captures(content) {
         let message = captures
@@ -25,9 +25,20 @@ pub fn handle_say(
             .map(|m| m.as_str().trim())
             .unwrap_or("");
 
+        let channel = captures
+            .name("channel")
+            .map(|m| m.as_str().trim())
+            .unwrap_or("");
+
+        let channel = match channel {
+            "chat" | "c" => ChatChannel::Chat,
+            "novice" | "n" => ChatChannel::Novice,
+            _ => ChatChannel::Chat,
+        };
+
         commands.send(ParsedCommand {
             from: client.id,
-            command: Command::Say(message.into()),
+            command: Command::Chat((channel, message.into())),
         });
 
         true
@@ -36,22 +47,15 @@ pub fn handle_say(
     }
 }
 
-pub fn say(
+pub fn chat(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Character, &Parent), With<Online>>,
-    tiles: Query<&Children, With<Tile>>,
+    players: Query<(&Client, &Character), With<Online>>,
 ) {
     for command in commands.iter() {
-        if let Command::Say(message) = &command.command {
-            let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+        if let Command::Chat((channel, message)) = &command.command {
+            let Some((client, character)) = players.iter().find(|(c, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(siblings) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
 
                 continue;
             };
@@ -62,10 +66,10 @@ pub fn say(
                 continue;
             }
 
-            for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
+            for (client, _) in players.iter() {
                 outbox.send_text(
-                    other_client.id,
-                    format!("{} says \"{message}\"", character.name),
+                    client.id,
+                    format!("[{}] {}: {}", channel, character.name, message),
                 );
             }
         }
@@ -85,58 +89,61 @@ mod tests {
     #[test]
     fn sends_to_sender() {
         let mut app = AppBuilder::new().build();
-        app.add_system(say);
+        app.add_system(chat);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let (_, client_id, _) = PlayerBuilder::new()
-            .name("Ramos")
+            .name("Astrid")
             .tile(tile)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "say Hello!");
+        send_message(&mut app, client_id, "chat Hello!");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, "Ramos says \"Hello!\"");
+        assert_eq!(content, format!("[chat] Astrid: Hello!"));
     }
 
     #[test]
-    fn sends_to_tile() {
+    fn sends_to_everyone() {
         let mut app = AppBuilder::new().build();
-        app.add_system(say);
+        app.add_system(chat);
 
-        let zone = ZoneBuilder::new().build(&mut app);
-        let tile = TileBuilder::new().build(&mut app, zone);
+        let zone_one = ZoneBuilder::new().build(&mut app);
+        let tile_one = TileBuilder::new().build(&mut app, zone_one);
+
+        let zone_two = ZoneBuilder::new().build(&mut app);
+        let tile_two = TileBuilder::new().build(&mut app, zone_two);
 
         let (_, sender_client_id, _) = PlayerBuilder::new()
-            .tile(tile)
+            .tile(tile_one)
             .name("Flora")
             .build(&mut app);
 
-        let (_, recipient_client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (_, recipient_client_id, _) = PlayerBuilder::new().tile(tile_two).build(&mut app);
 
-        send_message(&mut app, sender_client_id, "say Hello!");
+        send_message(&mut app, sender_client_id, "chat Hello!");
         app.update();
 
         let content = get_message_content(&mut app, recipient_client_id);
 
-        assert_eq!(content, "Flora says \"Hello!\"");
+        assert_eq!(content, "[chat] Flora: Hello!");
     }
 
     #[test]
     fn empty_message() {
         let mut app = AppBuilder::new().build();
-        app.add_system(say);
+        app.add_system(chat);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
-        send_message(&mut app, client_id, "say   ");
+        send_message(&mut app, client_id, "chat   ");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
