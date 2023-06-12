@@ -3,6 +3,7 @@ primary_region = "sea"
 
 [env]
 SERVER_PORT = "6012"
+RUST_LOG = "warn"
 
 [[services]]
 protocol = "tcp"
