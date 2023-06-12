@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
-use crate::items::components::{CanPlace, CanTake, Item, Size, Surface, SurfaceKind};
+use crate::{
+    interact::components::{Interaction, Interactions},
+    items::components::{Item, Size, Surface, SurfaceKind},
+};
 
 #[derive(Dummy)]
 pub struct ItemBuilder {
@@ -9,18 +12,16 @@ pub struct ItemBuilder {
     short_name: String,
     description: String,
     tags: Vec<String>,
-    #[dummy(expr = "Size::Small")]
-    size: Size,
-    #[dummy(expr = "false")]
-    can_take: bool,
-    #[dummy(expr = "false")]
-    can_place: bool,
+    #[dummy(expr = "None")]
+    interactions: Option<Vec<Interaction>>,
     #[dummy(expr = "false")]
     is_surface: bool,
     #[dummy(expr = "None")]
     surface_kind: Option<SurfaceKind>,
     #[dummy(expr = "None")]
     surface_capacity: Option<u8>,
+    #[dummy(expr = "Size::Small")]
+    size: Size,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
 }
@@ -51,18 +52,8 @@ impl ItemBuilder {
         self
     }
 
-    pub fn size(mut self, size: Size) -> Self {
-        self.size = size;
-        self
-    }
-
-    pub fn can_take(mut self) -> Self {
-        self.can_take = true;
-        self
-    }
-
-    pub fn can_place(mut self) -> Self {
-        self.can_place = true;
+    pub fn interactions(mut self, interactions: Vec<Interaction>) -> Self {
+        self.interactions = Some(interactions);
         self
     }
 
@@ -70,6 +61,11 @@ impl ItemBuilder {
         self.is_surface = true;
         self.surface_kind = Some(kind);
         self.surface_capacity = Some(capacity);
+        self
+    }
+
+    pub fn size(mut self, size: Size) -> Self {
+        self.size = size;
         self
     }
 
@@ -92,12 +88,8 @@ impl ItemBuilder {
             entity.set_parent(tile);
         }
 
-        if self.can_take {
-            entity.insert(CanTake);
-        }
-
-        if self.can_place {
-            entity.insert(CanPlace);
+        if let Some(interactions) = self.interactions {
+            entity.insert(Interactions(interactions));
         }
 
         if self.is_surface {

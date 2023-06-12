@@ -1,6 +1,7 @@
 mod auth;
 mod db;
 mod input;
+mod interact;
 mod items;
 mod net;
 mod player;
@@ -25,9 +26,9 @@ use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
     auth::plugin::AuthPlugin, db::pool::DatabasePool, input::plugin::InputPlugin,
-    items::plugin::ItemPlugin, net::plugin::NetPlugin, player::plugin::PlayerPlugin,
-    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
-    world::plugin::WorldPlugin,
+    interact::plugin::InteractPlugin, items::plugin::ItemPlugin, net::plugin::NetPlugin,
+    player::plugin::PlayerPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
+    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -84,6 +85,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(InputPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(SpatialPlugin)
+        .add_plugin(InteractPlugin)
         .add_plugin(ItemPlugin)
         .add_plugin(SocialPlugin)
         .add_plugin(VisualPlugin)

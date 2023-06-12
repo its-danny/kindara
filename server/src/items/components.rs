@@ -17,15 +17,7 @@ pub struct Item {
     pub visible: bool,
 }
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
-#[reflect(Schematic)]
-pub struct CanTake;
-
-#[derive(Component, Schematic, Reflect, FromReflect)]
-#[reflect(Schematic)]
-pub struct CanPlace;
-
-#[derive(Copy, Clone, Component, Reflect, FromReflect)]
+#[derive(Copy, Clone, Reflect, FromReflect)]
 pub enum Size {
     Small,
     Medium,
@@ -49,7 +41,7 @@ pub struct Surface {
     pub capacity: u8,
 }
 
-#[derive(Component, Reflect, FromReflect)]
+#[derive(Reflect, FromReflect)]
 pub enum SurfaceKind {
     Floor,
     Wall,

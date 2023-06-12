@@ -10,8 +10,6 @@ pub struct ItemPlugin;
 impl Plugin for ItemPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Item>()
-            .register_type::<CanTake>()
-            .register_type::<CanPlace>()
             .register_type::<Surface>()
             .register_type::<SurfaceKind>()
             .register_type::<Size>()
