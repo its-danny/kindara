@@ -6,8 +6,9 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
+    interact::components::{Interaction, Interactions},
     items::{
-        components::{CanPlace, Inventory, Item, Surface},
+        components::{Inventory, Item, Surface},
         utils::item_name_matches,
     },
     player::components::{Client, Online},
@@ -54,8 +55,7 @@ pub fn place(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item, Option<&Children>)>,
-    placeable: Query<&CanPlace>,
+    items: Query<(Entity, &Item, Option<&Interactions>, Option<&Children>)>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -78,11 +78,11 @@ pub fn place(
                 continue;
             };
 
-            let Some((object, object_item, _)) = inventory
+            let Some((object, object_item, object_interactable, _)) = inventory
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _)| item_name_matches(item, object)) else {
+                .find(|(_, item, _, _)| item_name_matches(item, object)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't have a {object}."),
@@ -91,7 +91,7 @@ pub fn place(
                 continue;
             };
 
-            if !placeable.contains(object) {
+            if !object_interactable.map_or(false, |i| i.0.contains(&Interaction::Place)) {
                 outbox.send_text(
                     client.id,
                     format!("You can't place the {}.", object_item.name),
@@ -100,10 +100,10 @@ pub fn place(
                 continue;
             }
 
-            let Some((target, target_item, target_children)) = siblings
+            let Some((target, target_item, _, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _)| item_name_matches(item, target)) else {
+                .find(|(_, item, _, _)| item_name_matches(item, target)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't see a {target} here."),
@@ -125,7 +125,7 @@ pub fn place(
                 children
                     .iter()
                     .filter_map(|child| items.get(*child).ok())
-                    .map(|(_, item, _)| item.size.value())
+                    .map(|(_, item, _, _)| item.size.value())
                     .sum::<u8>()
                     + object_item.size.value()
                     > surface.capacity
@@ -179,7 +179,7 @@ mod tests {
         let plate = ItemBuilder::new()
             .name("dinner plate")
             .tags(vec!["plate"])
-            .can_place()
+            .interactions(vec![Interaction::Place])
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
@@ -258,7 +258,7 @@ mod tests {
         let plate = ItemBuilder::new()
             .name("dinner plate")
             .tags(vec!["plate"])
-            .can_place()
+            .interactions(vec![Interaction::Place])
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
@@ -288,7 +288,7 @@ mod tests {
         let plate = ItemBuilder::new()
             .name("dinner plate")
             .tags(vec!["plate"])
-            .can_place()
+            .interactions(vec![Interaction::Place])
             .build(&mut app);
 
         let (_, client_id, inventory) = PlayerBuilder::new()
@@ -322,7 +322,7 @@ mod tests {
         let plate = ItemBuilder::new()
             .name("dinner plate")
             .tags(vec!["plate"])
-            .can_place()
+            .interactions(vec![Interaction::Place])
             .build(&mut app);
         let chair = ItemBuilder::new().size(Size::Medium).build(&mut app);
 

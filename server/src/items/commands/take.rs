@@ -7,8 +7,9 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParsedCommand},
+    interact::components::{Interaction, Interactions},
     items::{
-        components::{CanTake, Inventory, Item, Surface},
+        components::{Inventory, Item, Surface},
         utils::{item_name_list, item_name_matches},
     },
     player::components::{Client, Online},
@@ -56,8 +57,7 @@ pub fn take(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Entity, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item, Option<&Children>)>,
-    takeable: Query<&CanTake>,
+    items: Query<(Entity, &Item, Option<&Interactions>, Option<&Children>)>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -84,10 +84,10 @@ pub fn take(
                 siblings
                     .iter()
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(sibling, item, _)| {
+                    .find(|(sibling, item, _, _)| {
                         surfaces.get(*sibling).is_ok() && item_name_matches(item, source)
                     })
-                    .and_then(|(_, _, children)| children)
+                    .and_then(|(_, _, _, children)| children)
                     .map(|children| {
                         children
                             .iter()
@@ -104,7 +104,7 @@ pub fn take(
 
             let mut items_found = to_search
                 .iter()
-                .filter(|(_, item, _)| item_name_matches(item, target))
+                .filter(|(_, item, _, _)| item_name_matches(item, target))
                 .collect::<Vec<_>>();
 
             if items_found.is_empty() {
@@ -122,10 +122,9 @@ pub fn take(
                 continue;
             }
 
-            if items_found
-                .iter()
-                .any(|(ent, _, _)| takeable.get(*ent).is_err())
-            {
+            if items_found.iter().any(|(_, _, interactable, _)| {
+                interactable.map_or(true, |i| !i.0.contains(&Interaction::Take))
+            }) {
                 outbox.send_text(client.id, "You can't take that.");
 
                 continue;
@@ -135,14 +134,14 @@ pub fn take(
                 items_found.truncate(1);
             }
 
-            items_found.iter().for_each(|(entity, _, _)| {
+            items_found.iter().for_each(|(entity, _, _, _)| {
                 bevy.entity(*entity).set_parent(inventory);
             });
 
             let item_names = item_name_list(
                 &items_found
                     .iter()
-                    .map(|(_, item, _)| item.name.clone())
+                    .map(|(_, item, _, _)| item.name.clone())
                     .collect::<Vec<String>>(),
             );
 
@@ -176,7 +175,7 @@ mod tests {
 
         let stick = ItemBuilder::new()
             .name("stick")
-            .can_take()
+            .interactions(vec![Interaction::Take])
             .tile(tile)
             .build(&mut app);
 
@@ -210,7 +209,7 @@ mod tests {
         let stick = ItemBuilder::new()
             .name("stick")
             .tags(vec!["weapon"])
-            .can_take()
+            .interactions(vec![Interaction::Take])
             .tile(tile)
             .build(&mut app);
 
@@ -243,19 +242,19 @@ mod tests {
 
         let stick = ItemBuilder::new()
             .name("stick")
-            .can_take()
+            .interactions(vec![Interaction::Take])
             .tile(tile)
             .build(&mut app);
 
         let another_stick = ItemBuilder::new()
             .name("stick")
-            .can_take()
+            .interactions(vec![Interaction::Take])
             .tile(tile)
             .build(&mut app);
 
         ItemBuilder::new()
             .name("rock")
-            .can_take()
+            .interactions(vec![Interaction::Take])
             .tile(tile)
             .build(&mut app);
 
@@ -298,7 +297,10 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        let plate = ItemBuilder::new().name("plate").can_take().build(&mut app);
+        let plate = ItemBuilder::new()
+            .name("plate")
+            .interactions(vec![Interaction::Take])
+            .build(&mut app);
 
         app.world.entity_mut(table).add_child(plate);
 
