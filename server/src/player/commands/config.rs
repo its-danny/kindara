@@ -12,7 +12,7 @@ use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
     db::pool::DatabasePool,
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     player::{
         components::{Character, Client, Online},
         config::CharacterConfig,
@@ -21,27 +21,19 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_config(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_config(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
         Regex::new(r"^config(?:\s+(?P<option>\S+))?(?:\s+(?P<value>.*))?$").unwrap()
     });
 
-    if let Some(captures) = regex.captures(content) {
-        let option = captures.name("option").map(|m| m.as_str().to_string());
-        let value = captures.name("value").map(|m| m.as_str().to_string());
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let option = captures.name("option").map(|m| m.as_str().to_string());
+            let value = captures.name("value").map(|m| m.as_str().to_string());
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Config((option, value)),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Config((option, value)))
+        }
     }
 }
 

@@ -7,7 +7,7 @@ use regex::Regex;
 use vari::vformat;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Item, Surface},
         utils::{item_name_list, item_name_matches},
@@ -22,26 +22,19 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_look(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(look|l)( (at|in) )?(?P<target>.+)?$").unwrap());
+pub fn handle_look(content: &str) -> Result<Command, ParseError> {
+    let regex =
+        REGEX.get_or_init(|| Regex::new(r"^(look|l)( (at|in))?( (?P<target>.*))?$").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let target = captures
-            .name("target")
-            .map(|m| m.as_str().trim().to_lowercase());
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let target = captures
+                .name("target")
+                .map(|m| m.as_str().trim().to_lowercase());
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Look(target),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Look(target))
+        }
     }
 }
 

@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand, ProxyCommand},
+    input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Client, Online},
     spatial::{
         components::{Position, Tile, Zone},
@@ -15,24 +15,14 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_movement(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_movement(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(||
         Regex::new(r"^(north|n|northeast|ne|east|e|southeast|se|south|s|southwest|sw|west|w|northwest|nw|up|u|down|d)$").unwrap()
     );
 
-    if regex.is_match(content) {
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Movement(content.to_string()),
-        });
-
-        true
-    } else {
-        false
+    match regex.is_match(content) {
+        false => Err(ParseError::WrongCommand),
+        true => Ok(Command::Movement(content.into())),
     }
 }
 

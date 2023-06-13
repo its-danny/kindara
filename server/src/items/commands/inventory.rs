@@ -5,29 +5,19 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     items::components::{Inventory, Item},
     player::components::{Client, Online},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_inventory(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_inventory(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| Regex::new(r"^(inventory|inv|i)$").unwrap());
 
-    if regex.is_match(content) {
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Inventory,
-        });
-
-        true
-    } else {
-        false
+    match regex.is_match(content) {
+        false => Err(ParseError::WrongCommand),
+        true => Ok(Command::Inventory),
     }
 }
 

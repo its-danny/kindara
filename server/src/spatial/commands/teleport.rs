@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand, ProxyCommand},
+    input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::{
         components::{Character, Client, Online},
         permissions,
@@ -15,40 +15,42 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_teleport(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_teleport(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
-        Regex::new(r#"^(teleport|tp) "(?P<zone>here|(.+))" \(((?P<x>\d) (?P<y>\d) (?P<z>\d))\)$"#)
-            .unwrap()
+        Regex::new(
+            r#"^(teleport|tp)( (?P<zone>here|(.*?)))?( (\((?P<x>\d) (?P<y>\d) (?P<z>\d)\)))?$"#,
+        )
+        .unwrap()
     });
 
-    if let Some(captures) = regex.captures(content) {
-        let zone = captures.name("zone").map(|m| m.as_str()).unwrap_or("here");
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let zone =
+                captures
+                    .name("zone")
+                    .map(|m| m.as_str())
+                    .ok_or(ParseError::InvalidArguments(
+                        "Invalid zone name. Use `here` to teleport within the current zone.".into(),
+                    ))?;
 
-        let x = captures
-            .name("x")
-            .and_then(|m| m.as_str().parse::<i32>().ok())
-            .unwrap_or_default();
-        let y = captures
-            .name("y")
-            .and_then(|m| m.as_str().parse::<i32>().ok())
-            .unwrap_or_default();
-        let z = captures
-            .name("z")
-            .and_then(|m| m.as_str().parse::<i32>().ok())
-            .unwrap_or_default();
+            let x = captures
+                .name("x")
+                .and_then(|m| m.as_str().parse::<i32>().ok())
+                .ok_or(ParseError::InvalidArguments("Invalid coordinates.".into()))?;
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Teleport((zone.to_lowercase(), (x, y, z))),
-        });
+            let y = captures
+                .name("y")
+                .and_then(|m| m.as_str().parse::<i32>().ok())
+                .ok_or(ParseError::InvalidArguments("Invalid coordinates.".into()))?;
 
-        true
-    } else {
-        false
+            let z = captures
+                .name("z")
+                .and_then(|m| m.as_str().parse::<i32>().ok())
+                .ok_or(ParseError::InvalidArguments("Invalid coordinates.".into()))?;
+
+            Ok(Command::Teleport((zone.to_lowercase(), (x, y, z))))
+        }
     }
 }
 
@@ -93,7 +95,7 @@ pub fn teleport(
                     name => z.name.to_lowercase() == *name,
                 }
             }) else  {
-                outbox.send_text(client.id, "Invalid zone.");
+                outbox.send_text(client.id, format!("Zone \"{}\" not found.", zone));
 
                 continue;
             };
@@ -104,7 +106,7 @@ pub fn teleport(
                     .filter(|( _, p, _)| p.0 == position)
                     .map(|(e, _, _)| e)
             }) else {
-                outbox.send_text(client.id, "Invalid location.");
+                outbox.send_text(client.id, format!("No tile found at {}", position));
 
                 continue;
             };
@@ -158,7 +160,7 @@ mod tests {
             .tile(start)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport \"uruk\" (0 0 0)");
+        send_message(&mut app, client_id, "teleport uruk (0 0 0)");
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
@@ -184,7 +186,7 @@ mod tests {
             .tile(start)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport \"here\" (0 1 0)");
+        send_message(&mut app, client_id, "teleport here (0 1 0)");
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), destination);
@@ -203,12 +205,12 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport \"invalid\" (0 0 0)");
+        send_message(&mut app, client_id, "teleport invalid (0 0 0)");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, "Invalid zone.");
+        assert_eq!(content, "Zone \"invalid\" not found.");
     }
 
     #[test]
@@ -224,11 +226,11 @@ mod tests {
             .tile(tile)
             .build(&mut app);
 
-        send_message(&mut app, client_id, "teleport \"here\" (0 1 0)");
+        send_message(&mut app, client_id, "teleport here (0 1 0)");
         app.update();
 
         let content = get_message_content(&mut app, client_id);
 
-        assert_eq!(content, "Invalid location.");
+        assert_eq!(content, "No tile found at [0, 1, 0]");
     }
 }

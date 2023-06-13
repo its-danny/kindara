@@ -5,34 +5,27 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_emote(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^((emote |;)(?P<action>.+))$").unwrap());
+pub fn handle_emote(content: &str) -> Result<Command, ParseError> {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(emote |;)(?P<action>.*)?$").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let action = captures
-            .name("action")
-            .map(|m| m.as_str().trim())
-            .unwrap_or("");
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let action = captures
+                .name("action")
+                .map(|a| a.as_str().trim())
+                .filter(|a| !a.is_empty())
+                .ok_or(ParseError::InvalidArguments("Do what?".into()))?;
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Emote(action.into()),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Emote(action.into()))
+        }
     }
 }
 
@@ -44,7 +37,7 @@ pub fn emote(
 ) {
     for command in commands.iter() {
         if let Command::Emote(action) = &command.command {
-            let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+            let Some((_, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
@@ -55,12 +48,6 @@ pub fn emote(
 
                 continue;
             };
-
-            if action.is_empty() {
-                outbox.send_text(client.id, "Do what?");
-
-                continue;
-            }
 
             for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
                 outbox.send_text(other_client.id, format!("{} {action}", character.name));

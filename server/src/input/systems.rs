@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-use super::events::{ParsedCommand, ProxyCommand};
+use super::events::{Command, ParseError, ParsedCommand, ProxyCommand};
 
 pub fn parse_command(
     mut inbox: EventReader<Inbox>,
@@ -39,26 +39,36 @@ pub fn parse_command(
             continue;
         };
 
-        if handle_chat(client, content, &mut commands)
-            || handle_config(client, content, &mut commands)
-            || handle_drop(client, content, &mut commands)
-            || handle_emote(client, content, &mut commands)
-            || handle_enter(client, content, &mut commands)
-            || handle_inventory(client, content, &mut commands)
-            || handle_look(client, content, &mut commands)
-            || handle_map(client, content, &mut commands)
-            || handle_movement(client, content, &mut commands)
-            || handle_place(client, content, &mut commands)
-            || handle_say(client, content, &mut commands)
-            || handle_take(client, content, &mut commands)
-            || handle_teleport(client, content, &mut commands)
-            || handle_who(client, content, &mut commands)
-            || handle_yell(client, content, &mut commands)
-        {
-            continue;
-        }
+        let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
+            Box::new(handle_chat),
+            Box::new(handle_config),
+            Box::new(handle_drop),
+            Box::new(handle_emote),
+            Box::new(handle_enter),
+            Box::new(handle_inventory),
+            Box::new(handle_look),
+            Box::new(handle_map),
+            Box::new(handle_movement),
+            Box::new(handle_place),
+            Box::new(handle_say),
+            Box::new(handle_take),
+            Box::new(handle_teleport),
+            Box::new(handle_who),
+            Box::new(handle_yell),
+        ];
 
-        outbox.send_text(client.id, "Unknown command.");
+        match handlers.iter().find_map(|handler| match handler(content) {
+            Err(ParseError::WrongCommand) => None,
+            Ok(command) => Some(Ok(command)),
+            Err(err) => Some(Err(err)),
+        }) {
+            Some(Ok(command)) => commands.send(ParsedCommand {
+                from: client.id,
+                command,
+            }),
+            Some(Err(error)) => outbox.send_text(client.id, error.to_string()),
+            None => outbox.send_text(client.id, ParseError::UnknownCommand.to_string()),
+        }
     }
 }
 

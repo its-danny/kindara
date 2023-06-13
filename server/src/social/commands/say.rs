@@ -5,34 +5,27 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_say(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^((say |')(?P<message>.+))$").unwrap());
+pub fn handle_say(content: &str) -> Result<Command, ParseError> {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(say |')(?P<message>.*)?$").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let message = captures
-            .name("message")
-            .map(|m| m.as_str().trim())
-            .unwrap_or("");
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let message = captures
+                .name("message")
+                .map(|m| m.as_str().trim())
+                .filter(|m| !m.is_empty())
+                .ok_or(ParseError::InvalidArguments("Say what?".into()))?;
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Say(message.into()),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Say(message.into()))
+        }
     }
 }
 
@@ -44,7 +37,7 @@ pub fn say(
 ) {
     for command in commands.iter() {
         if let Command::Say(message) = &command.command {
-            let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
+            let Some((_, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
@@ -55,12 +48,6 @@ pub fn say(
 
                 continue;
             };
-
-            if message.is_empty() {
-                outbox.send_text(client.id, "Say what?");
-
-                continue;
-            }
 
             for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
                 outbox.send_text(

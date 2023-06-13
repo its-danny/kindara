@@ -5,45 +5,37 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{ChatChannel, Command, ParsedCommand},
+    input::events::{ChatChannel, Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_chat(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_chat(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX
-        .get_or_init(|| Regex::new(r"^((?P<channel>chat|c|novice|n) (?P<message>.+))$").unwrap());
+        .get_or_init(|| Regex::new(r"^(?P<channel>chat|c|novice|n)( (?P<message>.*))?$").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let message = captures
-            .name("message")
-            .map(|m| m.as_str().trim())
-            .unwrap_or("");
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let channel = captures.name("channel").map(|m| m.as_str().trim()).ok_or(
+                ParseError::InvalidArguments("Who are you talking to?".into()),
+            )?;
 
-        let channel = captures
-            .name("channel")
-            .map(|m| m.as_str().trim())
-            .unwrap_or("");
+            let channel = match channel {
+                "chat" | "c" => ChatChannel::Chat,
+                "novice" | "n" => ChatChannel::Novice,
+                _ => ChatChannel::Chat,
+            };
 
-        let channel = match channel {
-            "chat" | "c" => ChatChannel::Chat,
-            "novice" | "n" => ChatChannel::Novice,
-            _ => ChatChannel::Chat,
-        };
+            let message = captures
+                .name("message")
+                .map(|m| m.as_str().trim())
+                .filter(|m| !m.is_empty())
+                .ok_or(ParseError::InvalidArguments("Say what?".into()))?;
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Chat((channel, message.into())),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Chat((channel, message.into())))
+        }
     }
 }
 
@@ -54,17 +46,11 @@ pub fn chat(
 ) {
     for command in commands.iter() {
         if let Command::Chat((channel, message)) = &command.command {
-            let Some((client, character)) = players.iter().find(|(c, _)| c.id == command.from) else {
+            let Some((_, character)) = players.iter().find(|(c, _)| c.id == command.from) else {
                 debug!("Could not find authenticated client: {:?}", command.from);
 
                 continue;
             };
-
-            if message.is_empty() {
-                outbox.send_text(client.id, "Say what?");
-
-                continue;
-            }
 
             for (client, _) in players.iter() {
                 outbox.send_text(

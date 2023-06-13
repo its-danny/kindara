@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
@@ -17,34 +17,26 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_place(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_place(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
-        Regex::new(r"^place (?P<object>.+?) (on|against|in )?(?P<target>.+)$").unwrap()
+        Regex::new(r"^place( (?P<object>.*?))?( (on|against|in))?( (?P<target>.*))?$").unwrap()
     });
 
-    if let Some(captures) = regex.captures(content) {
-        let object = captures
-            .name("object")
-            .map(|m| m.as_str().trim().to_lowercase())
-            .unwrap_or_default();
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let object = captures
+                .name("object")
+                .map(|m| m.as_str().trim())
+                .ok_or(ParseError::InvalidArguments("Place what?".into()))?;
 
-        let target = captures
-            .name("target")
-            .map(|m| m.as_str().trim().to_lowercase())
-            .unwrap_or_default();
+            let target = captures
+                .name("target")
+                .map(|m| m.as_str().trim())
+                .ok_or(ParseError::InvalidArguments("Place where?".into()))?;
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Place((object, target)),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Place((object.into(), target.into())))
+        }
     }
 }
 

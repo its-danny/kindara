@@ -5,33 +5,25 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand, ProxyCommand},
+    input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_enter(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(enter)(?P<transition> .+)?$").unwrap());
+pub fn handle_enter(content: &str) -> Result<Command, ParseError> {
+    let regex = REGEX.get_or_init(|| Regex::new(r"^enter( (?P<transition>.+))?").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let target = captures
-            .name("transition")
-            .map(|m| m.as_str().trim().to_lowercase());
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let transition = captures
+                .name("transition")
+                .map(|m| m.as_str().trim().to_lowercase());
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Enter(target),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Enter(transition))
+        }
     }
 }
 
