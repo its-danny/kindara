@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Zone},
     visual::components::Sprite,
@@ -13,22 +13,12 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_map(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_map(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| Regex::new(r"^(map|m)$").unwrap());
 
-    if regex.is_match(content) {
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Map,
-        });
-
-        true
-    } else {
-        false
+    match regex.is_match(content) {
+        false => Err(ParseError::WrongCommand),
+        true => Ok(Command::Map),
     }
 }
 

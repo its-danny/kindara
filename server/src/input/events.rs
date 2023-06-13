@@ -36,6 +36,22 @@ pub enum Command {
     Yell(String),
 }
 
+pub enum ParseError {
+    WrongCommand,
+    InvalidArguments(String),
+    UnknownCommand,
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongCommand => unreachable!(),
+            Self::InvalidArguments(suggestion) => write!(f, "{suggestion}"),
+            Self::UnknownCommand => write!(f, "You don't know how to do that."),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ParsedCommand {
     pub from: ClientId,

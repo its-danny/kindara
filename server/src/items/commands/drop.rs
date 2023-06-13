@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Inventory, Item},
         utils::{item_name_list, item_name_matches},
@@ -16,29 +16,22 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_drop(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^drop ((?P<all>all) )?(?P<target>.+)$").unwrap());
+pub fn handle_drop(content: &str) -> Result<Command, ParseError> {
+    let regex =
+        REGEX.get_or_init(|| Regex::new(r"^drop( (?P<all>all))?( (?P<target>.*))?$").unwrap());
 
-    if let Some(captures) = regex.captures(content) {
-        let target = captures
-            .name("target")
-            .map(|m| m.as_str().trim().to_lowercase())
-            .unwrap_or_default();
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let target = captures
+                .name("target")
+                .map(|m| m.as_str().trim())
+                .ok_or(ParseError::InvalidArguments("Drop what?".into()))?;
 
-        let all = captures.name("all").is_some();
+            let all = captures.name("all").is_some();
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Drop((target, all)),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Drop((target.to_string(), all)))
+        }
     }
 }
 

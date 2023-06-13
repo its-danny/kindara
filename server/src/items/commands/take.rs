@@ -6,7 +6,7 @@ use indefinite::indefinite;
 use regex::Regex;
 
 use crate::{
-    input::events::{Command, ParsedCommand},
+    input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
@@ -18,35 +18,28 @@ use crate::{
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
-pub fn handle_take(
-    client: &Client,
-    content: &str,
-    commands: &mut EventWriter<ParsedCommand>,
-) -> bool {
+pub fn handle_take(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
-        Regex::new(r"^(take|get) ((?P<all>all) )?(?P<target>.*?)( from)?(?P<source> .+)?$").unwrap()
+        Regex::new(r"^(take|get)( (?P<all>all))?( (?P<target>.*?))?( (from))?( (?P<source>.*))?$")
+            .unwrap()
     });
 
-    if let Some(captures) = regex.captures(content) {
-        let target = captures
-            .name("target")
-            .map(|m| m.as_str().trim().to_lowercase())
-            .unwrap_or_default();
+    match regex.captures(content) {
+        None => Err(ParseError::WrongCommand),
+        Some(captures) => {
+            let target = captures
+                .name("target")
+                .map(|m| m.as_str().trim())
+                .ok_or(ParseError::InvalidArguments("Take what?".into()))?;
 
-        let all = captures.name("all").is_some();
+            let all = captures.name("all").is_some();
 
-        let source = captures
-            .name("source")
-            .map(|m| m.as_str().trim().to_lowercase());
+            let source = captures
+                .name("source")
+                .map(|m| m.as_str().trim().to_lowercase());
 
-        commands.send(ParsedCommand {
-            from: client.id,
-            command: Command::Take((target, all, source)),
-        });
-
-        true
-    } else {
-        false
+            Ok(Command::Take((target.into(), all, source)))
+        }
     }
 }
 
