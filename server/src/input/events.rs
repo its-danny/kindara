@@ -30,6 +30,7 @@ pub enum Command {
     Movement(String),
     Place((String, String)),
     Say(String),
+    Scan((bool, Option<String>)),
     Take((String, bool, Option<String>)),
     Teleport((String, (i32, i32, i32))),
     Who,

@@ -14,7 +14,7 @@ use crate::{
     },
     spatial::commands::{
         enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
-        teleport::handle_teleport,
+        scan::handle_scan, teleport::handle_teleport,
     },
 };
 
@@ -51,6 +51,7 @@ pub fn parse_command(
             Box::new(handle_movement),
             Box::new(handle_place),
             Box::new(handle_say),
+            Box::new(handle_scan),
             Box::new(handle_take),
             Box::new(handle_teleport),
             Box::new(handle_who),

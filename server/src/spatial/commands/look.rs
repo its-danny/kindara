@@ -10,7 +10,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Item, Surface},
-        utils::{item_name_list, item_name_matches},
+        utils::{item_matches_query, item_name_list},
     },
     player::components::{Character, Client, Online},
     spatial::{
@@ -39,7 +39,7 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn look(
-    items: Query<(&Item, Option<&Surface>, Option<&Children>)>,
+    items: Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
@@ -67,9 +67,9 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(item, _, _)| item_name_matches(item, target));
+                    .find(|(entity, item, _, _)| item_matches_query(entity, item, target));
 
-                if let Some((item, surface, children)) = item {
+                if let Some((_, item, surface, children)) = item {
                     let surface_line = surface
                         .and_then(|s| children.map(|c| (s, c)))
                         .map(|(surface, children)| {
@@ -195,14 +195,14 @@ fn get_players_line(
 
 fn get_items_line(
     siblings: Option<&Children>,
-    items: &Query<(&Item, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
 ) -> String {
     let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| items.get(*sibling).ok())
-        .filter(|(item, _, _)| item.visible)
-        .map(|(item, _, _)| item.short_name.clone())
+        .filter(|(_, item, _, _)| item.visible)
+        .map(|(_, item, _, _)| item.short_name.clone())
         .collect::<Vec<String>>();
 
     if items_found.is_empty() {
@@ -229,14 +229,14 @@ fn get_items_line(
 }
 
 fn items_on_surface(
-    items: &Query<(&Item, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
     children: &Children,
 ) -> String {
     let on_surface = children
         .iter()
         .filter_map(|child| items.get(*child).ok())
-        .filter(|(item, _, _)| item.visible)
-        .map(|(item, _, _)| item.short_name.clone())
+        .filter(|(_, item, _, _)| item.visible)
+        .map(|(_, item, _, _)| item.short_name.clone())
         .collect::<Vec<String>>();
 
     if on_surface.is_empty() {
