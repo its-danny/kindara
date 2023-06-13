@@ -9,7 +9,7 @@ use crate::{
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
-        utils::item_name_matches,
+        utils::item_matches_query,
     },
     player::components::{Client, Online},
     spatial::components::Tile,
@@ -74,7 +74,7 @@ pub fn place(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _, _)| item_name_matches(item, object)) else {
+                .find(|(entity, item, _, _)| item_matches_query(entity, item, object)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't have a {object}."),
@@ -95,7 +95,7 @@ pub fn place(
             let Some((target, target_item, _, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(_, item, _, _)| item_name_matches(item, target)) else {
+                .find(|(entity, item, _, _)| item_matches_query(entity, item, target)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't see a {target} here."),
