@@ -8,6 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::components::{Inventory, Item},
     player::components::{Client, Online},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -30,17 +31,11 @@ pub fn inventory(
 ) {
     for command in commands.iter() {
         if let Command::Inventory = &command.command {
-            let Some((client, children)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Some(inventory) = children.iter().find_map(|child| inventories.get(*child).ok()) else {
-                debug!("Could not get inventory for client: {:?}", client);
-
-                continue;
-            };
+            let (client, children) =
+                value_or_continue!(players.iter_mut().find(|(c, _)| c.id == command.from));
+            let inventory = value_or_continue!(children
+                .iter()
+                .find_map(|child| inventories.get(*child).ok()));
 
             let mut items = inventory
                 .iter()

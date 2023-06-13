@@ -13,6 +13,7 @@ use crate::{
     },
     player::components::{Client, Online},
     spatial::components::Tile,
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -52,23 +53,12 @@ pub fn place(
 ) {
     for command in commands.iter() {
         if let Command::Place((object, target)) = &command.command {
-            let Some((client, player_tile, player_children)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(siblings) = tiles.get(player_tile.get()) else {
-                debug!("Could not get tile: {:?}", player_tile.get());
-
-                continue;
-            };
-
-            let Some(inventory) = player_children.iter().find_map(|child| inventories.get(*child).ok()) else {
-                debug!("Could not get inventory for client: {:?}", client);
-
-                continue;
-            };
+            let (client, player_tile, player_children) =
+                value_or_continue!(players.iter_mut().find(|(c, _, _)| c.id == command.from));
+            let siblings = value_or_continue!(tiles.get(player_tile.get()).ok());
+            let inventory = value_or_continue!(player_children
+                .iter()
+                .find_map(|child| inventories.get(*child).ok()));
 
             let Some((object, object_item, object_interactable, _)) = inventory
                 .iter()

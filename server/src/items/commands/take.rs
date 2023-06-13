@@ -14,6 +14,7 @@ use crate::{
     },
     player::components::{Client, Online},
     spatial::components::Tile,
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -55,23 +56,12 @@ pub fn take(
 ) {
     for command in commands.iter() {
         if let Command::Take((target, all, source)) = &command.command {
-            let Some((client, tile, children)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(siblings) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Some(inventory) = children.iter().find_map(|child| inventories.get(*child).ok()) else {
-                debug!("Could not get inventory for client: {:?}", client);
-
-                continue;
-            };
+            let (client, tile, children) =
+                value_or_continue!(players.iter_mut().find(|(c, _, _)| c.id == command.from));
+            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
+            let inventory = value_or_continue!(children
+                .iter()
+                .find_map(|child| inventories.get(*child).ok()));
 
             let to_search = if let Some(source) = source {
                 siblings

@@ -12,6 +12,7 @@ use crate::{
     },
     player::components::{Client, Online},
     spatial::components::Tile,
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -46,23 +47,12 @@ pub fn drop(
 ) {
     for command in commands.iter() {
         if let Command::Drop((target, all)) = &command.command {
-            let Some((client, tile, children)) = players.iter_mut().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(tile) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Some(items_in_inventory) = children.iter().find_map(|child| inventories.get(*child).ok()) else {
-                debug!("Could not get inventory for client: {:?}", client);
-
-                continue;
-            };
+            let (client, tile, children) =
+                value_or_continue!(players.iter_mut().find(|(c, _, _)| c.id == command.from));
+            let tile = value_or_continue!(tiles.get(tile.get()).ok());
+            let items_in_inventory = value_or_continue!(children
+                .iter()
+                .find_map(|child| inventories.get(*child).ok()));
 
             let mut items_found = items_in_inventory
                 .iter()

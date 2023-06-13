@@ -11,6 +11,7 @@ use crate::{
         permissions,
     },
     spatial::components::{Position, Tile, Zone},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -65,23 +66,10 @@ pub fn teleport(
 ) {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
-            let Some((player, client, character, tile)) = players.iter_mut().find(|(_, c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok((_, _, here)) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Ok((here, _)) = zones.get(here.get()) else {
-                debug!("Could not get zone: {:?}", here.get());
-
-                continue;
-            };
+            let (player, client, character, tile) =
+                value_or_continue!(players.iter_mut().find(|(_, c, _, _)| c.id == command.from));
+            let (_, _, here) = value_or_continue!(tiles.get(tile.get()).ok());
+            let (here, _) = value_or_continue!(zones.get(here.get()).ok());
 
             if !character.can(permissions::TELEPORT) {
                 continue;

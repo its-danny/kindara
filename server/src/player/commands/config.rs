@@ -17,6 +17,7 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -46,11 +47,8 @@ pub fn config(
 ) {
     for command in commands.iter() {
         if let Command::Config((option, value)) = &command.command {
-            let Some((client, mut character)) = players.iter_mut().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
+            let (client, mut character) =
+                value_or_continue!(players.iter_mut().find(|(c, _)| c.id == command.from));
 
             match (option, value) {
                 (None, None) => {
@@ -121,11 +119,7 @@ pub fn handle_save_config_task(
 ) {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
-            let Some(client) = players.iter().find(|c| c.id == client_id) else {
-                debug!("Could not find authenticated client for Client ID: {:?}", client_id);
-
-                continue;
-            };
+            let client = value_or_continue!(players.iter().find(|c| c.id == client_id));
 
             outbox.send_text(client.id, "Config saved.");
 

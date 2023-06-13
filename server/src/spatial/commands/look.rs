@@ -17,6 +17,7 @@ use crate::{
         components::{Position, Tile, Zone},
         utils::offset_for_direction,
     },
+    value_or_continue,
     visual::components::Sprite,
 };
 
@@ -48,17 +49,10 @@ pub fn look(
 ) {
     for command in commands.iter() {
         if let Command::Look(target) = &command.command {
-            let Some((client, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok((tile, sprite, position, siblings, zone)) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
+            let (client, character, tile) =
+                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
+            let (tile, sprite, position, siblings, zone) =
+                value_or_continue!(tiles.get(tile.get()).ok());
 
             let output: String;
 
@@ -94,11 +88,7 @@ pub fn look(
                     output = format!("You don't see a {target} here.");
                 }
             } else {
-                let Ok((_, zone_tiles)) = zones.get(zone.get()) else {
-                    debug!("Could not get zone: {:?}", zone.get());
-
-                    continue;
-                };
+                let (_, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
 
                 let exits = get_exits(position, zone_tiles, &tiles);
                 let items_line = get_items_line(siblings, &items);

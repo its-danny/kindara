@@ -7,6 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{ChatChannel, Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -46,11 +47,8 @@ pub fn chat(
 ) {
     for command in commands.iter() {
         if let Command::Chat((channel, message)) = &command.command {
-            let Some((_, character)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
+            let (_, character) =
+                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
 
             for (client, _) in players.iter() {
                 outbox.send_text(

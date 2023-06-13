@@ -8,6 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -39,17 +40,9 @@ pub fn enter(
 ) {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok((_, _, _, siblings)) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
+            let (player, client, tile) =
+                value_or_continue!(players.iter_mut().find(|(_, c, _)| c.id == command.from));
+            let (_, _, _, siblings) = value_or_continue!(tiles.get(tile.get()).ok());
 
             let transitions = siblings
                 .map(|siblings| {
@@ -76,22 +69,15 @@ pub fn enter(
                 continue;
             };
 
-            let Some(target) = tiles.iter().find_map(|(e, p, z, _)| {
-                zones
-                    .get(z.get())
-                    .ok()
-                    .and_then(|zone| {
-                        if zone.name == transition.zone && p.0 == transition.position {
-                            Some(e)
-                        } else {
-                            None
-                        }
-                    })
-            }) else {
-                debug!("Could not find target tile for transition: {:?}", transition);
-
-                continue;
-            };
+            let target = value_or_continue!(tiles.iter().find_map(|(e, p, z, _)| {
+                zones.get(z.get()).ok().and_then(|zone| {
+                    if zone.name == transition.zone && p.0 == transition.position {
+                        Some(e)
+                    } else {
+                        None
+                    }
+                })
+            }));
 
             bevy.entity(player).set_parent(target);
 
