@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
-use crate::net::telnet::NAWS;
+use crate::{net::telnet::NAWS, value_or_continue};
 
 use super::components::Client;
 
@@ -13,11 +13,7 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
             None
         }
     }) {
-        let Some(mut client) = clients.iter_mut().find(|c| c.id == message.from) else {
-            debug!("Could not find authenticated client: {:?}", message.from);
-
-            continue;
-        };
+        let mut client = value_or_continue!(clients.iter_mut().find(|c| c.id == message.from));
 
         if content[0..=2] == [IAC, SB, NAWS] {
             let width = content.get(4).map(|a| *a as u16).unwrap_or(80);

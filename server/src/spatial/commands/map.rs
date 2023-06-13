@@ -8,6 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Zone},
+    value_or_continue,
     visual::components::Sprite,
 };
 
@@ -31,23 +32,10 @@ pub fn map(
 ) {
     for command in commands.iter() {
         if let Command::Map = &command.command {
-            let Some((client, tile)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok((position, _, zone)) = tiles.get(tile.get()) else {
-                debug!("Could not get parent: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Ok((zone, zone_tiles)) = zones.get(zone.get()) else {
-                debug!("Could not get zone: {:?}", zone.get());
-
-                continue;
-            };
+            let (client, tile) =
+                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
+            let (position, _, zone) = value_or_continue!(tiles.get(tile.get()).ok());
+            let (zone, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
 
             let height = 24;
             let width = if client.width % 2 == 1 {

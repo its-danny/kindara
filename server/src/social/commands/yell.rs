@@ -8,6 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::{Tile, Zone},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -38,23 +39,10 @@ pub fn yell(
 ) {
     for command in commands.iter() {
         if let Command::Yell(message) = &command.command {
-            let Some((_, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(zone) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Ok(zone_tiles) = zones.get(zone.get()) else {
-                debug!("Could not get zone: {:?}", zone.get());
-
-                continue;
-            };
+            let (_, character, tile) =
+                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
+            let zone = value_or_continue!(tiles.get(tile.get()).ok());
+            let zone_tiles = value_or_continue!(zones.get(zone.get()).ok());
 
             for (client, _, _) in players.iter().filter(|(_, _, t)| zone_tiles.contains(t)) {
                 outbox.send_text(client.id, format!("{} yells \"{message}\"", character.name));

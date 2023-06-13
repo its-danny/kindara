@@ -8,6 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -37,17 +38,9 @@ pub fn emote(
 ) {
     for command in commands.iter() {
         if let Command::Emote(action) = &command.command {
-            let Some((_, character, tile)) = players.iter().find(|(c, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok(siblings) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
+            let (_, character, tile) =
+                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
+            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
             for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
                 outbox.send_text(other_client.id, format!("{} {action}", character.name));

@@ -20,6 +20,7 @@ use crate::{
         config::CharacterConfig,
     },
     spatial::components::{Spawn, Tile},
+    value_or_continue,
 };
 
 use super::components::{AuthState, Authenticating};
@@ -40,11 +41,8 @@ pub fn authenticate(
             None
         }
     }) {
-        let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == message.from) else {
-            debug!("Could not find authentication state for Client ID: {:?}", message.from);
-
-            continue;
-        };
+        let (client, mut auth) =
+            value_or_continue!(clients.iter_mut().find(|(c, _)| c.id == message.from));
 
         match &mut auth.state {
             AuthState::Name => {
@@ -111,11 +109,8 @@ pub fn handle_user_exists_task(
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
-            let Some((client, mut auth)) = clients.iter_mut().find(|(c, _)| c.id == client_id) else {
-                debug!("Could not find authentication state for Client ID: {:?}", client_id);
-
-                continue;
-            };
+            let (client, mut auth) =
+                value_or_continue!(clients.iter_mut().find(|(c, _)| c.id == client_id));
 
             auth.state = AuthState::Password;
 
@@ -188,20 +183,11 @@ pub fn handle_authenticate_task(
         if let Some(Ok((character_model, client_id))) =
             future::block_on(future::poll_once(&mut task.0))
         {
-            let Some((player_entity, client, mut auth)) =
-                clients.iter_mut().find(|(_, c, _)| c.id == client_id)
-            else {
-                debug!("Could not find authentication state for Client ID: {:?}", client_id);
-
-                continue;
-            };
+            let (player_entity, client, mut auth) =
+                value_or_continue!(clients.iter_mut().find(|(_, c, _)| c.id == client_id));
 
             if let Some(character) = character_model {
-                let Some(spawn) = spawn_tiles.iter().next() else {
-                    debug!("Could not find spawn tile");
-
-                    continue;
-                };
+                let spawn = value_or_continue!(spawn_tiles.iter().next());
 
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()

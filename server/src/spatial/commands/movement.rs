@@ -11,6 +11,7 @@ use crate::{
         components::{Position, Tile, Zone},
         utils::offset_for_direction,
     },
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -37,23 +38,10 @@ pub fn movement(
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let Some((player, client, tile)) = players.iter_mut().find(|(_, c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
-
-            let Ok((_, position, zone)) = tiles.get(tile.get()) else {
-                debug!("Could not get tile: {:?}", tile.get());
-
-                continue;
-            };
-
-            let Ok(zone_tiles) = zones.get(zone.get()) else {
-                debug!("Could not get zone: {:?}", zone.get());
-
-                continue;
-            };
+            let (player, client, tile) =
+                value_or_continue!(players.iter_mut().find(|(_, c, _)| c.id == command.from));
+            let (_, position, zone) = value_or_continue!(tiles.get(tile.get()).ok());
+            let zone_tiles = value_or_continue!(zones.get(zone.get()).ok());
 
             let Some(offset) = offset_for_direction(direction) else {
                 continue;

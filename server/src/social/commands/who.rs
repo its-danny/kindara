@@ -7,6 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -27,11 +28,8 @@ pub fn who(
 ) {
     for command in commands.iter() {
         if let Command::Who = &command.command {
-            let Some((client, _)) = players.iter().find(|(c, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
+            let (client, _) =
+                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
 
             let online = players
                 .iter()

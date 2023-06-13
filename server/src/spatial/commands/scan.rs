@@ -12,6 +12,7 @@ use crate::{
     },
     player::components::{Character, Client, Online},
     spatial::components::Tile,
+    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -45,11 +46,8 @@ pub fn scan(
 ) {
     for command in commands.iter() {
         if let Command::Scan((inventory, target)) = &command.command {
-            let Some((_, client, _, tile, children)) = players.iter().find(|(_, c, _, _, _)| c.id == command.from) else {
-                debug!("Could not find authenticated client: {:?}", command.from);
-
-                continue;
-            };
+            let (_, client, _, tile, children) =
+                value_or_continue!(players.iter().find(|(_, c, _, _, _)| c.id == command.from));
 
             let entities_to_scan = if *inventory {
                 children

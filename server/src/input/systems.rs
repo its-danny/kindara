@@ -16,6 +16,7 @@ use crate::{
         enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
         scan::handle_scan, teleport::handle_teleport,
     },
+    value_or_continue,
 };
 
 use super::events::{Command, ParseError, ParsedCommand, ProxyCommand};
@@ -33,11 +34,7 @@ pub fn parse_command(
             None
         }
     }) {
-        let Some(client) = players.iter().find(|c| c.id == message.from) else {
-            debug!("Could not find authenticated client: {:?}", message.from);
-
-            continue;
-        };
+        let client = value_or_continue!(players.iter().find(|c| c.id == message.from));
 
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_chat),
