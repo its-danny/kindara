@@ -36,6 +36,7 @@ use crate::{
 #[system_set(base)]
 pub enum Set {
     Input,
+    WorldSave,
 }
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
@@ -64,6 +65,7 @@ async fn main() -> Result<(), sqlx::Error> {
     App::new()
         // Stages
         .configure_set(Set::Input.before(CoreSet::Update))
+        .configure_set(Set::WorldSave.after(CoreSet::Update))
         // Resources
         .insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
             1.0 / 60.0,
