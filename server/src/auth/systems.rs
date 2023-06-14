@@ -5,6 +5,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_nest::prelude::*;
+use bevy_proto::prelude::ProtoCommands;
 use censor::Censor;
 use futures_lite::future;
 use regex::Regex;
@@ -13,6 +14,7 @@ use vari::vformat;
 
 use crate::{
     db::{models::CharacterModel, pool::DatabasePool},
+    input::events::{Command, ParsedCommand, ProxyCommand},
     items::components::Inventory,
     player::{
         bundles::PlayerBundle,
@@ -21,11 +23,18 @@ use crate::{
     },
     spatial::components::{Spawn, Tile},
     value_or_continue,
+    world::resources::WorldState,
 };
 
 use super::components::{AuthState, Authenticating};
 
 static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
+
+#[derive(Component)]
+pub struct UserExistsTask(Task<Result<(bool, ClientId), sqlx::Error>>);
+
+#[derive(Component)]
+pub struct AuthenticateTask(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
 pub fn authenticate(
     mut bevy: Commands,
@@ -55,7 +64,7 @@ pub fn authenticate(
                 auth.name = content.clone();
                 auth.state = AuthState::AwaitingTaskCompletion;
 
-                bevy.spawn(UserExists(spawn_user_exists_task(
+                bevy.spawn(UserExistsTask(spawn_user_exists_task(
                     database.0.clone(),
                     client.id,
                     content.clone(),
@@ -70,7 +79,7 @@ pub fn authenticate(
 
                 auth.state = AuthState::AwaitingTaskCompletion;
 
-                bevy.spawn(Authenticate(spawn_authenticate_task(
+                bevy.spawn(AuthenticateTask(spawn_authenticate_task(
                     database.0.clone(),
                     client.id,
                     auth.name.clone(),
@@ -81,9 +90,6 @@ pub fn authenticate(
         }
     }
 }
-
-#[derive(Component)]
-pub struct UserExists(Task<Result<(bool, ClientId), sqlx::Error>>);
 
 fn spawn_user_exists_task(
     pool: Pool<Postgres>,
@@ -103,7 +109,7 @@ fn spawn_user_exists_task(
 
 pub fn handle_user_exists_task(
     mut bevy: Commands,
-    mut tasks: Query<(Entity, &mut UserExists)>,
+    mut tasks: Query<(Entity, &mut UserExistsTask)>,
     mut outbox: EventWriter<Outbox>,
     mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
 ) {
@@ -127,13 +133,10 @@ pub fn handle_user_exists_task(
                 },
             );
 
-            bevy.entity(entity).remove::<UserExists>();
+            bevy.entity(entity).remove::<UserExistsTask>();
         }
     }
 }
-
-#[derive(Component)]
-pub struct Authenticate(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
 fn spawn_authenticate_task(
     pool: Pool<Postgres>,
@@ -174,10 +177,14 @@ fn spawn_authenticate_task(
 
 pub fn handle_authenticate_task(
     mut bevy: Commands,
-    mut tasks: Query<(Entity, &mut Authenticate)>,
     mut clients: Query<(Entity, &Client, &mut Authenticating), Without<Online>>,
     mut outbox: EventWriter<Outbox>,
+    mut proto: ProtoCommands,
+    mut proxy: EventWriter<ProxyCommand>,
+    mut tasks: Query<(Entity, &mut AuthenticateTask)>,
     spawn_tiles: Query<Entity, (With<Tile>, With<Spawn>)>,
+    tiles: Query<(Entity, &Name), With<Tile>>,
+    world_state: Res<WorldState>,
 ) {
     for (task_entity, mut task) in &mut tasks {
         if let Some(Ok((character_model, client_id))) =
@@ -187,8 +194,6 @@ pub fn handle_authenticate_task(
                 value_or_continue!(clients.iter_mut().find(|(_, c, _)| c.id == client_id));
 
             if let Some(character) = character_model {
-                let spawn = value_or_continue!(spawn_tiles.iter().next());
-
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
                     .insert((
@@ -201,14 +206,49 @@ pub fn handle_authenticate_task(
                                 config: character.config.0,
                             },
                         },
-                    ))
-                    .set_parent(spawn)
-                    .with_children(|parent| {
-                        parent.spawn(Inventory);
-                    });
+                    ));
+
+                let spawn = value_or_continue!(spawn_tiles.iter().next());
+
+                let character_in_state =
+                    world_state.characters.iter().find(|c| c.id == character.id);
+
+                if let Some(character_in_state) = character_in_state {
+                    let tile = tiles
+                        .iter()
+                        .find(|(_, name)| {
+                            name.trim_end_matches(" (Prototype)")
+                                == character_in_state.tile.trim_end_matches(" (Prototype)")
+                        })
+                        .map(|(e, _)| e)
+                        .unwrap_or(spawn);
+
+                    bevy.entity(player_entity)
+                        .set_parent(tile)
+                        .with_children(|parent| {
+                            let mut inventory = parent.spawn(Inventory);
+
+                            for item_name in character_in_state.inventory.iter() {
+                                inventory.add_child(
+                                    proto.spawn(item_name.trim_end_matches(" (Prototype)")).id(),
+                                );
+                            }
+                        });
+                } else {
+                    bevy.entity(player_entity)
+                        .set_parent(spawn)
+                        .with_children(|parent| {
+                            parent.spawn(Inventory);
+                        });
+                }
 
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
                 outbox.send_text(client.id, "May thy journey here be prosperous.");
+
+                proxy.send(ProxyCommand(ParsedCommand {
+                    from: client.id,
+                    command: Command::Look(None),
+                }));
             } else {
                 auth.state = AuthState::Password;
 
@@ -218,7 +258,7 @@ pub fn handle_authenticate_task(
                 );
             }
 
-            bevy.entity(task_entity).remove::<Authenticate>();
+            bevy.entity(task_entity).remove::<AuthenticateTask>();
         }
     }
 }
@@ -303,7 +343,7 @@ mod tests {
         send_message(&mut app, client_id, "Icauna");
         app.update();
 
-        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -315,7 +355,7 @@ mod tests {
         send_message(&mut app, client_id, "secret");
         app.update();
 
-        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -362,7 +402,7 @@ mod tests {
         send_message(&mut app, client_id, "Bres");
         app.update();
 
-        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -377,7 +417,7 @@ mod tests {
         send_message(&mut app, client_id, "secret");
         app.update();
 
-        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -413,7 +453,7 @@ mod tests {
         send_message(&mut app, client_id, "Bres");
         app.update();
 
-        wait_for_task(&get_task::<UserExists>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
         let command = get_command_content(&mut app, client_id);
@@ -428,7 +468,7 @@ mod tests {
         send_message(&mut app, client_id, "wrong");
         app.update();
 
-        wait_for_task(&get_task::<Authenticate>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
         let content = get_message_content(&mut app, client_id);

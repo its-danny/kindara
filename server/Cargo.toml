@@ -10,7 +10,10 @@ async-std = { version = "1.12", features = ["attributes"] }
 bcrypt = "0.14"
 bevy = { version = "0.10", default-features = false }
 bevy-nest = "0.1"
-bevy_proto = { version = "0.10", default-features = false, features = ["ron"] }
+bevy_proto = { version = "0.10", default-features = false, features = [
+  "auto_name",
+  "ron",
+] }
 censor = "0.3"
 chrono = "0.4"
 dotenvy = "0.15"

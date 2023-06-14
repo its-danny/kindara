@@ -8,6 +8,7 @@ use crate::{
         events::{ParsedCommand, ProxyCommand},
         systems::parse_command,
     },
+    world::resources::WorldState,
     Set,
 };
 
@@ -30,6 +31,7 @@ impl AppBuilder {
 
         app.configure_set(Set::Input.before(CoreSet::Update))
             .add_plugins(MinimalPlugins)
+            .insert_resource(WorldState::default())
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()

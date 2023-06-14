@@ -38,6 +38,9 @@ pub fn handle_config(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(Component)]
+pub struct SaveConfigTask(Task<Result<ClientId, sqlx::Error>>);
+
 pub fn config(
     database: Res<DatabasePool>,
     mut bevy: Commands,
@@ -76,7 +79,7 @@ pub fn config(
                 },
                 (Some(option), Some(value)) => match character.config.set(option, value) {
                     Ok(_) => {
-                        bevy.spawn(SaveConfig(spawn_save_config_task(
+                        bevy.spawn(SaveConfigTask(spawn_save_config_task(
                             database.0.clone(),
                             client.id,
                             character.id,
@@ -90,9 +93,6 @@ pub fn config(
         }
     }
 }
-
-#[derive(Component)]
-pub struct SaveConfig(Task<Result<ClientId, sqlx::Error>>);
 
 fn spawn_save_config_task(
     pool: Pool<Postgres>,
@@ -113,7 +113,7 @@ fn spawn_save_config_task(
 
 pub fn handle_save_config_task(
     mut bevy: Commands,
-    mut tasks: Query<(Entity, &mut SaveConfig)>,
+    mut tasks: Query<(Entity, &mut SaveConfigTask)>,
     mut outbox: EventWriter<Outbox>,
     players: Query<&Client, With<Online>>,
 ) {
@@ -123,7 +123,7 @@ pub fn handle_save_config_task(
 
             outbox.send_text(client.id, "Config saved.");
 
-            bevy.entity(entity).remove::<SaveConfig>();
+            bevy.entity(entity).remove::<SaveConfigTask>();
         }
     }
 }
@@ -162,7 +162,7 @@ mod tests {
             true
         );
 
-        wait_for_task(&get_task::<SaveConfig>(&mut app).unwrap().0);
+        wait_for_task(&get_task::<SaveConfigTask>(&mut app).unwrap().0);
         app.update();
 
         let content = get_message_content(&mut app, client_id);
