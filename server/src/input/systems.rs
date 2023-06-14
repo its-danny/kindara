@@ -6,7 +6,7 @@ use crate::{
         drop::handle_drop, inventory::handle_inventory, place::handle_place, take::handle_take,
     },
     player::{
-        commands::config::handle_config,
+        commands::{config::handle_config, describe::handle_describe},
         components::{Client, Online},
     },
     social::commands::{
@@ -39,6 +39,7 @@ pub fn parse_command(
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_chat),
             Box::new(handle_config),
+            Box::new(handle_describe),
             Box::new(handle_drop),
             Box::new(handle_emote),
             Box::new(handle_enter),

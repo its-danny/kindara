@@ -18,6 +18,8 @@ pub struct PlayerBuilder {
     id: i64,
     #[dummy(faker = "Name()")]
     name: String,
+    #[dummy(expr = "None")]
+    description: Option<String>,
     #[dummy(faker = "Password(3..30)")]
     password: String,
     #[dummy(expr = "0")]
@@ -45,6 +47,11 @@ impl PlayerBuilder {
 
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.into();
+        self
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.into());
         self
     }
 
@@ -108,6 +115,7 @@ impl PlayerBuilder {
                     character: Character {
                         id: self.id,
                         name: self.name,
+                        description: self.description,
                         role: self.role,
                         config: self.config,
                     },

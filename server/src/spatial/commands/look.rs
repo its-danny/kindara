@@ -57,13 +57,19 @@ pub fn look(
             let output: String;
 
             if let Some(target) = target {
-                let item = siblings
+                let matching_item = siblings
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
                     .find(|(entity, item, _, _)| item_matches_query(entity, item, target));
 
-                if let Some((_, item, surface, children)) = item {
+                let matching_player = siblings
+                    .iter()
+                    .flat_map(|siblings| siblings.iter())
+                    .filter_map(|sibling| players.get(*sibling).ok())
+                    .find(|(_, c, _)| &c.name.to_lowercase() == target);
+
+                if let Some((_, item, surface, children)) = matching_item {
                     let surface_line = surface
                         .and_then(|s| children.map(|c| (s, c)))
                         .map(|(surface, children)| {
@@ -84,6 +90,16 @@ pub fn look(
                         .unwrap_or("".into());
 
                     output = vformat!("{}\n{}{}", item.name, item.description, surface_line);
+                } else if let Some((_, character, _)) = matching_player {
+                    output = vformat!(
+                        "[$cyan]{}[$/]{}",
+                        character.name,
+                        character
+                            .description
+                            .clone()
+                            .map(|d| format!("\n{}", d))
+                            .unwrap_or_default()
+                    );
                 } else {
                     output = format!("You don't see a {target} here.");
                 }
@@ -297,6 +313,30 @@ mod tests {
         let content = get_message_content(&mut app, client_id);
 
         assert_eq!(content, "Rock\nA small rock.");
+    }
+
+    #[test]
+    fn sends_player_info() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(look);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        PlayerBuilder::new()
+            .name("Ramos")
+            .description("A big, burly hunk.")
+            .tile(tile)
+            .build(&mut app);
+
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        send_message(&mut app, client_id, "look ramos");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert_eq!(content.no_ansi(), "Ramos\nA big, burly hunk.");
     }
 
     #[test]

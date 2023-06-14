@@ -21,6 +21,7 @@ impl Display for ChatChannel {
 pub enum Command {
     Chat((ChatChannel, String)),
     Config((Option<String>, Option<String>)),
+    Describe(Option<String>),
     Drop((String, bool)),
     Emote(String),
     Enter(Option<String>),

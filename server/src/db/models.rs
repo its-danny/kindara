@@ -7,6 +7,7 @@ use crate::{player::config::CharacterConfig, world::resources::WorldState};
 pub struct CharacterModel {
     pub config: Json<CharacterConfig>,
     pub created_at: NaiveDateTime,
+    pub description: Option<String>,
     pub email: Option<String>,
     pub id: i64,
     pub name: String,
