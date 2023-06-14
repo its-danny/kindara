@@ -25,6 +25,7 @@ pub enum Command {
     Drop((String, bool)),
     Emote(String),
     Enter(Option<String>),
+    Examine((Option<String>, Option<usize>)),
     Inventory,
     Look(Option<String>),
     Map,

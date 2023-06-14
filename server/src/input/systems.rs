@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
+    interact::commands::examine::handle_examine,
     items::commands::{
         drop::handle_drop, inventory::handle_inventory, place::handle_place, take::handle_take,
     },
@@ -43,6 +44,7 @@ pub fn parse_command(
             Box::new(handle_drop),
             Box::new(handle_emote),
             Box::new(handle_enter),
+            Box::new(handle_examine),
             Box::new(handle_inventory),
             Box::new(handle_look),
             Box::new(handle_map),
