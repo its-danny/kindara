@@ -202,6 +202,7 @@ pub fn handle_authenticate_task(
                             character: Character {
                                 id: character.id,
                                 name: character.name,
+                                description: character.description,
                                 role: character.role,
                                 config: character.config.0,
                             },

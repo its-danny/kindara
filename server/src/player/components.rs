@@ -13,6 +13,7 @@ pub struct Client {
 pub struct Character {
     pub id: i64,
     pub name: String,
+    pub description: Option<String>,
     pub role: i16,
     pub config: CharacterConfig,
 }
@@ -37,6 +38,7 @@ mod tests {
         let admin = Character {
             id: 0,
             name: "admin".to_string(),
+            description: None,
             role: TELEPORT,
             config: CharacterConfig { brief: false },
         };
@@ -46,6 +48,7 @@ mod tests {
         let player = Character {
             id: 0,
             name: "player".to_string(),
+            description: None,
             role: 0,
             config: CharacterConfig { brief: false },
         };
