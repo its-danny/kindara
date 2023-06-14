@@ -136,13 +136,17 @@ pub fn load_world_state(mut bevy: Commands, database: Res<DatabasePool>) {
 
 fn spawn_load_world_state_task(pool: Pool<Postgres>) -> Task<Result<WorldState, sqlx::Error>> {
     AsyncComputeTaskPool::get().spawn(async move {
-        let state = sqlx::query_as::<_, WorldSaveModel>(
+        let save = sqlx::query_as::<_, WorldSaveModel>(
             "SELECT * FROM world_saves ORDER BY id DESC LIMIT 1",
         )
-        .fetch_one(&pool)
+        .fetch_optional(&pool)
         .await?;
 
-        Ok(state.state.0)
+        if let Some(save) = save {
+            Ok(save.state.0)
+        } else {
+            Ok(WorldState::default())
+        }
     })
 }
 
