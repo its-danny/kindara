@@ -6,7 +6,7 @@ use crate::{
     db::pool::DatabasePool,
     input::{
         events::{ParsedCommand, ProxyCommand},
-        systems::parse_command,
+        systems::{handle_proxy_command, parse_command},
     },
     world::resources::WorldState,
     Set,
@@ -36,7 +36,7 @@ impl AppBuilder {
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()
             .add_event::<ProxyCommand>()
-            .add_system(parse_command.in_base_set(Set::Input));
+            .add_systems((parse_command, handle_proxy_command).in_base_set(Set::Input));
 
         if let Some(database) = self.database {
             app.insert_resource(DatabasePool(database));
