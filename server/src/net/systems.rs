@@ -3,11 +3,11 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_nest::prelude::*;
-use sqlx::{types::Json, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 
 use crate::{
     auth::components::Authenticating,
-    db::pool::DatabasePool,
+    db::{pool::DatabasePool, utils::store_world_state},
     items::components::{Inventory, Item},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
@@ -48,23 +48,21 @@ pub fn on_network_event(
             if let Some((entity, _, character, parent, children)) =
                 players.iter().find(|(_, c, _, _, _)| c.id == *id)
             {
-                let tile = value_or_continue!(tiles.get(parent.get()).ok());
+                let tile = value_or_continue!(tiles.get(parent.get()).ok().map(|n| n.to_string()));
+
                 let inventory = value_or_continue!(children
                     .iter()
-                    .find_map(|child| inventories.get(*child).ok()));
-                let items = inventory
-                    .iter()
-                    .flat_map(|children| children.iter())
-                    .filter_map(|child| items.get(*child).ok())
-                    .collect::<Vec<_>>();
+                    .find_map(|child| inventories.get(*child).ok()))
+                .iter()
+                .flat_map(|children| children.iter())
+                .filter_map(|child| items.get(*child).ok())
+                .map(|(_, name)| name.to_string())
+                .collect::<Vec<_>>();
 
                 let state = WorldStateCharacter {
                     id: character.id,
-                    tile: tile.to_string(),
-                    inventory: items
-                        .iter()
-                        .map(|(_, name)| name.to_string())
-                        .collect::<Vec<_>>(),
+                    tile,
+                    inventory,
                 };
 
                 let mut characters = world_state.characters.clone();
@@ -95,14 +93,7 @@ fn spawn_save_character_task(
     AsyncComputeTaskPool::get().spawn(async move {
         let mut transaction = pool.begin().await?;
 
-        sqlx::query("INSERT INTO world_saves (state) VALUES ($1)")
-            .bind(Json(&state))
-            .execute(&mut *transaction)
-            .await?;
-
-        sqlx::query("DELETE FROM world_saves WHERE id IN (SELECT id FROM world_saves ORDER BY id ASC LIMIT 1) AND (SELECT COUNT(*) FROM world_saves) > 10")
-            .execute(&mut *transaction)
-            .await?;
+        store_world_state(&state, &mut transaction).await?;
 
         transaction.commit().await?;
 
