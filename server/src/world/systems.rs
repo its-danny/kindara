@@ -4,10 +4,10 @@ use bevy::{
 };
 use bevy_proto::prelude::*;
 use futures_lite::future;
-use sqlx::{types::Json, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 
 use crate::{
-    db::{models::WorldSaveModel, pool::DatabasePool},
+    db::{models::WorldSaveModel, pool::DatabasePool, utils::store_world_state},
     items::components::{Inventory, Item},
     player::components::{Character, Online},
     spatial::components::Tile,
@@ -78,9 +78,11 @@ fn spawn_save_world_state_task(
     AsyncComputeTaskPool::get().spawn(async move {
         let mut transaction = pool.begin().await?;
 
-        let latest = sqlx::query_as::<_, WorldSaveModel>("SELECT * FROM world_saves ORDER BY id DESC LIMIT 1")
-            .fetch_optional(&mut *transaction)
-            .await?;
+        let latest = sqlx::query_as::<_, WorldSaveModel>(
+            "SELECT * FROM world_saves ORDER BY id DESC LIMIT 1",
+        )
+        .fetch_optional(&mut *transaction)
+        .await?;
 
         let mut characters = state.characters.clone();
 
@@ -96,14 +98,7 @@ fn spawn_save_world_state_task(
 
         let state = WorldState { characters };
 
-        sqlx::query("INSERT INTO world_saves (state) VALUES ($1)")
-            .bind(Json(&state))
-            .execute(&mut *transaction)
-            .await?;
-
-        sqlx::query("DELETE FROM world_saves WHERE id IN (SELECT id FROM world_saves ORDER BY id ASC LIMIT 1) AND (SELECT COUNT(*) FROM world_saves) > 10")
-            .execute(&mut *transaction)
-            .await?;
+        store_world_state(&state, &mut transaction).await?;
 
         transaction.commit().await?;
 
