@@ -174,7 +174,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You place the dinner plate on the table.");
         assert!(app.world.get::<Children>(table).unwrap().contains(&plate));
@@ -196,7 +196,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You don't have a plate.");
     }
@@ -224,7 +224,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You can't place the dinner plate.");
     }
@@ -253,7 +253,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You don't see a table here.");
     }
@@ -283,7 +283,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You can't place the dinner plate on the table.");
     }
@@ -319,7 +319,7 @@ mod tests {
         send_message(&mut app, client_id, "place plate on table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "The table is full.");
     }

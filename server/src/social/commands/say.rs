@@ -78,7 +78,7 @@ mod tests {
         send_message(&mut app, client_id, "say Hello!");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Ramos says \"Hello!\"");
     }
@@ -101,7 +101,7 @@ mod tests {
         send_message(&mut app, sender_client_id, "say Hello!");
         app.update();
 
-        let content = get_message_content(&mut app, recipient_client_id);
+        let content = get_message_content(&mut app, recipient_client_id).unwrap();
 
         assert_eq!(content, "Flora says \"Hello!\"");
     }
@@ -119,7 +119,7 @@ mod tests {
         send_message(&mut app, client_id, "say   ");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Say what?");
     }

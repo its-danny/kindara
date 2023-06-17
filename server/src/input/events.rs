@@ -17,8 +17,18 @@ impl Display for ChatChannel {
     }
 }
 
+impl ChatChannel {
+    pub fn color(&self) -> String {
+        match self {
+            Self::Chat => "cyan".into(),
+            Self::Novice => "green".into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Command {
+    Announce(String),
     Chat((ChatChannel, String)),
     Config((Option<String>, Option<String>)),
     Describe(Option<String>),

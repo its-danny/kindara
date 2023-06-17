@@ -169,7 +169,7 @@ mod tests {
         send_message(&mut app, client_id, "enter at your own risk");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert!(content.contains("Could not find entrance."));
     }
@@ -187,7 +187,7 @@ mod tests {
         send_message(&mut app, client_id, "enter the dragon");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert!(content.contains("There is nowhere to enter from here."));
     }

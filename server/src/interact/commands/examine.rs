@@ -162,7 +162,7 @@ mod tests {
         send_message(&mut app, client_id, "examine rock");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,

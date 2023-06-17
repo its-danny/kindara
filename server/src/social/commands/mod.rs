@@ -1,3 +1,4 @@
+pub mod announce;
 pub mod chat;
 pub mod emote;
 pub mod say;

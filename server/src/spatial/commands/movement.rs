@@ -119,7 +119,7 @@ mod tests {
         send_message(&mut app, client_id, "south");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You can't go that way.");
     }

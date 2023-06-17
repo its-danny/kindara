@@ -75,7 +75,7 @@ mod tests {
         send_message(&mut app, client_id, "emote waves.");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Ramos waves.");
     }
@@ -98,7 +98,7 @@ mod tests {
         send_message(&mut app, sender_client_id, "emote waves.");
         app.update();
 
-        let content = get_message_content(&mut app, recipient_client_id);
+        let content = get_message_content(&mut app, recipient_client_id).unwrap();
 
         assert_eq!(content, "Flora waves.");
     }
@@ -116,7 +116,7 @@ mod tests {
         send_message(&mut app, client_id, "emote   ");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Do what?");
     }
