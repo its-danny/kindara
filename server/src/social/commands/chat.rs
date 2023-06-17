@@ -51,7 +51,17 @@ pub fn chat(
             let (_, character) =
                 value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
 
-            for (client, _) in players.iter() {
+            for (client, other_character) in players.iter() {
+                let mentioned = message
+                    .to_lowercase()
+                    .contains(&other_character.name.to_lowercase());
+
+                let message = if mentioned {
+                    format!("[$yellow]{message}[$/]")
+                } else {
+                    message.clone()
+                };
+
                 outbox.send_text(
                     client.id,
                     vformat!(
