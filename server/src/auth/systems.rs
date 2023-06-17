@@ -13,9 +13,13 @@ use sqlx::{types::Json, Pool, Postgres};
 use vari::vformat;
 
 use crate::{
-    db::{models::CharacterModel, pool::DatabasePool},
+    db::{
+        models::{CharacterModel, Role},
+        pool::DatabasePool,
+    },
     input::events::{Command, ParsedCommand, ProxyCommand},
     items::components::Inventory,
+    keycard::Keycard,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client, Online},
@@ -199,11 +203,14 @@ pub fn handle_authenticate_task(
                     .insert((
                         Online,
                         PlayerBundle {
+                            keycard: match character.role {
+                                Role::Admin => Keycard::admin(),
+                                Role::Player => Keycard::player(),
+                            },
                             character: Character {
                                 id: character.id,
                                 name: character.name,
                                 description: character.description,
-                                role: character.role,
                                 config: character.config.0,
                             },
                         },

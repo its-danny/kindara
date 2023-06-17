@@ -3,6 +3,7 @@ mod db;
 mod input;
 mod interact;
 mod items;
+mod keycard;
 mod net;
 mod player;
 mod social;

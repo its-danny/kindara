@@ -6,10 +6,8 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
-    player::{
-        components::{Character, Client, Online},
-        permissions,
-    },
+    keycard::{Keycard, TELEPORT},
+    player::components::{Character, Client, Online},
     spatial::components::{Position, Tile, Zone},
     value_or_continue,
 };
@@ -60,18 +58,19 @@ pub fn teleport(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Character, &Parent), With<Online>>,
+    mut players: Query<(Entity, &Client, &Keycard, &Character, &Parent), With<Online>>,
     tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
-            let (player, client, character, tile) =
-                value_or_continue!(players.iter_mut().find(|(_, c, _, _)| c.id == command.from));
+            let (player, client, keycard, character, tile) = value_or_continue!(players
+                .iter_mut()
+                .find(|(_, c, _, _, _)| c.id == command.from));
             let (_, _, here) = value_or_continue!(tiles.get(tile.get()).ok());
             let (here, _) = value_or_continue!(zones.get(here.get()).ok());
 
-            if !character.can(permissions::TELEPORT) {
+            if !keycard.can(TELEPORT) {
                 continue;
             }
 
@@ -116,14 +115,11 @@ pub fn teleport(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        player::permissions::TELEPORT,
-        test::{
-            app_builder::AppBuilder,
-            player_builder::PlayerBuilder,
-            tile_builder::{TileBuilder, ZoneBuilder},
-            utils::{get_message_content, send_message},
-        },
+    use crate::test::{
+        app_builder::AppBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
+        utils::{get_message_content, send_message},
     };
 
     use super::*;
@@ -144,7 +140,7 @@ mod tests {
             .build(&mut app, destination_zone);
 
         let (player, client_id, _) = PlayerBuilder::new()
-            .role(TELEPORT)
+            .role(Keycard::admin())
             .tile(start)
             .build(&mut app);
 
@@ -170,7 +166,7 @@ mod tests {
             .build(&mut app, zone);
 
         let (player, client_id, _) = PlayerBuilder::new()
-            .role(TELEPORT)
+            .role(Keycard::admin())
             .tile(start)
             .build(&mut app);
 
@@ -189,7 +185,7 @@ mod tests {
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let (_, client_id, _) = PlayerBuilder::new()
-            .role(TELEPORT)
+            .role(Keycard::admin())
             .tile(tile)
             .build(&mut app);
 
@@ -210,7 +206,7 @@ mod tests {
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let (_, client_id, _) = PlayerBuilder::new()
-            .role(TELEPORT)
+            .role(Keycard::admin())
             .tile(tile)
             .build(&mut app);
 

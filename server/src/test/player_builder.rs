@@ -6,6 +6,7 @@ use sqlx::{types::Json, PgPool};
 use crate::{
     auth::components::Authenticating,
     items::components::Inventory,
+    keycard::Keycard,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client, Online},
@@ -22,8 +23,8 @@ pub struct PlayerBuilder {
     description: Option<String>,
     #[dummy(faker = "Password(3..30)")]
     password: String,
-    #[dummy(expr = "0")]
-    role: i16,
+    #[dummy(expr = "Keycard::player()")]
+    role: Keycard,
     #[dummy(expr = "CharacterConfig::default()")]
     config: CharacterConfig,
     #[dummy(expr = "false")]
@@ -60,7 +61,7 @@ impl PlayerBuilder {
         self
     }
 
-    pub fn role(mut self, role: i16) -> Self {
+    pub fn role(mut self, role: Keycard) -> Self {
         self.role = role;
         self
     }
@@ -112,11 +113,11 @@ impl PlayerBuilder {
             entity.insert((
                 Online,
                 PlayerBundle {
+                    keycard: self.role,
                     character: Character {
                         id: self.id,
                         name: self.name,
                         description: self.description,
-                        role: self.role,
                         config: self.config,
                     },
                 },
