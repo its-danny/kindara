@@ -61,7 +61,7 @@ mod tests {
         send_message(&mut app, client_id, "who");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Ashur, Bau");
     }

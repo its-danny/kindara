@@ -119,7 +119,7 @@ mod tests {
         send_message(&mut app, client_id, "drop stick");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You drop a stick.");
         assert_eq!(
@@ -154,7 +154,7 @@ mod tests {
         send_message(&mut app, client_id, "drop stick");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You drop a stick.");
 
@@ -188,7 +188,7 @@ mod tests {
         send_message(&mut app, client_id, "drop all stick");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You drop 2 sticks.");
 
@@ -231,7 +231,7 @@ mod tests {
         send_message(&mut app, client_id, "drop sword");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You don't have a sword.");
 

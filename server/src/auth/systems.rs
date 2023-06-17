@@ -354,10 +354,10 @@ mod tests {
         wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
-        let command = get_command_content(&mut app, client_id);
+        let command = get_command_content(&mut app, client_id).unwrap();
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(content, "Hail, Icauna. Set for thyself a word of secrecy.");
 
         send_message(&mut app, client_id, "secret");
@@ -366,10 +366,10 @@ mod tests {
         wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
-        let command = get_command_content(&mut app, client_id);
+        let command = get_command_content(&mut app, client_id).unwrap();
         assert_eq!(command, vec![IAC, WONT, ECHO]);
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(content, "May thy journey here be prosperous.");
 
         assert!(app.world.get::<Authenticating>(player).is_none());
@@ -413,10 +413,10 @@ mod tests {
         wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
-        let command = get_command_content(&mut app, client_id);
+        let command = get_command_content(&mut app, client_id).unwrap();
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(
             content,
             "Hail, returned Bres! What is the secret word thou dost keep?"
@@ -428,10 +428,10 @@ mod tests {
         wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
-        let command = get_command_content(&mut app, client_id);
+        let command = get_command_content(&mut app, client_id).unwrap();
         assert_eq!(command, vec![IAC, WONT, ECHO]);
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(content, "May thy journey here be prosperous.");
 
         assert!(app.world.get::<Authenticating>(player).is_none());
@@ -464,10 +464,10 @@ mod tests {
         wait_for_task(&get_task::<UserExistsTask>(&mut app).unwrap().0);
         app.update();
 
-        let command = get_command_content(&mut app, client_id);
+        let command = get_command_content(&mut app, client_id).unwrap();
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(
             content,
             "Hail, returned Bres! What is the secret word thou dost keep?"
@@ -479,7 +479,7 @@ mod tests {
         wait_for_task(&get_task::<AuthenticateTask>(&mut app).unwrap().0);
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(
             content,
             "The secret word thou hast given is not the right one."

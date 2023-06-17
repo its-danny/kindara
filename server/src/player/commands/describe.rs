@@ -125,7 +125,7 @@ mod tests {
         wait_for_task(&get_task::<SaveDescriptionTask>(&mut app).unwrap().0);
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Description saved.");
         assert_eq!(
@@ -150,7 +150,7 @@ mod tests {
         send_message(&mut app, client_id, "describe");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "A handsome fella.");
 
@@ -167,7 +167,7 @@ mod tests {
         send_message(&mut app, client_id, "describe");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "No description set.");
 

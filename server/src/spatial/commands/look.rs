@@ -286,7 +286,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "x The Void\nA vast, empty void.");
     }
@@ -310,7 +310,7 @@ mod tests {
         send_message(&mut app, client_id, "look rock");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Rock\nA small rock.");
     }
@@ -334,7 +334,7 @@ mod tests {
         send_message(&mut app, client_id, "look ramos");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content.no_ansi(), "Ramos\nA big, burly hunk.");
     }
@@ -365,7 +365,7 @@ mod tests {
         send_message(&mut app, client_id, "look table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,
@@ -398,7 +398,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "x The Void [N, U]\nA vast, empty void.");
     }
@@ -425,7 +425,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content.no_ansi(),
@@ -460,7 +460,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content.no_ansi(),
@@ -490,7 +490,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,
@@ -524,7 +524,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,
@@ -558,7 +558,7 @@ mod tests {
         send_message(&mut app, client_id, "look");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,

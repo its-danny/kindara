@@ -192,7 +192,7 @@ mod tests {
         send_message(&mut app, client_id, "teleport invalid (0 0 0)");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "Zone \"invalid\" not found.");
     }
@@ -213,8 +213,26 @@ mod tests {
         send_message(&mut app, client_id, "teleport here (0 1 0)");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "No tile found at [0, 1, 0]");
+    }
+
+    #[test]
+    fn forbidden() {
+        let mut app = AppBuilder::new().build();
+        app.add_system(teleport);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        send_message(&mut app, client_id, "teleport here (0 0 0)");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id);
+
+        assert!(content.is_none());
     }
 }

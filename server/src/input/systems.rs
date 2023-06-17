@@ -11,7 +11,8 @@ use crate::{
         components::{Client, Online},
     },
     social::commands::{
-        chat::handle_chat, emote::handle_emote, say::handle_say, who::handle_who, yell::handle_yell,
+        announce::handle_announce, chat::handle_chat, emote::handle_emote, say::handle_say,
+        who::handle_who, yell::handle_yell,
     },
     spatial::commands::{
         enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
@@ -38,6 +39,7 @@ pub fn parse_command(
         let client = value_or_continue!(players.iter().find(|c| c.id == message.from));
 
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
+            Box::new(handle_announce),
             Box::new(handle_chat),
             Box::new(handle_config),
             Box::new(handle_describe),

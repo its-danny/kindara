@@ -9,7 +9,7 @@ pub fn send_message(app: &mut App, from: ClientId, message: &str) {
     });
 }
 
-pub fn get_message_content(app: &mut App, to: ClientId) -> String {
+pub fn get_message_content(app: &mut App, to: ClientId) -> Option<String> {
     let outbox_events = app.world.resource::<Events<Outbox>>();
     let mut outbox_reader = outbox_events.get_reader();
 
@@ -20,10 +20,9 @@ pub fn get_message_content(app: &mut App, to: ClientId) -> String {
             Message::Text(text) => Some(text.clone()),
             _ => None,
         })
-        .expect("Expected Message::Text")
 }
 
-pub fn get_command_content(app: &mut App, to: ClientId) -> Vec<u8> {
+pub fn get_command_content(app: &mut App, to: ClientId) -> Option<Vec<u8>> {
     let outbox_events = app.world.resource::<Events<Outbox>>();
     let mut outbox_reader = outbox_events.get_reader();
 
@@ -34,7 +33,6 @@ pub fn get_command_content(app: &mut App, to: ClientId) -> Vec<u8> {
             Message::Command(command) => Some(command.clone()),
             _ => None,
         })
-        .expect("Expected Message::Command")
 }
 
 pub fn get_task<T: Component>(app: &mut App) -> Option<&T> {

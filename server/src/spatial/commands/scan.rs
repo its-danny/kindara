@@ -129,7 +129,7 @@ mod tests {
         send_message(&mut app, client_id, "scan");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
             content,
@@ -162,7 +162,7 @@ mod tests {
         send_message(&mut app, client_id, "scan rock pile");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, format!("#{}: rock", rock.index()));
     }
@@ -187,7 +187,7 @@ mod tests {
         send_message(&mut app, client_id, "scan inv");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, format!("#{}: rock", rock.index()));
     }

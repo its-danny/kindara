@@ -170,7 +170,7 @@ mod tests {
         send_message(&mut app, client_id, "take stick");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You take a stick.");
 
@@ -204,7 +204,7 @@ mod tests {
         send_message(&mut app, client_id, "take weapon");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You take a stick.");
 
@@ -249,7 +249,7 @@ mod tests {
         send_message(&mut app, client_id, "take all stick");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You take 2 sticks.");
 
@@ -295,7 +295,7 @@ mod tests {
         send_message(&mut app, client_id, "take plate from table");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!("You take a plate.", content);
 
@@ -323,7 +323,7 @@ mod tests {
         send_message(&mut app, client_id, "take sword");
         app.update();
 
-        let content = get_message_content(&mut app, client_id);
+        let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You don't see a sword here.");
 
