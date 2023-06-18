@@ -16,6 +16,7 @@ bevy_proto = { version = "0.10", default-features = false, features = [
 ] }
 censor = "0.3"
 chrono = "0.4"
+colored = "1.9"
 dotenvy = "0.15"
 futures-lite = "1.13"
 indefinite = "0.1"
@@ -30,7 +31,6 @@ sqlx = { version = "0.7.0-alpha.3", features = [
   "runtime-async-std",
   "tls-rustls",
 ] }
-vari = "0.2"
 
 [dev-dependencies]
 fake = { version = "2.6", features = ["derive"] }

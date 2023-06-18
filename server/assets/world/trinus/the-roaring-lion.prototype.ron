@@ -14,7 +14,7 @@
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (
                             name: "Common room",
-                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn [$yellow]wooden tables[$/], their laughter blending with the clinking of mugs. A [$yellow]roaring hearth[$/] warms the room, while a [$yellow]stocked bar[$/] occupies one wall. The sounds of a [$green]lively city street[$/] sing to the south.",
+                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn <fg.yellow>wooden tables</>, their laughter blending with the clinking of mugs. A <fg.yellow>roaring hearth</> warms the room, while a <fg.yellow>stocked bar</> occupies one wall. The sounds of a <fg.green>lively city street</> sing to the south.",
                         ),
                         sprite: (
                             character: "=",
@@ -83,7 +83,7 @@
                                 "server::items::components::Item": (
                                     name: "Stocked Bar",
                                     short_name: "stocked bar",
-                                    description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a [$yellow]disheveled door[$/].",
+                                    description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a <fg.yellow>disheveled door</>.",
                                     tags: ["bar", "drinks"],
                                     visible: false,
                                     size: Large,
@@ -150,7 +150,7 @@
                         position: (IVec3 ( x: 0, y: -1, z: 1 )),
                         tile: (
                             name: "Attic",
-                            description: "A cozy attic laden with forgotten trunks, dusty tomes, and aged maps. [$yellow]Straw mats[$/] offer rest amidst the clutter. A [$yellow]small window[$/] punctuates the space, casting a soft glow on the hushed world below.",
+                            description: "A cozy attic laden with forgotten trunks, dusty tomes, and aged maps. <fg.yellow>Straw mats</> offer rest amidst the clutter. A <fg.yellow>small window</> punctuates the space, casting a soft glow on the hushed world below.",
                         ),
                         sprite: (
                             character: ">",

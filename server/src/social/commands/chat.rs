@@ -3,10 +3,10 @@ use std::sync::OnceLock;
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use regex::Regex;
-use vari::vformat;
 
 use crate::{
     input::events::{ChatChannel, Command, ParseError, ParsedCommand},
+    paint,
     player::components::{Character, Client, Online},
     value_or_continue,
 };
@@ -57,19 +57,18 @@ pub fn chat(
                     .contains(&other_character.name.to_lowercase());
 
                 let message = if mentioned {
-                    format!("[$yellow]{message}[$/]")
+                    format!("<fg.yellow>{message}</>")
                 } else {
                     message.clone()
                 };
 
                 outbox.send_text(
                     client.id,
-                    vformat!(
-                        "[[${}]{}[$reset]] {}: {}",
+                    paint!(
+                        "[<fg.{}>{}</>] {}: {message}",
                         channel.color(),
                         channel,
-                        character.name,
-                        message
+                        character.name
                     ),
                 );
             }
@@ -79,8 +78,6 @@ pub fn chat(
 
 #[cfg(test)]
 mod tests {
-    use vari::util::NoAnsi;
-
     use super::*;
     use crate::test::{
         app_builder::AppBuilder,
@@ -107,7 +104,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content.no_ansi(), format!("[chat] Astrid: Hello!"));
+        assert_eq!(content, format!("[chat] Astrid: Hello!"));
     }
 
     #[test]
@@ -133,7 +130,7 @@ mod tests {
 
         let content = get_message_content(&mut app, recipient_client_id).unwrap();
 
-        assert_eq!(content.no_ansi(), "[chat] Flora: Hello!");
+        assert_eq!(content, "[chat] Flora: Hello!");
     }
 
     #[test]
