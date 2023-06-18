@@ -31,6 +31,7 @@ impl AppBuilder {
 
         app.configure_set(Set::Input.before(CoreSet::Update))
             .add_plugins(MinimalPlugins)
+            .add_plugin(NestPlugin)
             .insert_resource(WorldState::default())
             .add_event::<Inbox>()
             .add_event::<Outbox>()

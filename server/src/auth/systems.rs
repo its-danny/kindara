@@ -186,6 +186,8 @@ pub fn handle_authenticate_task(
     mut proto: ProtoCommands,
     mut proxy: EventWriter<ProxyCommand>,
     mut tasks: Query<(Entity, &mut AuthenticateTask)>,
+    online_characters: Query<(&Client, &Character), With<Online>>,
+    server: Res<Server>,
     spawn_tiles: Query<Entity, (With<Tile>, With<Spawn>)>,
     tiles: Query<(Entity, &Name), With<Tile>>,
     world_state: Res<WorldState>,
@@ -198,6 +200,20 @@ pub fn handle_authenticate_task(
                 value_or_continue!(clients.iter_mut().find(|(_, c, _)| c.id == client_id));
 
             if let Some(character) = character_model {
+                if let Some((online, _)) =
+                    online_characters.iter().find(|(_, c)| c.id == character.id)
+                {
+                    outbox.send_text(
+                        client.id,
+                        vformat!(
+                            "[$cyan]{}[$/] is already online and will be disconnected.",
+                            character.name
+                        ),
+                    );
+
+                    server.disconnect(&online.id);
+                }
+
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
                     .insert((
