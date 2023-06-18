@@ -3,11 +3,11 @@ use std::sync::OnceLock;
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use regex::Regex;
-use vari::vformat;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     keycard::{Keycard, ANNOUNCE},
+    paint,
     player::components::{Client, Online},
     value_or_continue,
 };
@@ -46,10 +46,7 @@ pub fn announce(
             }
 
             for (client, _) in players.iter() {
-                outbox.send_text(
-                    client.id,
-                    vformat!("[[$yellow]announcement[$reset]]: {message}"),
-                );
+                outbox.send_text(client.id, paint!("[<fg.yellow>announcement</>]: {message}"));
             }
         }
     }
@@ -57,8 +54,6 @@ pub fn announce(
 
 #[cfg(test)]
 mod tests {
-    use vari::util::NoAnsi;
-
     use super::*;
     use crate::test::{
         app_builder::AppBuilder,
@@ -90,7 +85,7 @@ mod tests {
 
         let content = get_message_content(&mut app, recipient_client_id).unwrap();
 
-        assert_eq!(content.no_ansi(), "[announcement]: Hello!");
+        assert_eq!(content, "[announcement]: Hello!");
     }
 
     #[test]

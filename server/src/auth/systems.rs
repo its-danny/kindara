@@ -10,7 +10,6 @@ use censor::Censor;
 use futures_lite::future;
 use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
-use vari::vformat;
 
 use crate::{
     db::{
@@ -20,6 +19,7 @@ use crate::{
     input::events::{Command, ParsedCommand, ProxyCommand},
     items::components::Inventory,
     keycard::Keycard,
+    paint,
     player::{
         bundles::PlayerBundle,
         components::{Character, Client, Online},
@@ -41,11 +41,11 @@ pub struct UserExistsTask(Task<Result<(bool, ClientId), sqlx::Error>>);
 pub struct AuthenticateTask(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
 pub fn authenticate(
+    database: Res<DatabasePool>,
     mut bevy: Commands,
+    mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
-    database: Res<DatabasePool>,
-    mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
 ) {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
@@ -60,7 +60,7 @@ pub fn authenticate(
         match &mut auth.state {
             AuthState::Name => {
                 if let Err(err) = name_is_valid(content) {
-                    outbox.send_text(client.id, vformat!("[$red]{err}[$/]"));
+                    outbox.send_text(client.id, paint!("<fg.red>{err}</>"));
 
                     continue;
                 }
@@ -76,7 +76,7 @@ pub fn authenticate(
             }
             AuthState::Password => {
                 if let Err(err) = password_is_valid(content) {
-                    outbox.send_text(client.id, vformat!("[$red]{err}[$/]"));
+                    outbox.send_text(client.id, paint!("<fg.red>{err}</>"));
 
                     continue;
                 }
@@ -205,8 +205,8 @@ pub fn handle_authenticate_task(
                 {
                     outbox.send_text(
                         client.id,
-                        vformat!(
-                            "[$cyan]{}[$/] is already online and will be disconnected.",
+                        paint!(
+                            "<fg.cyan>{}</> is already online and will be disconnected.",
                             character.name
                         ),
                     );

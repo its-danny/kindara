@@ -19,6 +19,7 @@ use crate::{
         scan::handle_scan, teleport::handle_teleport,
     },
     value_or_continue,
+    visual::paint,
 };
 
 use super::events::{Command, ParseError, ParsedCommand, ProxyCommand};
@@ -31,7 +32,7 @@ pub fn parse_command(
 ) {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
-            Some((m, content))
+            Some((m, paint::strip(content)))
         } else {
             None
         }
@@ -60,7 +61,7 @@ pub fn parse_command(
             Box::new(handle_yell),
         ];
 
-        match handlers.iter().find_map(|handler| match handler(content) {
+        match handlers.iter().find_map(|handler| match handler(&content) {
             Err(ParseError::WrongCommand) => None,
             Ok(command) => Some(Ok(command)),
             Err(err) => Some(Err(err)),

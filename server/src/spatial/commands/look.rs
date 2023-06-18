@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use inflector::cases::titlecase::to_title_case;
 use regex::Regex;
-use vari::vformat;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -12,6 +11,7 @@ use crate::{
         components::{Item, Surface},
         utils::{item_matches_query, item_name_list},
     },
+    paint,
     player::components::{Character, Client, Online},
     spatial::{
         components::{Position, Tile, Zone},
@@ -89,10 +89,10 @@ pub fn look(
                         })
                         .unwrap_or("".into());
 
-                    output = vformat!("{}\n{}{}", item.name, item.description, surface_line);
+                    output = paint!("{}\n{}{}", item.name, item.description, surface_line);
                 } else if let Some((_, character, _)) = matching_player {
-                    output = vformat!(
-                        "[$cyan]{}[$/]{}",
+                    output = paint!(
+                        "<fg.cyan>{}</>{}",
                         character.name,
                         character
                             .description
@@ -113,7 +113,7 @@ pub fn look(
                 output = if character.config.brief {
                     format!("{} {}{}", sprite.character, tile.name, exits)
                 } else {
-                    vformat!(
+                    paint!(
                         "{} {}{}\n{}{}{}",
                         sprite.character,
                         tile.name,
@@ -175,17 +175,17 @@ fn get_players_line(
     player_names.sort();
 
     let player_names_concat = match player_names.len() {
-        1 => vformat!("[$cyan]{}[$/]", player_names[0]),
-        2 => vformat!(
-            "[$cyan]{}[$/] and [$cyan]{}[$/]",
+        1 => paint!("<fg.cyan>{}</>", player_names[0]),
+        2 => paint!(
+            "<fg.cyan>{}</> and <fg.cyan>{}</>",
             player_names[0],
             player_names[1]
         ),
         _ => {
             let last = player_names.pop().unwrap_or_default();
 
-            vformat!(
-                "[$cyan]{}[$/], and [$cyan]{}[$/]",
+            paint!(
+                "<fg.cyan>{}</>, and <fg.cyan>{}</>",
                 player_names.join(", "),
                 last
             )
@@ -254,8 +254,6 @@ fn items_on_surface(
 
 #[cfg(test)]
 mod tests {
-    use vari::util::NoAnsi;
-
     use crate::{
         items::components::SurfaceKind,
         test::{
@@ -336,7 +334,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content.no_ansi(), "Ramos\nA big, burly hunk.");
+        assert_eq!(content, "Ramos\nA big, burly hunk.");
     }
 
     #[test]
@@ -428,7 +426,7 @@ mod tests {
         let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
-            content.no_ansi(),
+            content,
             "x The Void\nA vast, empty void.\n\nAstrid is here."
         );
     }
@@ -463,7 +461,7 @@ mod tests {
         let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(
-            content.no_ansi(),
+            content,
             "x The Void\nA vast, empty void.\n\nAstrid and Ramos are here."
         );
     }

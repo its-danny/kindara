@@ -8,6 +8,7 @@ use crate::{
         events::{ParsedCommand, ProxyCommand},
         systems::{handle_proxy_command, parse_command},
     },
+    visual::paint,
     world::resources::WorldState,
     Set,
 };
@@ -27,6 +28,8 @@ impl AppBuilder {
     }
 
     pub fn build(self) -> App {
+        paint::toggle(false);
+
         let mut app = App::new();
 
         app.configure_set(Set::Input.before(CoreSet::Update))
