@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use super::components::Sprite;
+use super::components::{Depiction, Sprite};
 
 pub struct VisualPlugin;
 
 impl Plugin for VisualPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Sprite>();
+        app.register_type::<Sprite>().register_type::<Depiction>();
     }
 }

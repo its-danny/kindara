@@ -2,9 +2,9 @@ use bevy::{prelude::*, utils::HashMap};
 use indefinite::indefinite;
 use inflector::string::pluralize::to_plural;
 
-use super::components::Item;
+use crate::visual::components::Depiction;
 
-pub fn item_matches_query(entity: &Entity, item: &Item, query: &str) -> bool {
+pub fn depiction_matches_query(entity: &Entity, item: &Depiction, query: &str) -> bool {
     if let Some(idx) = query
         .starts_with('#')
         .then(|| query.trim_start_matches('#').parse::<u32>().ok())

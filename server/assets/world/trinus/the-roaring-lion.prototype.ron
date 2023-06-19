@@ -31,13 +31,17 @@
                                     zone: "Trinus Castra",
                                     position: IVec3 ( x: 1, y: -1, z: 0 ),
                                 ),
-                                "server::items::components::Item": (
-                                    name: "Door to Trinus Castra",
-                                    short_name: "trinus castra",
-                                    description: "The door frames a living portrait of the city. Sunlight cuts into the dim interior, highlighting the cobblestone street that bustles with people. Past patrons lounge at the outdoor tables, caught in animated exchanges. With each swing of the door, a fresh city breeze invades, laced with the fragrance of nearby flowers.",
-                                    tags: ["lively city street", "city street", "street", "trinus", "trinus castra", "outside"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Door to Trinus Castra",
+                                        short_name: "trinus castra",
+                                        description: "The door frames a living portrait of the city. Sunlight cuts into the dim interior, highlighting the cobblestone street that bustles with people. Past patrons lounge at the outdoor tables, caught in animated exchanges. With each swing of the door, a fresh city breeze invades, laced with the fragrance of nearby flowers.",
+                                        tags: ["lively city street", "city street", "street", "trinus", "trinus castra", "outside"],
+                                    ),
                                 ),
                             },
                         )),
@@ -46,13 +50,17 @@
                         value: Inline((
                             name: "T93L6K",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Wooden Tables",
-                                    short_name: "wooden tables",
-                                    description: "The tables bear the patina of time and countless stories. Each notch and burnish in their rugged surface holds a silent testament to shared tales, laughter, and camaraderie. Their worn edges and sturdy legs anchor the room, providing a gathering point for patrons seeking fellowship and reprieve.",
-                                    tags: ["wooden tables", "tables", "table", "seating", "seats", "seat", "furniture", "furnishings"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Wooden Tables",
+                                        short_name: "wooden tables",
+                                        description: "The tables bear the patina of time and countless stories. Each notch and burnish in their rugged surface holds a silent testament to shared tales, laughter, and camaraderie. Their worn edges and sturdy legs anchor the room, providing a gathering point for patrons seeking fellowship and reprieve.",
+                                        tags: ["wooden tables", "tables", "table", "seating", "seats", "seat", "furniture", "furnishings"],
+                                    ),
                                 ),
                                 "server::items::components::Surface": (
                                     kind: Floor,
@@ -65,13 +73,17 @@
                         value: Inline((
                             name: "LengNA",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Roaring Hearth",
-                                    short_name: "roaring hearth",
-                                    description: "The hearth roars at the heart of the room, its dancing flames casting a welcoming glow across the space. It provides both warmth and atmosphere, the occasional crackle and pop punctuating the tavern's ambient melody. The lingering scent of burning wood is a comforting constant, enhancing the rustic charm of the tavern.",
-                                    tags: ["hearth", "fire", "fireplace", "fire pit"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Roaring Hearth",
+                                        short_name: "roaring hearth",
+                                        description: "The hearth roars at the heart of the room, its dancing flames casting a welcoming glow across the space. It provides both warmth and atmosphere, the occasional crackle and pop punctuating the tavern's ambient melody. The lingering scent of burning wood is a comforting constant, enhancing the rustic charm of the tavern.",
+                                        tags: ["hearth", "fire", "fireplace", "fire pit"],
+                                    ),
                                 ),
                             },
                         )),
@@ -80,13 +92,17 @@
                         value: Inline((
                             name: "9rGnIe",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Stocked Bar",
-                                    short_name: "stocked bar",
-                                    description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a <fg.yellow>disheveled door</>.",
-                                    tags: ["bar", "drinks"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Stocked Bar",
+                                        short_name: "stocked bar",
+                                        description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a <fg.yellow>disheveled door</>.",
+                                        tags: ["bar", "drinks"],
+                                    ),
                                 ),
                             },
                         )),
@@ -95,13 +111,17 @@
                         value: Inline((
                             name: "B1Y4Bj",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Dishelved Door",
-                                    short_name: "disheveled door",
-                                    description: "The door unassuming, its surface marred by countless dents and scratches.",
-                                    tags: ["door", "disheveled door", "back room", "backroom"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Dishelved Door",
+                                        short_name: "disheveled door",
+                                        description: "The door unassuming, its surface marred by countless dents and scratches.",
+                                        tags: ["door", "disheveled door", "back room", "backroom"],
+                                    ),
                                 ),
                             },
                         )),
@@ -110,13 +130,17 @@
                         value: Inline((
                             name: "YRAbDX",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Empty mug",
-                                    short_name: "empty mug",
-                                    description: "A sturdy vessel of simple design, its surface is glazed ceramic, worn smooth by countless hands, and warmed by fireside drinks. The handle, slightly oversized, is well-worn, testifying to many a hearty toast.",
-                                    tags: ["mug", "glass"],
-                                    size: Small,
-                                    visible: true,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        size: Small,
+                                        visible: true,
+                                    ),
+                                    depiction: (
+                                        name: "Empty mug",
+                                        short_name: "empty mug",
+                                        description: "A sturdy vessel of simple design, its surface is glazed ceramic, worn smooth by countless hands, and warmed by fireside drinks. The handle, slightly oversized, is well-worn, testifying to many a hearty toast.",
+                                        tags: ["mug", "glass"],
+                                    ),
                                 ),
                                 "server::interact::components::Interactions": ([Take, Place]),
                             },
@@ -162,13 +186,17 @@
                         value: Inline((
                             name: "qoh0Jr",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Straw Mats",
-                                    short_name: "straw mats",
-                                    description: "The mats are worn and threadbare, but still provide a comfortable place to rest.",
-                                    tags: ["straw mats", "mats", "mat", "bed", "beds"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Straw Mats",
+                                        short_name: "straw mats",
+                                        description: "The mats are worn and threadbare, but still provide a comfortable place to rest.",
+                                        tags: ["straw mats", "mats", "mat", "bed", "beds"],
+                                    ),
                                 ),
                             },
                         )),
@@ -177,13 +205,17 @@
                         value: Inline((
                             name: "KHRPtS",
                             schematics: {
-                                "server::items::components::Item": (
-                                    name: "Small Window",
-                                    short_name: "small window",
-                                    description: "The window is small, but provides a view of the world below; a miniature landscape of cobblestone streets and bustling life, framed by distant silhouettes of grand structures. The window is open, allowing a cool breeze to filter into the attic.",
-                                    tags: ["small window", "window"],
-                                    visible: false,
-                                    size: Large,
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        visible: false,
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "Small Window",
+                                        short_name: "small window",
+                                        description: "The window is small, but provides a view of the world below; a miniature landscape of cobblestone streets and bustling life, framed by distant silhouettes of grand structures. The window is open, allowing a cool breeze to filter into the attic.",
+                                        tags: ["small window", "window"],
+                                    ),
                                 ),
                             },
                         )),

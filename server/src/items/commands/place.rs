@@ -9,11 +9,12 @@ use crate::{
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
-        utils::item_matches_query,
+        utils::depiction_matches_query,
     },
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -48,7 +49,13 @@ pub fn place(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item, Option<&Interactions>, Option<&Children>)>,
+    items: Query<(
+        Entity,
+        &Item,
+        &Depiction,
+        Option<&Interactions>,
+        Option<&Children>,
+    )>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -60,11 +67,11 @@ pub fn place(
                 .iter()
                 .find_map(|child| inventories.get(*child).ok()));
 
-            let Some((object, object_item, object_interactable, _)) = inventory
+            let Some((object, object_item, object_depiction, object_interactable, _)) = inventory
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(entity, item, _, _)| item_matches_query(entity, item, object)) else {
+                .find(|(e, _, d, _, _)| depiction_matches_query(e, d, object)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't have a {object}."),
@@ -76,16 +83,16 @@ pub fn place(
             if !object_interactable.map_or(false, |i| i.0.contains(&Interaction::Place)) {
                 outbox.send_text(
                     client.id,
-                    format!("You can't place the {}.", object_item.name),
+                    format!("You can't place the {}.", object_depiction.name),
                 );
 
                 continue;
             }
 
-            let Some((target, target_item, _, target_children)) = siblings
+            let Some((target, _, target_depiction, _, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(entity, item, _, _)| item_matches_query(entity, item, target)) else {
+                .find(|(e, _,d,  _, _)| depiction_matches_query(e, d, target)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't see a {target} here."),
@@ -97,7 +104,7 @@ pub fn place(
             let Ok(surface) = surfaces.get(target) else {
                 outbox.send_text(
                     client.id,
-                    format!("You can't place the {} on the {}.", object_item.name, target_item.name),
+                    format!("You can't place the {} on the {}.", object_depiction.name, target_depiction.name),
                 );
 
                 continue;
@@ -107,12 +114,12 @@ pub fn place(
                 children
                     .iter()
                     .filter_map(|child| items.get(*child).ok())
-                    .map(|(_, item, _, _)| item.size.value())
+                    .map(|(_, item, _, _, _)| item.size.value())
                     .sum::<u8>()
                     + object_item.size.value()
                     > surface.capacity
             }) {
-                outbox.send_text(client.id, format!("The {} is full.", target_item.name));
+                outbox.send_text(client.id, format!("The {} is full.", target_depiction.name));
 
                 continue;
             }
@@ -123,7 +130,7 @@ pub fn place(
                 client.id,
                 format!(
                     "You place the {} {} the {}.",
-                    object_item.name, surface.kind, target_item.name,
+                    object_depiction.name, surface.kind, target_depiction.name,
                 ),
             );
         }

@@ -10,11 +10,12 @@ use crate::{
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
-        utils::{item_matches_query, item_name_list},
+        utils::{depiction_matches_query, item_name_list},
     },
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -51,7 +52,7 @@ pub fn take(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Entity, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Item, Option<&Interactions>, Option<&Children>)>,
+    items: Query<(Entity, &Depiction, Option<&Interactions>, Option<&Children>), With<Item>>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -67,8 +68,9 @@ pub fn take(
                 siblings
                     .iter()
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(sibling, item, _, _)| {
-                        surfaces.get(*sibling).is_ok() && item_matches_query(sibling, item, source)
+                    .find(|(sibling, depiction, _, _)| {
+                        surfaces.get(*sibling).is_ok()
+                            && depiction_matches_query(sibling, depiction, source)
                     })
                     .and_then(|(_, _, _, children)| children)
                     .map(|children| {
@@ -87,7 +89,7 @@ pub fn take(
 
             let mut items_found = to_search
                 .iter()
-                .filter(|(entity, item, _, _)| item_matches_query(entity, item, target))
+                .filter(|(entity, item, _, _)| depiction_matches_query(entity, item, target))
                 .collect::<Vec<_>>();
 
             if items_found.is_empty() {

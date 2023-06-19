@@ -9,7 +9,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Item, Surface},
-        utils::{item_matches_query, item_name_list},
+        utils::{depiction_matches_query, item_name_list},
     },
     paint,
     player::components::{Character, Client, Online},
@@ -18,7 +18,7 @@ use crate::{
         utils::offset_for_direction,
     },
     value_or_continue,
-    visual::components::Sprite,
+    visual::components::{Depiction, Sprite},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -40,7 +40,13 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn look(
-    items: Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
+    items: Query<(
+        Entity,
+        &Item,
+        &Depiction,
+        Option<&Surface>,
+        Option<&Children>,
+    )>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
@@ -61,7 +67,9 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(entity, item, _, _)| item_matches_query(entity, item, target));
+                    .find(|(entity, _, depiction, _, _)| {
+                        depiction_matches_query(entity, depiction, target)
+                    });
 
                 let matching_player = siblings
                     .iter()
@@ -69,7 +77,7 @@ pub fn look(
                     .filter_map(|sibling| players.get(*sibling).ok())
                     .find(|(_, c, _)| &c.name.to_lowercase() == target);
 
-                if let Some((_, item, surface, children)) = matching_item {
+                if let Some((_, _, depiction, surface, children)) = matching_item {
                     let surface_line = surface
                         .and_then(|s| children.map(|c| (s, c)))
                         .map(|(surface, children)| {
@@ -81,7 +89,7 @@ pub fn look(
                                 format!(
                                     " {} the {} {} {}.",
                                     to_title_case(&surface.kind.to_string()),
-                                    item.short_name,
+                                    depiction.short_name,
                                     if children.len() > 1 { "are" } else { "is" },
                                     on_surface
                                 )
@@ -89,7 +97,12 @@ pub fn look(
                         })
                         .unwrap_or("".into());
 
-                    output = paint!("{}\n{}{}", item.name, item.description, surface_line);
+                    output = paint!(
+                        "{}\n{}{}",
+                        depiction.name,
+                        depiction.description,
+                        surface_line
+                    );
                 } else if let Some((_, character, _)) = matching_player {
                     output = paint!(
                         "<fg.cyan>{}</>{}",
@@ -201,14 +214,20 @@ fn get_players_line(
 
 fn get_items_line(
     siblings: Option<&Children>,
-    items: &Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(
+        Entity,
+        &Item,
+        &Depiction,
+        Option<&Surface>,
+        Option<&Children>,
+    )>,
 ) -> String {
     let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| items.get(*sibling).ok())
-        .filter(|(_, item, _, _)| item.visible)
-        .map(|(_, item, _, _)| item.short_name.clone())
+        .filter(|(_, item, _, _, _)| item.visible)
+        .map(|(_, _, depiction, _, _)| depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if items_found.is_empty() {
@@ -235,14 +254,20 @@ fn get_items_line(
 }
 
 fn items_on_surface(
-    items: &Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(
+        Entity,
+        &Item,
+        &Depiction,
+        Option<&Surface>,
+        Option<&Children>,
+    )>,
     children: &Children,
 ) -> String {
     let on_surface = children
         .iter()
         .filter_map(|child| items.get(*child).ok())
-        .filter(|(_, item, _, _)| item.visible)
-        .map(|(_, item, _, _)| item.short_name.clone())
+        .filter(|(_, item, _, _, _)| item.visible)
+        .map(|(_, _, depiction, _, _)| depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if on_surface.is_empty() {

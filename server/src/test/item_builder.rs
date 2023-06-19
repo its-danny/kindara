@@ -3,7 +3,11 @@ use fake::{Dummy, Fake, Faker};
 
 use crate::{
     interact::components::{Interaction, Interactions},
-    items::components::{Item, Size, Surface, SurfaceKind},
+    items::{
+        bundles::ItemBundle,
+        components::{Item, Size, Surface, SurfaceKind},
+    },
+    visual::components::Depiction,
 };
 
 #[derive(Dummy)]
@@ -75,13 +79,17 @@ impl ItemBuilder {
     }
 
     pub fn build(self, app: &mut App) -> Entity {
-        let mut entity = app.world.spawn(Item {
-            name: self.name,
-            short_name: self.short_name,
-            description: self.description,
-            tags: self.tags,
-            size: self.size,
-            visible: true,
+        let mut entity = app.world.spawn(ItemBundle {
+            item: Item {
+                size: self.size,
+                visible: true,
+            },
+            depiction: Depiction {
+                name: self.name,
+                short_name: self.short_name,
+                description: self.description,
+                tags: self.tags,
+            },
         });
 
         if let Some(tile) = self.tile {

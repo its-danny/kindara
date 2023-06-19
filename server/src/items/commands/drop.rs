@@ -8,11 +8,12 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Inventory, Item},
-        utils::{item_matches_query, item_name_list},
+        utils::{depiction_matches_query, item_name_list},
     },
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -43,7 +44,7 @@ pub fn drop(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<Entity, With<Tile>>,
-    items: Query<(Entity, &Item)>,
+    items: Query<(Entity, &Depiction), With<Item>>,
 ) {
     for command in commands.iter() {
         if let Command::Drop((target, all)) = &command.command {
@@ -58,8 +59,8 @@ pub fn drop(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|sibling| items.get(*sibling).ok())
-                .filter(|(entity, item)| item_matches_query(entity, item, target))
-                .collect::<Vec<(Entity, &Item)>>();
+                .filter(|(e, d)| depiction_matches_query(e, d, target))
+                .collect::<Vec<(Entity, &Depiction)>>();
 
             if !*all {
                 items_found.truncate(1);
