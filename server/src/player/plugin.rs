@@ -14,7 +14,8 @@ impl Plugin for PlayerPlugin {
             handle_save_config_task,
             describe,
             handle_save_description_task,
-        ))
-        .add_system(handle_client_width);
+        ));
+
+        app.add_system(handle_client_width);
     }
 }

@@ -14,7 +14,8 @@ impl Plugin for ItemPlugin {
             .register_type::<Item>()
             .register_type::<Surface>()
             .register_type::<SurfaceKind>()
-            .register_type::<Size>()
-            .add_systems((inventory, take, drop, place));
+            .register_type::<Size>();
+
+        app.add_systems((inventory, take, drop, place));
     }
 }
