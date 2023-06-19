@@ -10,7 +10,7 @@ use crate::{
     interact::components::{Interaction, Interactions},
     items::{
         components::{Inventory, Item, Surface},
-        utils::{depiction_matches_query, item_name_list},
+        utils::item_name_list,
     },
     player::components::{Client, Online},
     spatial::components::Tile,
@@ -69,8 +69,7 @@ pub fn take(
                     .iter()
                     .filter_map(|sibling| items.get(*sibling).ok())
                     .find(|(sibling, depiction, _, _)| {
-                        surfaces.get(*sibling).is_ok()
-                            && depiction_matches_query(sibling, depiction, source)
+                        surfaces.get(*sibling).is_ok() && depiction.matches_query(sibling, source)
                     })
                     .and_then(|(_, _, _, children)| children)
                     .map(|children| {
@@ -89,7 +88,7 @@ pub fn take(
 
             let mut items_found = to_search
                 .iter()
-                .filter(|(entity, item, _, _)| depiction_matches_query(entity, item, target))
+                .filter(|(entity, depiction, _, _)| depiction.matches_query(entity, target))
                 .collect::<Vec<_>>();
 
             if items_found.is_empty() {

@@ -7,10 +7,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
-    items::{
-        components::Surface,
-        utils::{depiction_matches_query, item_name_list},
-    },
+    items::{components::Surface, utils::item_name_list},
     paint,
     player::components::{Character, Client, Online},
     spatial::{
@@ -61,9 +58,7 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(entity, depiction, _, _)| {
-                        depiction_matches_query(entity, depiction, target)
-                    });
+                    .find(|(entity, depiction, _, _)| depiction.matches_query(entity, target));
 
                 let matching_player = siblings
                     .iter()

@@ -1,22 +1,6 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::utils::HashMap;
 use indefinite::indefinite;
 use inflector::string::pluralize::to_plural;
-
-use crate::visual::components::Depiction;
-
-pub fn depiction_matches_query(entity: &Entity, item: &Depiction, query: &str) -> bool {
-    if let Some(idx) = query
-        .starts_with('#')
-        .then(|| query.trim_start_matches('#').parse::<u32>().ok())
-        .flatten()
-    {
-        idx == entity.index()
-    } else {
-        item.name.eq_ignore_ascii_case(query)
-            || item.short_name.eq_ignore_ascii_case(query)
-            || item.tags.contains(&query.to_lowercase())
-    }
-}
 
 pub fn item_name_list(item_names: &[String]) -> String {
     let count_map: HashMap<String, u16> =
