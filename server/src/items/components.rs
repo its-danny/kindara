@@ -10,7 +10,6 @@ pub struct Inventory;
 #[reflect(Schematic)]
 pub struct Item {
     pub size: Size,
-    pub visible: bool,
 }
 
 #[derive(Copy, Clone, Reflect, FromReflect)]
