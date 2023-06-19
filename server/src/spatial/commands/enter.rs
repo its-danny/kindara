@@ -9,6 +9,7 @@ use crate::{
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -34,7 +35,7 @@ pub fn enter(
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Parent), With<Online>>,
-    transitions: Query<&Transition>,
+    transitions: Query<(&Transition, &Depiction)>,
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Zone>,
 ) {
@@ -59,10 +60,10 @@ pub fn enter(
                 continue;
             }
 
-            let Some(transition) = transitions.iter().find(|transition| {
+            let Some((transition, _)) = transitions.iter().find(|(_, depiction)| {
                 target
                     .as_ref()
-                    .map_or(true, |tag| transition.tags.contains(tag))
+                    .map_or(true, |tag| depiction.tags.contains(tag))
             }) else {
                 outbox.send_text(client.id, "Could not find entrance.");
 

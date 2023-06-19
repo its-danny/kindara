@@ -103,14 +103,10 @@
                         value: Inline((
                             name: "NURAY4",
                             schematics: {
-                                "server::spatial::components::Transition": (
-                                    tags: ["tavern", "bar", "pub", "the roaring lion", "roaring", "lion"],
-                                    zone: "The Roaring Lion",
-                                    position: IVec3 ( x: 0, y: 0, z: 0 ),
-                                ),
-                                "server::items::bundles::ItemBundle": (
-                                    item: (
-                                        size: Large,
+                                "server::spatial::bundles::TransitionBundle": (
+                                    transition: (
+                                        zone: "The Roaring Lion",
+                                        position: IVec3 ( x: 0, y: 0, z: 0 ),
                                     ),
                                     depiction: (
                                         name: "Door to The Roaring Lion",

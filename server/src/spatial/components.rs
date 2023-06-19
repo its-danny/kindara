@@ -23,7 +23,6 @@ pub struct Spawn;
 #[derive(Debug, Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Transition {
-    pub tags: Vec<String>,
     pub zone: String,
     pub position: IVec3,
 }

@@ -26,14 +26,10 @@
                         value: Inline((
                             name: "kxkqtQ",
                             schematics: {
-                                "server::spatial::components::Transition": (
-                                    tags: ["lively city street", "city street", "street", "trinus", "trinus castra", "outside"],
-                                    zone: "Trinus Castra",
-                                    position: IVec3 ( x: 1, y: -1, z: 0 ),
-                                ),
-                                "server::items::bundles::ItemBundle": (
-                                    item: (
-                                        size: Large,
+                                "server::spatial::bundles::TransitionBundle": (
+                                    transition: (
+                                        zone: "Trinus Castra",
+                                        position: IVec3 ( x: 1, y: -1, z: 0 ),
                                     ),
                                     depiction: (
                                         name: "Door to Trinus Castra",
@@ -41,7 +37,7 @@
                                         description: "The door frames a living portrait of the city. Sunlight cuts into the dim interior, highlighting the cobblestone street that bustles with people. Past patrons lounge at the outdoor tables, caught in animated exchanges. With each swing of the door, a fresh city breeze invades, laced with the fragrance of nearby flowers.",
                                         tags: ["lively city street", "city street", "street", "trinus", "trinus castra", "outside"],
                                         visible: false,
-                                    ),
+                                    )
                                 ),
                             },
                         )),
