@@ -80,15 +80,13 @@ impl ItemBuilder {
 
     pub fn build(self, app: &mut App) -> Entity {
         let mut entity = app.world.spawn(ItemBundle {
-            item: Item {
-                size: self.size,
-                visible: true,
-            },
+            item: Item { size: self.size },
             depiction: Depiction {
                 name: self.name,
                 short_name: self.short_name,
                 description: self.description,
                 tags: self.tags,
+                visible: true,
             },
         });
 

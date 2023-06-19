@@ -13,4 +13,5 @@ pub struct Depiction {
     pub short_name: String,
     pub description: String,
     pub tags: Vec<String>,
+    pub visible: bool,
 }
