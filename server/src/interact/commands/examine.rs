@@ -131,7 +131,7 @@ pub fn examine(
 #[cfg(test)]
 mod tests {
     use crate::{
-        items::commands::take::take,
+        interact::commands::take::*,
         test::{
             app_builder::AppBuilder,
             item_builder::ItemBuilder,

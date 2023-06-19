@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{
     bundles::ItemBundle,
-    commands::{drop::*, inventory::*, place::*, take::*},
+    commands::{drop::*, inventory::*},
     components::*,
 };
 
@@ -16,6 +16,6 @@ impl Plugin for ItemPlugin {
             .register_type::<SurfaceKind>()
             .register_type::<Size>();
 
-        app.add_systems((inventory, take, drop, place));
+        app.add_systems((inventory, drop));
     }
 }
