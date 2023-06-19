@@ -14,10 +14,11 @@ impl Plugin for SpatialPlugin {
             .register_type::<Position>()
             .register_type::<Tile>()
             .register_type::<Spawn>()
-            .register_type::<TileBundle>()
             .register_type::<Transition>()
             .register_type::<Zone>()
-            .register_type::<TransitionBundle>()
-            .add_systems((look, scan, map, movement, enter, teleport));
+            .register_type::<TileBundle>()
+            .register_type::<TransitionBundle>();
+
+        app.add_systems((look, scan, map, movement, enter, teleport));
     }
 }
