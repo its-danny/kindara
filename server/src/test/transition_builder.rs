@@ -1,7 +1,13 @@
 use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
-use crate::spatial::components::{Position, Transition, Zone};
+use crate::{
+    spatial::{
+        bundles::TransitionBundle,
+        components::{Position, Transition, Zone},
+    },
+    visual::components::Depiction,
+};
 
 #[derive(Dummy)]
 pub struct TransitionBuilder {
@@ -33,10 +39,18 @@ impl TransitionBuilder {
             .expect("Target has no position");
 
         app.world
-            .spawn(Transition {
-                tags: self.tags,
-                zone: zone.name.clone(),
-                position: position.0,
+            .spawn(TransitionBundle {
+                transition: Transition {
+                    zone: zone.name.clone(),
+                    position: position.0,
+                },
+                depiction: Depiction {
+                    tags: self.tags,
+                    name: "Transition".into(),
+                    short_name: "transition".into(),
+                    description: "A transition".into(),
+                    visible: false,
+                },
             })
             .set_parent(tile)
             .id()
