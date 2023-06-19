@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use super::{commands::examine::*, components::*, systems::*};
+use super::{
+    commands::{examine::*, place::*, take::*},
+    components::*,
+    systems::*,
+};
 
 pub struct InteractPlugin;
 
@@ -10,6 +14,6 @@ impl Plugin for InteractPlugin {
             .register_type::<Vec<Interaction>>()
             .register_type::<Interactions>();
 
-        app.add_systems((examine, remove_menu_if_changed_tiles));
+        app.add_systems((examine, take, place, remove_menu_if_changed_tiles));
     }
 }

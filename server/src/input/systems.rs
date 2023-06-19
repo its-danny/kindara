@@ -2,10 +2,8 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
-    interact::commands::examine::handle_examine,
-    items::commands::{
-        drop::handle_drop, inventory::handle_inventory, place::handle_place, take::handle_take,
-    },
+    interact::commands::{examine::handle_examine, place::handle_place, take::handle_take},
+    items::commands::{drop::handle_drop, inventory::handle_inventory},
     player::{
         commands::{config::handle_config, describe::handle_describe},
         components::{Client, Online},
