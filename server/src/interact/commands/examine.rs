@@ -7,10 +7,11 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     interact::components::{InMenu, Interaction, Interactions, MenuType},
-    items::{components::Item, utils::item_matches_query},
+    items::{components::Item, utils::depiction_matches_query},
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -41,7 +42,7 @@ pub fn handle_examine(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn examine(
-    items: Query<(Entity, &Item, Option<&Interactions>)>,
+    items: Query<(Entity, &Depiction, Option<&Interactions>), With<Item>>,
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
@@ -59,7 +60,7 @@ pub fn examine(
                 let item = siblings
                     .iter()
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(entity, item, _)| item_matches_query(entity, item, target));
+                    .find(|(e, d, _)| depiction_matches_query(e, d, target));
 
                 let Some((entity, item, interactions)) = item else {
                     outbox.send_text(client.id, format!("You don't see a {target} here."));

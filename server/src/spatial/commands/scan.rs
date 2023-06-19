@@ -8,11 +8,12 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Inventory, Item, Surface},
-        utils::item_matches_query,
+        utils::depiction_matches_query,
     },
     player::components::{Character, Client, Online},
     spatial::components::Tile,
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -38,7 +39,13 @@ pub fn handle_scan(content: &str) -> Result<Command, ParseError> {
 
 pub fn scan(
     inventories: Query<(Entity, &Children), With<Inventory>>,
-    items: Query<(Entity, &Item, Option<&Surface>, Option<&Children>)>,
+    items: Query<(
+        Entity,
+        &Item,
+        &Depiction,
+        Option<&Surface>,
+        Option<&Children>,
+    )>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(Entity, &Client, &Character, &Parent, &Children), With<Online>>,
@@ -58,9 +65,11 @@ pub fn scan(
             } else if let Some(target) = target {
                 items
                     .iter()
-                    .filter(|(_, _, surface, _)| surface.is_some())
-                    .find(|(entity, item, _, _)| item_matches_query(entity, item, target))
-                    .and_then(|(_, _, _, children)| children)
+                    .filter(|(_, _, _, surface, _)| surface.is_some())
+                    .find(|(entity, _, depiction, _, _)| {
+                        depiction_matches_query(entity, depiction, target)
+                    })
+                    .and_then(|(_, _, _, _, children)| children)
                     .map(|children| children.iter().collect())
                     .unwrap_or_else(Vec::new)
             } else {
@@ -74,8 +83,8 @@ pub fn scan(
             let output: Vec<String> = entities_to_scan
                 .iter()
                 .filter_map(|entity| {
-                    if let Ok((entity, item, _, _)) = items.get(**entity) {
-                        Some(format!("#{}: {}", entity.index(), item.short_name))
+                    if let Ok((entity, _, depiction, _, _)) = items.get(**entity) {
+                        Some(format!("#{}: {}", entity.index(), depiction.short_name))
                     } else if let Ok((entity, _, character, _, _)) = players.get(**entity) {
                         Some(format!("#{}: {}", entity.index(), character.name))
                     } else {

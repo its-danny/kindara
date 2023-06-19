@@ -9,6 +9,7 @@ use crate::{
     items::components::{Inventory, Item},
     player::components::{Client, Online},
     value_or_continue,
+    visual::components::Depiction,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -27,7 +28,7 @@ pub fn inventory(
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
-    items: Query<&Item>,
+    items: Query<&Depiction, With<Item>>,
 ) {
     for command in commands.iter() {
         if let Command::Inventory = &command.command {

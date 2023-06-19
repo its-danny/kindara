@@ -9,11 +9,7 @@ pub struct Inventory;
 #[derive(Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Item {
-    pub name: String,
-    pub short_name: String,
-    pub description: String,
     pub size: Size,
-    pub tags: Vec<String>,
     pub visible: bool,
 }
 
