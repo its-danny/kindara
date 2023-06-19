@@ -7,10 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
-    items::{
-        components::{Inventory, Item, Surface},
-        utils::depiction_matches_query,
-    },
+    items::components::{Inventory, Item, Surface},
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
@@ -71,7 +68,7 @@ pub fn place(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _, d, _, _)| depiction_matches_query(e, d, object)) else {
+                .find(|(e, _, d, _, _)| d.matches_query(e, object)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't have a {object}."),
@@ -92,7 +89,7 @@ pub fn place(
             let Some((target, _, target_depiction, _, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _,d,  _, _)| depiction_matches_query(e, d, target)) else {
+                .find(|(e, _,d,  _, _)| d.matches_query(e, target)) else {
                 outbox.send_text(
                     client.id,
                     format!("You don't see a {target} here."),

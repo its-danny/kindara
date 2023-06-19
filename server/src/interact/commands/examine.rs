@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     interact::components::{InMenu, Interaction, Interactions, MenuType},
-    items::{components::Item, utils::depiction_matches_query},
+    items::components::Item,
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
@@ -60,7 +60,7 @@ pub fn examine(
                 let item = siblings
                     .iter()
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(e, d, _)| depiction_matches_query(e, d, target));
+                    .find(|(e, d, _)| d.matches_query(e, target));
 
                 let Some((entity, item, interactions)) = item else {
                     outbox.send_text(client.id, format!("You don't see a {target} here."));

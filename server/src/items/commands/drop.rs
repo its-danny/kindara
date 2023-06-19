@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::{
         components::{Inventory, Item},
-        utils::{depiction_matches_query, item_name_list},
+        utils::item_name_list,
     },
     player::components::{Client, Online},
     spatial::components::Tile,
@@ -59,7 +59,7 @@ pub fn drop(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|sibling| items.get(*sibling).ok())
-                .filter(|(e, d)| depiction_matches_query(e, d, target))
+                .filter(|(e, d)| d.matches_query(e, target))
                 .collect::<Vec<(Entity, &Depiction)>>();
 
             if !*all {

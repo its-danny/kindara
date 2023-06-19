@@ -6,10 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
-    items::{
-        components::{Inventory, Item, Surface},
-        utils::depiction_matches_query,
-    },
+    items::components::{Inventory, Item, Surface},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
     value_or_continue,
@@ -66,9 +63,7 @@ pub fn scan(
                 items
                     .iter()
                     .filter(|(_, _, _, surface, _)| surface.is_some())
-                    .find(|(entity, _, depiction, _, _)| {
-                        depiction_matches_query(entity, depiction, target)
-                    })
+                    .find(|(entity, _, depiction, _, _)| depiction.matches_query(entity, target))
                     .and_then(|(_, _, _, _, children)| children)
                     .map(|children| children.iter().collect())
                     .unwrap_or_else(Vec::new)
