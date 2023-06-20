@@ -5,6 +5,7 @@ mod interact;
 mod items;
 mod keycard;
 mod net;
+mod npc;
 mod player;
 mod social;
 mod spatial;
@@ -29,8 +30,8 @@ use sqlx::{migrate, postgres::PgPoolOptions};
 use crate::{
     auth::plugin::AuthPlugin, db::pool::DatabasePool, input::plugin::InputPlugin,
     interact::plugin::InteractPlugin, items::plugin::ItemPlugin, net::plugin::NetPlugin,
-    player::plugin::PlayerPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
-    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
+    npc::plugin::NPCPlugin, player::plugin::PlayerPlugin, social::plugin::SocialPlugin,
+    spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -83,16 +84,17 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(NestPlugin)
         .add_plugin(ProtoPlugin::new())
         // Our plugins
-        .add_plugin(WorldPlugin)
-        .add_plugin(NetPlugin)
         .add_plugin(AuthPlugin)
         .add_plugin(InputPlugin)
-        .add_plugin(PlayerPlugin)
-        .add_plugin(SpatialPlugin)
         .add_plugin(InteractPlugin)
         .add_plugin(ItemPlugin)
+        .add_plugin(NPCPlugin)
+        .add_plugin(NetPlugin)
+        .add_plugin(PlayerPlugin)
         .add_plugin(SocialPlugin)
+        .add_plugin(SpatialPlugin)
         .add_plugin(VisualPlugin)
+        .add_plugin(WorldPlugin)
         // Get it started
         .add_startup_systems((load_prototypes, setup_network))
         .run();

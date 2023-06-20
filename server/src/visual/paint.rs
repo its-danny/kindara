@@ -11,6 +11,27 @@ static REGEX_ATTR: OnceLock<Regex> = OnceLock::new();
 
 static ENABLED: AtomicBool = AtomicBool::new(true);
 
+#[derive(Clone, Copy)]
+pub enum Color {
+    Enemy,
+    Item,
+    Npc,
+    Player,
+    Transition,
+}
+
+impl Color {
+    pub fn value(&self) -> &str {
+        match self {
+            Color::Enemy => "red",
+            Color::Item => "yellow",
+            Color::Npc => "blue",
+            Color::Player => "cyan",
+            Color::Transition => "green",
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub fn toggle(enabled: bool) {
     ENABLED.store(enabled, Ordering::Relaxed);
@@ -33,9 +54,18 @@ pub fn style(text: &str) -> String {
             let mut styled = ColoredString::from(&cap["content"]);
 
             for attr in regex_attr.captures_iter(&cap["attrs"]) {
+                let value = match &attr["value"] {
+                    "enemy" => Color::Enemy.value(),
+                    "item" => Color::Item.value(),
+                    "npc" => Color::Npc.value(),
+                    "player" => Color::Player.value(),
+                    "transition" => Color::Transition.value(),
+                    _ => &attr["value"],
+                };
+
                 styled = match &attr["attr"] {
-                    "fg" => styled.color(&attr["value"]),
-                    "bg" => styled.on_color(&attr["value"]),
+                    "fg" => styled.color(value),
+                    "bg" => styled.on_color(value),
                     "s" => match &attr["value"] {
                         "bold" => styled.bold(),
                         "dimmed" => styled.dimmed(),

@@ -14,7 +14,7 @@
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (
                             name: "Common room",
-                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn <fg.yellow>wooden tables</>, their laughter blending with the clinking of mugs. A <fg.yellow>roaring hearth</> warms the room, while a <fg.yellow>stocked bar</> occupies one wall. The sounds of a <fg.green>lively city street</> sing to the south.",
+                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn <fg.item>wooden tables</>, their laughter blending with the clinking of mugs. A <fg.item>roaring hearth</> warms the room, while a <fg.npc>barkeep</> tends a <fg.item>stocked bar</> along the back wall. The sounds of a <fg.transition>lively city street</> sing to the south.",
                         ),
                         sprite: (
                             character: "=",
@@ -22,6 +22,23 @@
                     ),
                 },
                 children: [
+                    (
+                        value: Inline((
+                            name: "jWtPbu",
+                            schematics: {
+                                "server::npc::bundles::NPCBundle": (
+                                    npc: (),
+                                    depiction: (
+                                        name: "Barkeep",
+                                        short_name: "barkeep",
+                                        description: "Laughter lines etch a weathered face. His sharp eyes, a remarkable shade of hazel, are alert and quick, keeping pace with the tavern's ebb and flow. His muscular hands, stained from years of pouring spirits, glide across the polished counter with a dancer's grace. A well-worn apron drapes over his sturdy frame, and his chestnut hair, peppered with grey, gives him an air of mature charisma.",
+                                        tags: ["bartender"],
+                                        visible: false,
+                                    )
+                                ),
+                            },
+                        )),
+                    ),
                     (
                         value: Inline((
                             name: "kxkqtQ",
@@ -95,7 +112,7 @@
                                     depiction: (
                                         name: "Stocked Bar",
                                         short_name: "stocked bar",
-                                        description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a <fg.yellow>disheveled door</>.",
+                                        description: "The bar occupies the north wall of the common room. Rows of bottles line its surface, a rainbow of liquid golds, ambers, and rubies glinting in the dim light. Its worn surface is smooth under countless rounds, a testament to the countless stories poured and shared across its breadth. Tucked behind the bar is a <fg.item>disheveled door</>.",
                                         tags: ["bar", "drinks"],
                                         visible: false,
                                     ),
@@ -170,7 +187,7 @@
                         position: (IVec3 ( x: 0, y: -1, z: 1 )),
                         tile: (
                             name: "Attic",
-                            description: "A cozy attic laden with forgotten trunks, dusty tomes, and aged maps. <fg.yellow>Straw mats</> offer rest amidst the clutter. A <fg.yellow>small window</> punctuates the space, casting a soft glow on the hushed world below.",
+                            description: "A cozy attic laden with forgotten trunks, dusty tomes, and aged maps. <fg.item>Straw mats</> offer rest amidst the clutter. A <fg.item>small window</> punctuates the space, casting a soft glow on the hushed world below.",
                         ),
                         sprite: (
                             character: ">",
@@ -178,6 +195,23 @@
                     ),
                 },
                 children: [
+                    (
+                        value: Inline((
+                            name: "f1nBAT",
+                            schematics: {
+                                "server::npc::bundles::NPCBundle": (
+                                    npc: (),
+                                    depiction: (
+                                        name: "Racoon",
+                                        short_name: "racoon",
+                                        description: "Its matted grey coat shimmers with an otherworldly gloom, the patches of darkness seeming to absorb light rather than reflect it. Stark black masks its eyes, the gaze within a disturbing yellow that seems to hold an ancient, malignant wisdom. Its paws, worn and rugged, move with an uncanny rhythm, each twitch a dissonant note in nature's symphony.",
+                                        tags: ["racoon", "trash", "creature", "animal", "abomination"],
+                                        visible: true,
+                                    )
+                                ),
+                            },
+                        )),
+                    ),
                     (
                         value: Inline((
                             name: "qoh0Jr",

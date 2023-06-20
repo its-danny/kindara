@@ -8,14 +8,11 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
-    items::{
-        components::{Inventory, Item, Surface},
-        utils::item_name_list,
-    },
+    items::components::{Inventory, Item, Surface},
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
-    visual::components::Depiction,
+    visual::{components::Depiction, utils::name_list},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -122,11 +119,13 @@ pub fn take(
                 bevy.entity(*entity).set_parent(inventory);
             });
 
-            let item_names = item_name_list(
+            let item_names = name_list(
                 &items_found
                     .iter()
                     .map(|(_, item, _, _)| item.name.clone())
                     .collect::<Vec<String>>(),
+                None,
+                true,
             );
 
             outbox.send_text(client.id, format!("You take {item_names}."));

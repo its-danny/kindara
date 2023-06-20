@@ -9,15 +9,15 @@ pub struct Interactions(pub Vec<Interaction>);
 
 #[derive(PartialEq, Reflect, FromReflect, Debug)]
 pub enum Interaction {
-    Take,
     Place,
+    Take,
 }
 
 impl Display for Interaction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Interaction::Take => write!(f, "Take"),
             Interaction::Place => write!(f, "Place"),
+            Interaction::Take => write!(f, "Take"),
         }
     }
 }
@@ -25,8 +25,8 @@ impl Display for Interaction {
 impl Interaction {
     pub fn usable_in_menu(&self) -> bool {
         match self {
-            Interaction::Take => true,
             Interaction::Place => false,
+            Interaction::Take => true,
         }
     }
 }

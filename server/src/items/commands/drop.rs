@@ -6,14 +6,11 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
-    items::{
-        components::{Inventory, Item},
-        utils::item_name_list,
-    },
+    items::components::{Inventory, Item},
     player::components::{Client, Online},
     spatial::components::Tile,
     value_or_continue,
-    visual::components::Depiction,
+    visual::{components::Depiction, utils::name_list},
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -70,11 +67,13 @@ pub fn drop(
                 bevy.entity(*entity).set_parent(tile);
             });
 
-            let item_names = item_name_list(
+            let item_names = name_list(
                 &items_found
                     .iter()
                     .map(|(_, item)| item.name.clone())
                     .collect::<Vec<String>>(),
+                None,
+                true,
             );
 
             if item_names.is_empty() {

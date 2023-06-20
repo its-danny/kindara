@@ -22,7 +22,7 @@ use crate::{
     paint,
     player::{
         bundles::PlayerBundle,
-        components::{Character, Client, Online},
+        components::{Character, CharacterState, Client, Online},
         config::CharacterConfig,
     },
     spatial::components::{Spawn, Tile},
@@ -206,7 +206,7 @@ pub fn handle_authenticate_task(
                     outbox.send_text(
                         client.id,
                         paint!(
-                            "<fg.cyan>{}</> is already online and will be disconnected.",
+                            "<fg.player>{}</> is already online and will be disconnected.",
                             character.name
                         ),
                     );
@@ -228,6 +228,7 @@ pub fn handle_authenticate_task(
                                 name: character.name,
                                 description: character.description,
                                 config: character.config.0,
+                                state: CharacterState::Idle,
                             },
                         },
                     ));

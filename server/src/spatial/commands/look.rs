@@ -7,15 +7,21 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
-    items::{components::Surface, utils::item_name_list},
+    interact::components::Interactions,
+    items::components::{Item, Surface},
+    npc::components::Npc,
     paint,
     player::components::{Character, Client, Online},
     spatial::{
-        components::{Position, Tile, Zone},
+        components::{Position, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
-    visual::components::{Depiction, Sprite},
+    visual::{
+        components::{Depiction, Sprite},
+        paint::Color,
+        utils::name_list,
+    },
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -37,11 +43,13 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn look(
-    items: Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>)>,
+    items: Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
+    npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
+    transitions: Query<(Entity, &Depiction), With<Transition>>,
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
@@ -59,6 +67,18 @@ pub fn look(
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
                     .find(|(entity, depiction, _, _)| depiction.matches_query(entity, target));
+
+                let matching_transition = siblings
+                    .iter()
+                    .flat_map(|siblings| siblings.iter())
+                    .filter_map(|sibling| transitions.get(*sibling).ok())
+                    .find(|(entity, depiction)| depiction.matches_query(entity, target));
+
+                let matching_npc = siblings
+                    .iter()
+                    .flat_map(|siblings| siblings.iter())
+                    .filter_map(|sibling| npcs.get(*sibling).ok())
+                    .find(|(entity, depiction, _)| depiction.matches_query(entity, target));
 
                 let matching_player = siblings
                     .iter()
@@ -86,22 +106,16 @@ pub fn look(
                         })
                         .unwrap_or("".into());
 
-                    output = paint!(
-                        "{}\n{}{}",
-                        depiction.name,
-                        depiction.description,
-                        surface_line
-                    );
+                    output = paint!("{}{}", depiction.description, surface_line);
+                } else if let Some((_, depiction)) = matching_transition {
+                    output = paint!("{}", depiction.description,);
+                } else if let Some((_, depiction, _)) = matching_npc {
+                    output = paint!("{}", depiction.description,);
                 } else if let Some((_, character, _)) = matching_player {
-                    output = paint!(
-                        "<fg.cyan>{}</>{}",
-                        character.name,
-                        character
-                            .description
-                            .clone()
-                            .map(|d| format!("\n{}", d))
-                            .unwrap_or_default()
-                    );
+                    output = character.description.clone().unwrap_or(format!(
+                        "You can't quite make out what {} looks like.",
+                        character.name
+                    ));
                 } else {
                     output = format!("You don't see a {target} here.");
                 }
@@ -110,18 +124,20 @@ pub fn look(
 
                 let exits = get_exits(position, zone_tiles, &tiles);
                 let items_line = get_items_line(siblings, &items);
+                let npcs_line = get_npcs_line(siblings, &npcs);
                 let players_line = get_players_line(client, siblings, &players);
 
                 output = if character.config.brief {
                     format!("{} {}{}", sprite.character, tile.name, exits)
                 } else {
                     paint!(
-                        "{} {}{}\n{}{}{}",
+                        "{} {}{}\n{}{}{}{}",
                         sprite.character,
                         tile.name,
                         exits,
                         tile.description,
                         items_line,
+                        npcs_line,
                         players_line,
                     )
                 };
@@ -162,7 +178,7 @@ fn get_players_line(
     siblings: Option<&Children>,
     players: &Query<(&Client, &Character, &Parent), With<Online>>,
 ) -> String {
-    let mut player_names = siblings
+    let players_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|child| players.get(*child).ok())
@@ -170,40 +186,53 @@ fn get_players_line(
         .map(|(_, character, _)| character.name.clone())
         .collect::<Vec<String>>();
 
-    if player_names.is_empty() {
+    if players_found.is_empty() {
         return "".into();
     }
 
-    player_names.sort();
-
-    let player_names_concat = match player_names.len() {
-        1 => paint!("<fg.cyan>{}</>", player_names[0]),
-        2 => paint!(
-            "<fg.cyan>{}</> and <fg.cyan>{}</>",
-            player_names[0],
-            player_names[1]
-        ),
-        _ => {
-            let last = player_names.pop().unwrap_or_default();
-
-            paint!(
-                "<fg.cyan>{}</>, and <fg.cyan>{}</>",
-                player_names.join(", "),
-                last
-            )
-        }
-    };
+    let player_names = name_list(&players_found, Some(Color::Player), false);
 
     format!(
         "\n\n{} {} here.",
-        player_names_concat,
-        if player_names.len() == 1 { "is" } else { "are" }
+        player_names,
+        if players_found.len() == 1 {
+            "is"
+        } else {
+            "are"
+        }
     )
+}
+
+fn get_npcs_line(
+    siblings: Option<&Children>,
+    npcs: &Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
+) -> String {
+    let npcs_found = siblings
+        .iter()
+        .flat_map(|children| children.iter())
+        .filter_map(|sibling| npcs.get(*sibling).ok())
+        .filter(|(_, depiction, _)| depiction.visible)
+        .map(|(_, depiction, _)| depiction.short_name.clone())
+        .collect::<Vec<String>>();
+
+    if npcs_found.is_empty() {
+        return "".into();
+    }
+
+    let npc_names = name_list(&npcs_found, Some(Color::Npc), true);
+
+    let formatted = format!(
+        "{}{}",
+        npc_names.chars().next().unwrap_or_default().to_uppercase(),
+        &npc_names[1..]
+    );
+
+    format!("\n\n{} are here.", formatted,)
 }
 
 fn get_items_line(
     siblings: Option<&Children>,
-    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
 ) -> String {
     let items_found = siblings
         .iter()
@@ -217,7 +246,7 @@ fn get_items_line(
         return "".into();
     }
 
-    let item_names = item_name_list(&items_found);
+    let item_names = name_list(&items_found, Some(Color::Item), true);
 
     let formatted = format!(
         "{}{}",
@@ -237,7 +266,7 @@ fn get_items_line(
 }
 
 fn items_on_surface(
-    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>)>,
+    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
     children: &Children,
 ) -> String {
     let on_surface = children
@@ -251,7 +280,7 @@ fn items_on_surface(
         return "".into();
     }
 
-    item_name_list(&on_surface)
+    name_list(&on_surface, None, true)
 }
 
 #[cfg(test)]
@@ -312,7 +341,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content, "Rock\nA small rock.");
+        assert_eq!(content, "A small rock.");
     }
 
     #[test]
@@ -336,7 +365,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content, "Ramos\nA big, burly hunk.");
+        assert_eq!(content, "A big, burly hunk.");
     }
 
     #[test]
@@ -348,7 +377,6 @@ mod tests {
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let table = ItemBuilder::new()
-            .name("Dining Table")
             .short_name("table")
             .description("A small dining table.")
             .is_surface(SurfaceKind::Floor, 1)
@@ -369,7 +397,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "Dining Table\nA small dining table. On the table is a dinner plate."
+            "A small dining table. On the table is a dinner plate."
         );
     }
 
