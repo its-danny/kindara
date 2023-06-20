@@ -15,7 +15,7 @@
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (
                             name: "Beyond the gate",
-                            description: "A vast cobblestone square unveils itself, alive with the rhythm of everyday life. Marble <fg.yellow>statues</> dominate the square, a celebration of conquest and stoic vigil. Blooms of <fg.yellow>vibrant flora</> punctuate the area and nestled among these, a smaller road forks to the northeast, carrying with it an exotic melody of spices and the distant buzz of eager commerce. Stretching out ahead, a palace anchors the city's horizon in its grandeur.",
+                            description: "A vast cobblestone square unveils itself, alive with the rhythm of everyday life. Marble <fg.item>statues</> dominate the square, a celebration of conquest and stoic vigil. Blooms of <fg.item>vibrant flora</> punctuate the area and nestled among these, a smaller road forks to the northeast, carrying with it an exotic melody of spices and the distant buzz of eager commerce. Stretching out ahead, a palace anchors the city's horizon in its grandeur.",
                         ),
                         sprite: (
                             character: "=",
@@ -72,7 +72,7 @@
                         position: (IVec3 ( x: 1, y: -1, z: 0 )),
                         tile: (
                             name: "Towards the market",
-                            description: "The grandeur of the marble structures gives way to more humble storefronts. Standing out among them is <fg.green>The Roaring Lion</>; its raucous laughter and clinking glasses promise respite and camaraderie. Outside, patrons sit at <fg.yellow>wooden benches</>, their boisterous conversations contributing to the ambient symphony of the city.",
+                            description: "The grandeur of the marble structures gives way to more humble storefronts. Standing out among them is <fg.transition>The Roaring Lion</>; its raucous laughter and clinking glasses promise respite and camaraderie. Outside, patrons sit at <fg.item>wooden benches</>, their boisterous conversations contributing to the ambient symphony of the city.",
                         ),
                         sprite: (
                             character: "/",

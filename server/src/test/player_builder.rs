@@ -9,7 +9,7 @@ use crate::{
     keycard::Keycard,
     player::{
         bundles::PlayerBundle,
-        components::{Character, Client, Online},
+        components::{Character, CharacterState, Client, Online},
         config::CharacterConfig,
     },
 };
@@ -119,6 +119,7 @@ impl PlayerBuilder {
                         name: self.name,
                         description: self.description,
                         config: self.config,
+                        state: CharacterState::Idle,
                     },
                 },
             ));
