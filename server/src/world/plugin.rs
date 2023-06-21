@@ -24,7 +24,7 @@ impl Plugin for WorldPlugin {
                 handle_save_world_state_task,
                 handle_load_world_state_task,
             ))
-            .add_startup_system(load_world_state);
+            .add_startup_systems((load_world_state,));
 
         app.add_systems((
             spawn_trinus_castra

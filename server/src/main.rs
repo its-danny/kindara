@@ -44,11 +44,27 @@ pub enum Set {
 }
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
-    if let Err(e) = prototypes.load_folder("world/") {
-        panic!("{e}");
+    match prototypes.load_folder("world/") {
+        Ok(loaded) => {
+            loaded.iter().for_each(|proto| {
+                info!("Loaded zones: {:?}", proto);
+            });
+        }
+        Err(err) => {
+            error!("Failed to load prototypes: {}", err);
+        }
     }
 
-    info!("Loaded world prototypes");
+    match prototypes.load_folder("enemies/") {
+        Ok(loaded) => {
+            loaded.iter().for_each(|proto| {
+                info!("Loaded enemies: {:?}", proto);
+            });
+        }
+        Err(err) => {
+            error!("Failed to load prototypes: {}", err);
+        }
+    }
 }
 
 fn setup_network(server: Res<Server>) {
