@@ -1,4 +1,5 @@
 mod auth;
+mod combat;
 mod db;
 mod input;
 mod interact;
@@ -28,10 +29,11 @@ use dotenvy::dotenv;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
-    auth::plugin::AuthPlugin, db::pool::DatabasePool, input::plugin::InputPlugin,
-    interact::plugin::InteractPlugin, items::plugin::ItemPlugin, net::plugin::NetPlugin,
-    npc::plugin::NPCPlugin, player::plugin::PlayerPlugin, social::plugin::SocialPlugin,
-    spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
+    auth::plugin::AuthPlugin, combat::plugin::CombatPlugin, db::pool::DatabasePool,
+    input::plugin::InputPlugin, interact::plugin::InteractPlugin, items::plugin::ItemPlugin,
+    net::plugin::NetPlugin, npc::plugin::NpcPlugin, player::plugin::PlayerPlugin,
+    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
+    world::plugin::WorldPlugin,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -85,10 +87,11 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(ProtoPlugin::new())
         // Our plugins
         .add_plugin(AuthPlugin)
+        .add_plugin(CombatPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(InteractPlugin)
         .add_plugin(ItemPlugin)
-        .add_plugin(NPCPlugin)
+        .add_plugin(NpcPlugin)
         .add_plugin(NetPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(SocialPlugin)

@@ -26,7 +26,7 @@
                         value: Inline((
                             name: "jWtPbu",
                             schematics: {
-                                "server::npc::bundles::NPCBundle": (
+                                "server::npc::bundles::NpcBundle": (
                                     npc: (),
                                     depiction: (
                                         name: "Barkeep",
@@ -199,7 +199,7 @@
                         value: Inline((
                             name: "f1nBAT",
                             schematics: {
-                                "server::npc::bundles::NPCBundle": (
+                                "server::npc::bundles::NpcBundle": (
                                     npc: (),
                                     depiction: (
                                         name: "Racoon",
@@ -209,6 +209,7 @@
                                         visible: true,
                                     )
                                 ),
+                                "server::interact::components::Interactions": ([Attack]),
                             },
                         )),
                     ),

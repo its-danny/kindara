@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
+    combat::commands::attack::handle_attack,
     interact::commands::{examine::handle_examine, place::handle_place, take::handle_take},
     items::commands::{drop::handle_drop, inventory::handle_inventory},
     player::{
@@ -39,6 +40,7 @@ pub fn parse_command(
 
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_announce),
+            Box::new(handle_attack),
             Box::new(handle_chat),
             Box::new(handle_config),
             Box::new(handle_describe),

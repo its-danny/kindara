@@ -29,6 +29,7 @@ impl ChatChannel {
 #[derive(Clone, Debug)]
 pub enum Command {
     Announce(String),
+    Attack(String),
     Chat((ChatChannel, String)),
     Config((Option<String>, Option<String>)),
     Describe(Option<String>),

@@ -2,10 +2,10 @@ use bevy::prelude::*;
 
 use super::{bundles::*, components::*};
 
-pub struct NPCPlugin;
+pub struct NpcPlugin;
 
-impl Plugin for NPCPlugin {
+impl Plugin for NpcPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<NPCBundle>().register_type::<Npc>();
+        app.register_type::<NpcBundle>().register_type::<Npc>();
     }
 }
