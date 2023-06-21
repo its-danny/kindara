@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
-    player::components::{Client, Online},
+    player::components::{Character, Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
     value_or_continue,
     visual::components::Depiction,
@@ -34,15 +34,22 @@ pub fn enter(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Parent), With<Online>>,
+    mut players: Query<(Entity, &Client, &Character, &Parent), With<Online>>,
     transitions: Query<(&Transition, &Depiction)>,
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Zone>,
 ) {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let (player, client, tile) =
-                value_or_continue!(players.iter_mut().find(|(_, c, _)| c.id == command.from));
+            let (player, client, character, tile) =
+                value_or_continue!(players.iter_mut().find(|(_, c, _, _)| c.id == command.from));
+
+            if character.state.is_combat() {
+                outbox.send_text(client.id, "You can't move while in combat.");
+
+                continue;
+            }
+
             let (_, _, _, siblings) = value_or_continue!(tiles.get(tile.get()).ok());
 
             let transitions = siblings

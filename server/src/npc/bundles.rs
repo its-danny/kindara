@@ -7,7 +7,7 @@ use super::components::Npc;
 
 #[derive(Bundle, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
-pub struct NPCBundle {
-    npc: Npc,
-    depiction: Depiction,
+pub struct NpcBundle {
+    pub npc: Npc,
+    pub depiction: Depiction,
 }

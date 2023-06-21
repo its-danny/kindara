@@ -67,12 +67,13 @@ pub fn teleport(
             let (player, client, keycard, character, tile) = value_or_continue!(players
                 .iter_mut()
                 .find(|(_, c, _, _, _)| c.id == command.from));
-            let (_, _, here) = value_or_continue!(tiles.get(tile.get()).ok());
-            let (here, _) = value_or_continue!(zones.get(here.get()).ok());
 
             if !keycard.can(TELEPORT) {
                 continue;
             }
+
+            let (_, _, here) = value_or_continue!(tiles.get(tile.get()).ok());
+            let (here, _) = value_or_continue!(zones.get(here.get()).ok());
 
             let position = IVec3::new(*x, *y, *z);
 

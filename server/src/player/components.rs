@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_nest::server::ClientId;
+use enum_as_inner::EnumAsInner;
 
 use super::config::CharacterConfig;
 
@@ -18,8 +19,10 @@ pub struct Character {
     pub state: CharacterState,
 }
 
+#[derive(EnumAsInner)]
 pub enum CharacterState {
     Idle,
+    Combat,
 }
 
 #[derive(Component)]
