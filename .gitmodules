@@ -1,0 +1,3 @@
+[submodule "server/assets"]
+	path = server/assets
+	url = https://github.com/its-danny/aureus-assets

@@ -48,6 +48,11 @@ variant and sent to `EventWriter<ParsedCommand>`. This system belongs to the `In
 A `Tile` is the only entity with a `Position` and its position is relative to the `Zone` it belongs to. All other positioned entites
 are children of a tile.
 
+**Content**
+
+The games content lives in a private repo to avoid spoiling puzzles, secrets, and so on. It all uses [bevy_proto](https://github.com/MrGVSV/bevy_proto),
+so check their docs for how to create your own content.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/aureus/blob/main/LICENSE-APACHE)
