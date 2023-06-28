@@ -9,7 +9,7 @@ use crate::{
         systems::{handle_proxy_command, parse_command},
     },
     visual::paint,
-    world::resources::WorldState,
+    world::resources::{WorldState, WorldTime},
     Set,
 };
 
@@ -36,6 +36,7 @@ impl AppBuilder {
             .add_plugins(MinimalPlugins)
             .add_plugin(NestPlugin)
             .insert_resource(WorldState::default())
+            .insert_resource(WorldTime::default())
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()
