@@ -22,6 +22,7 @@ use crate::{
         paint::Color,
         utils::name_list,
     },
+    world::resources::WorldTime,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -50,6 +51,7 @@ pub fn look(
     players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
     transitions: Query<(Entity, &Depiction), With<Transition>>,
+    world_time: Res<WorldTime>,
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
@@ -120,7 +122,7 @@ pub fn look(
                     output = format!("You don't see a {target} here.");
                 }
             } else {
-                let (_, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
+                let (zone, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
 
                 let exits = get_exits(position, zone_tiles, &tiles);
                 let items_line = get_items_line(siblings, &items);
@@ -131,10 +133,12 @@ pub fn look(
                     format!("{} {}{}", sprite.character, tile.name, exits)
                 } else {
                     paint!(
-                        "{} {}{}\n{}{}{}{}",
+                        "{} {}{} - {} ({})\n{}{}{}{}",
                         sprite.character,
                         tile.name,
                         exits,
+                        zone.name,
+                        world_time.time_string(),
                         tile.description,
                         items_line,
                         npcs_line,
@@ -303,7 +307,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -317,7 +321,7 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content, "x The Void\nA vast, empty void.");
+        assert_eq!(content, "x The Void - V (00:00am)\nA vast, empty void.");
     }
 
     #[test]
@@ -406,7 +410,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
 
         let tile = TileBuilder::new()
             .sprite("x")
@@ -428,7 +432,10 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content, "x The Void [N, U]\nA vast, empty void.");
+        assert_eq!(
+            content,
+            "x The Void [N, U] - V (00:00am)\nA vast, empty void."
+        );
     }
 
     #[test]
@@ -436,7 +443,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -457,7 +464,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\nAstrid is here."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid is here."
         );
     }
 
@@ -466,7 +473,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -492,7 +499,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\nAstrid and Ramos are here."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid and Ramos are here."
         );
     }
 
@@ -501,7 +508,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -522,7 +529,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\nA rock lies on the ground."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nA rock lies on the ground."
         );
     }
 
@@ -531,7 +538,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -556,7 +563,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\n2 rocks lie on the ground."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\n2 rocks lie on the ground."
         );
     }
 
@@ -565,7 +572,7 @@ mod tests {
         let mut app = AppBuilder::new().build();
         app.add_system(look);
 
-        let zone = ZoneBuilder::new().build(&mut app);
+        let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
             .sprite("x")
             .name("The Void")
@@ -590,7 +597,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void\nA vast, empty void.\n\nA rock and a stick lie on the ground."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nA rock and a stick lie on the ground."
         );
     }
 }

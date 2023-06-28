@@ -14,7 +14,7 @@ use crate::{
     value_or_continue,
 };
 
-use super::resources::{SaveTimer, WorldState, WorldStateCharacter};
+use super::resources::{SaveTimer, WorldState, WorldStateCharacter, WorldTime};
 
 pub fn spawn_trinus_castra(mut commands: ProtoCommands) {
     commands.spawn("world.trinus.trinus-castra");
@@ -157,4 +157,8 @@ pub fn handle_load_world_state_task(
             bevy.entity(entity).remove::<LoadWorldStateTask>();
         }
     }
+}
+
+pub fn update_world_time(mut time: ResMut<WorldTime>) {
+    time.update();
 }

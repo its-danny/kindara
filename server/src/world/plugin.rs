@@ -6,7 +6,8 @@ use bevy_proto::prelude::*;
 use crate::Set;
 
 use super::{
-    resources::{SaveTimer, WorldState},
+    commands::time::*,
+    resources::{SaveTimer, WorldState, WorldTime},
     systems::*,
 };
 
@@ -19,12 +20,14 @@ impl Plugin for WorldPlugin {
                 Duration::from_secs(60),
                 TimerMode::Repeating,
             )))
+            .insert_resource(WorldTime::default())
             .add_systems((
                 save_world_state.in_base_set(Set::WorldSave),
                 handle_save_world_state_task,
                 handle_load_world_state_task,
             ))
-            .add_startup_systems((load_world_state,));
+            .add_startup_systems((load_world_state,))
+            .add_systems((time, update_world_time));
 
         app.add_systems((
             spawn_trinus_castra

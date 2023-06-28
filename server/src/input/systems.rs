@@ -19,6 +19,7 @@ use crate::{
     },
     value_or_continue,
     visual::paint,
+    world::commands::time::handle_time,
 };
 
 use super::events::{Command, ParseError, ParsedCommand, ProxyCommand};
@@ -57,6 +58,7 @@ pub fn parse_command(
             Box::new(handle_scan),
             Box::new(handle_take),
             Box::new(handle_teleport),
+            Box::new(handle_time),
             Box::new(handle_who),
             Box::new(handle_yell),
         ];
