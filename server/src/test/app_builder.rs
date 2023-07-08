@@ -8,6 +8,7 @@ use crate::{
         events::{ParsedCommand, ProxyCommand},
         systems::{handle_proxy_command, parse_command},
     },
+    player::events::Prompt,
     visual::paint,
     world::resources::{WorldState, WorldTime},
     Set,
@@ -41,6 +42,7 @@ impl AppBuilder {
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()
             .add_event::<ProxyCommand>()
+            .add_event::<Prompt>()
             .add_systems((parse_command, handle_proxy_command).in_base_set(Set::Input));
 
         if let Some(database) = self.database {

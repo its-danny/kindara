@@ -22,7 +22,7 @@ pub struct Character {
 #[derive(EnumAsInner)]
 pub enum CharacterState {
     Idle,
-    Combat,
+    Combat(Entity),
 }
 
 #[derive(Component)]

@@ -11,7 +11,10 @@ use crate::{
     items::components::{Item, Surface},
     npc::components::Npc,
     paint,
-    player::components::{Character, Client, Online},
+    player::{
+        components::{Character, Client, Online},
+        events::Prompt,
+    },
     spatial::{
         components::{Position, Tile, Transition, Zone},
         utils::offset_for_direction,
@@ -47,6 +50,7 @@ pub fn look(
     items: Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
+    mut prompts: EventWriter<Prompt>,
     npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
@@ -148,6 +152,8 @@ pub fn look(
             }
 
             outbox.send_text(client.id, output);
+
+            prompts.send(Prompt::new(client.id));
         }
     }
 }

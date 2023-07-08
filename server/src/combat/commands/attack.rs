@@ -8,7 +8,10 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     npc::components::Npc,
-    player::components::{Character, CharacterState, Client, Online},
+    player::{
+        components::{Character, CharacterState, Client, Online},
+        events::Prompt,
+    },
     spatial::components::Tile,
     value_or_continue,
     visual::components::Depiction,
@@ -36,6 +39,7 @@ pub fn attack(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&mut Character, &Client, &Parent), With<Online>>,
+    mut prompts: EventWriter<Prompt>,
     npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
@@ -45,7 +49,7 @@ pub fn attack(
                 value_or_continue!(players.iter_mut().find(|(_, c, _)| c.id == command.from));
             let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
-            let Some((_, _, npc_interactions)) = siblings
+            let Some((entity, _, interactions)) = siblings
                 .iter()
                 .filter_map(|sibling| npcs.get(*sibling).ok())
                 .find(|(entity, depiction, _)| depiction.matches_query(entity, target)) else {
@@ -54,13 +58,15 @@ pub fn attack(
                 continue;
             };
 
-            if npc_interactions.map_or(true, |i| !i.0.contains(&Interaction::Attack)) {
+            if interactions.map_or(true, |i| !i.0.contains(&Interaction::Attack)) {
                 outbox.send_text(client.id, format!("You can't attack the {target}."));
 
                 continue;
             }
 
-            character.state = CharacterState::Combat;
+            character.state = CharacterState::Combat(entity);
+
+            prompts.send(Prompt::new(client.id));
         }
     }
 }
