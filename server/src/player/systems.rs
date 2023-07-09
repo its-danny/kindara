@@ -2,7 +2,11 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
-    net::telnet::NAWS, npc::components::Npc, value_or_continue, visual::components::Depiction,
+    combat::components::{Attributes, State},
+    net::telnet::NAWS,
+    npc::components::Npc,
+    paint, value_or_continue,
+    visual::components::Depiction,
 };
 
 use super::{
@@ -34,12 +38,20 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
 pub fn send_prompt(
     mut events: EventReader<Prompt>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Character)>,
+    players: Query<(&Client, &Character, &Attributes, &State)>,
     npcs: Query<&Depiction, With<Npc>>,
 ) {
     for prompt in events.iter() {
-        let (client, character) =
-            value_or_continue!(players.iter().find(|(c, _)| c.id == prompt.client_id));
+        let (client, character, attributes, state) =
+            value_or_continue!(players.iter().find(|(c, _, _, _)| c.id == prompt.client_id));
+
+        let mut parts: Vec<String> = vec![];
+
+        parts.push(paint!(
+            "[{}/<fg.red>{}</>]",
+            state.health,
+            attributes.max_health()
+        ));
 
         let target = match character.state {
             CharacterState::Idle => None,
@@ -51,8 +63,6 @@ pub fn send_prompt(
                 }
             }
         };
-
-        let mut parts: Vec<String> = vec![];
 
         if let Some(target) = target {
             parts.push(format!("({target})"));

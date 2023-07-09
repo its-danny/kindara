@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use bevy_nest::server::ClientId;
+use bevy_nest::prelude::*;
 
 #[derive(Clone, Debug)]
 pub enum ChatChannel {

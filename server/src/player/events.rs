@@ -1,4 +1,4 @@
-use bevy_nest::server::ClientId;
+use bevy_nest::prelude::*;
 
 pub struct Prompt {
     pub client_id: ClientId,
