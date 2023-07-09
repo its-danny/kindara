@@ -7,6 +7,7 @@ use regex::Regex;
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::components::{Inventory, Item, Surface},
+    npc::components::Npc,
     player::components::{Character, Client, Online},
     spatial::components::Tile,
     value_or_continue,
@@ -35,6 +36,8 @@ pub fn handle_scan(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn scan(
+    mut commands: EventReader<ParsedCommand>,
+    mut outbox: EventWriter<Outbox>,
     inventories: Query<(Entity, &Children), With<Inventory>>,
     items: Query<(
         Entity,
@@ -43,8 +46,7 @@ pub fn scan(
         Option<&Surface>,
         Option<&Children>,
     )>,
-    mut commands: EventReader<ParsedCommand>,
-    mut outbox: EventWriter<Outbox>,
+    npcs: Query<(Entity, &Depiction), With<Npc>>,
     players: Query<(Entity, &Client, &Character, &Parent, &Children), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
@@ -79,6 +81,8 @@ pub fn scan(
                 .iter()
                 .filter_map(|entity| {
                     if let Ok((entity, _, depiction, _, _)) = items.get(**entity) {
+                        Some(format!("#{}: {}", entity.index(), depiction.short_name))
+                    } else if let Ok((entity, depiction)) = npcs.get(**entity) {
                         Some(format!("#{}: {}", entity.index(), depiction.short_name))
                     } else if let Ok((entity, _, character, _, _)) = players.get(**entity) {
                         Some(format!("#{}: {}", entity.index(), character.name))
