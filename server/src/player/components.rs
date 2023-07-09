@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_nest::server::ClientId;
+use bevy_nest::prelude::*;
 use enum_as_inner::EnumAsInner;
 
 use super::config::CharacterConfig;

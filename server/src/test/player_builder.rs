@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_nest::server::ClientId;
+use bevy_nest::prelude::*;
 use fake::{faker::internet::en::Password, faker::name::en::Name, Dummy, Fake, Faker};
 use sqlx::{types::Json, PgPool};
 

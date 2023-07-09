@@ -12,6 +12,10 @@ use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
+    combat::{
+        bundles::CombatBundle,
+        components::{Attributes, State},
+    },
     db::{
         models::{CharacterModel, Role},
         pool::DatabasePool,
@@ -230,6 +234,12 @@ pub fn handle_authenticate_task(
                                 config: character.config.0,
                                 state: CharacterState::Idle,
                             },
+                        },
+                        CombatBundle {
+                            attributes: Attributes::default(),
+                        },
+                        State {
+                            health: Attributes::default().max_health(),
                         },
                     ));
 
