@@ -26,39 +26,14 @@ cargo run -p server  # Starts the server at 127.0.0.1:3000
 - https://bevy-cheatbook.github.io/
 - https://docs.rs/sqlx/latest/sqlx/
 
-### How it works
-
-**When a user first connects:**
-
-- Spawn a new entity with a [`Client`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs)
-and [`Authenticating`](https://github.com/its-danny/aureus/blob/main/server/src/auth/components.rs) component.
-
-**When a user sends a message:**
-
-- If authenticating, all messages are handled by the [`auth systems`](https://github.com/its-danny/aureus/blob/main/server/src/auth/systems.rs).
-When succesfully authenticated, this component is removed and an
-[`Online`](https://github.com/its-danny/aureus/blob/main/server/src/player/components.rs) component is added.
-- When not authenticating, all messages first go through [`parse_command`](https://github.com/its-danny/aureus/blob/main/server/src/input/systems.rs)
-to be turned into their respective [`Command`](https://github.com/its-danny/aureus/blob/main/server/src/input/events.rs)
-variant and sent to `EventWriter<ParsedCommand>`. This system belongs to the `Input` system set that runs _before_ bevys `CoreSet::Update`.
-- On every game tick, command systems will iterate through `EventReader<ParsedCommand>` and act on their respective events.
-
-**Positions**
-
-A `Tile` is the only entity with a `Position` and its position is relative to the `Zone` it belongs to. All other positioned entites
-are children of a tile.
-
-**Content**
-
-The games content lives in a private repo to avoid spoiling puzzles, secrets, and so on. It all uses [bevy_proto](https://github.com/MrGVSV/bevy_proto),
-so check their docs for how to create your own content.
-
 ## License
 
-Licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/aureus/blob/main/LICENSE-APACHE)
-or [MIT](https://github.com/its-danny/aureus/blob/main/LICENSE-MIT) license at your option.
+The code is licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/aureus/blob/main/LICENSE-APACHE)
+or [MIT](https://github.com/its-danny/aureus/blob/main/LICENSE-MIT) license at your option. The content and assets
+are licensed under [CC BY-NC-SA 4.0](https://github.com/its-danny/aureus/blob/main/LICENSE-CC-BY-NC-SA).
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for
-inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed
-as above, without any additional terms or conditions.
+## Contributing
+
+Contributions, specifically typo corrections and bug fixes, are welcome. Please note that this is a hobby project,
+so new features or content are not sought after. All contributions will fall under the existing project licenses.
 

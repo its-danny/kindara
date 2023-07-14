@@ -1,0 +1,126 @@
+(
+    name: "world.trinus.trinus-castra",
+    schematics: {
+        "server::spatial::components::Zone": (
+            name: "Trinus Castra",
+        ),
+    },
+    children: [
+        (
+            value: Inline((
+                name: "lKLXk7",
+                schematics: {
+                    "server::spatial::components::Spawn": (),
+                    "server::spatial::bundles::TileBundle": (
+                        position: (IVec3 ( x: 0, y: 0, z: 0 )),
+                        tile: (
+                            name: "Beyond the gate",
+                            description: "A vast cobblestone square unveils itself, alive with the rhythm of everyday life. Marble <fg.item>statues</> dominate the square, a celebration of conquest and stoic vigil. Blooms of <fg.item>vibrant flora</> punctuate the area and nestled among these, a smaller road forks to the northeast, carrying with it an exotic melody of spices and the distant buzz of eager commerce. Stretching out ahead, a palace anchors the city's horizon in its grandeur.",
+                        ),
+                        sprite: (
+                            character: "=",
+                        ),
+                    ),
+                },
+                children: [
+                    (
+                        value: Inline((
+                            name: "gzqylH",
+                            schematics: {
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "A gallery of statues",
+                                        short_name: "statues",
+                                        description: "Each statue is expertly chiseled to represent renowned warriors. One stands poised for combat, muscles tensed mid-strike, his expression frozen in a timeless battle cry. Another is etched in the stance of victory, a triumphant hero with a stone sword raised high. Their silent narratives of war and conquest are carved in stone.",
+                                        tags: ["statues", "statue", "marble", "sculpture", "sculptures", "art", "artwork", "artworks", "gallery", "galleries"],
+                                        visible: false,
+                                    ),
+                                ),
+                            },
+                        )),
+                    ),
+                    (
+                        value: Inline((
+                            name: "DIB9O4",
+                            schematics: {
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "An array of flora",
+                                        short_name: "vibrant flora",
+                                        description: "The cascades of colorful petals tumble from hanging baskets, while verdant shrubs display bursts of hues from delicate pastels to fiery reds. Exotic plants intrigue with their unusual shapes, their rich fragrances permeating the air, offering an intoxicating medley of sweet and heady scents. Amid the stone and marble city, this living tapestry of nature brings a dash of color, life, and aroma.",
+                                        tags: ["flora", "flowers", "plants", "bushes", "bloom", "blooms", "vibrant"],
+                                        visible: false,
+                                    ),
+                                ),
+                            },
+                        )),
+                    ),
+                ],
+            )),
+        ),
+        (
+            value: Inline((
+                name: "567lax",
+                schematics: {
+                    "server::spatial::bundles::TileBundle": (
+                        position: (IVec3 ( x: 1, y: -1, z: 0 )),
+                        tile: (
+                            name: "Towards the market",
+                            description: "The grandeur of the marble structures gives way to more humble storefronts. Standing out among them is <fg.transition>The Roaring Lion</>; its raucous laughter and clinking glasses promise respite and camaraderie. Outside, patrons sit at <fg.item>wooden benches</>, their boisterous conversations contributing to the ambient symphony of the city.",
+                        ),
+                        sprite: (
+                            character: "/",
+                        ),
+                    ),
+                },
+                children: [
+                    (
+                        value: Inline((
+                            name: "6sKh5T",
+                            schematics: {
+                                "server::items::bundles::ItemBundle": (
+                                    item: (
+                                        size: Large,
+                                    ),
+                                    depiction: (
+                                        name: "A cluster of wooden benches",
+                                        short_name: "wooden benches",
+                                        description: "The benches, worn and weathered by the elements, hold tales of countless gatherings etched into their grain. They stand stoutly on the cobblestones, promising respite for weary feet.",
+                                        tags: ["wooden", "wood", "benches", "bench", "seats", "seat", "chairs", "chair"],
+                                        visible: false,
+                                    ),
+                                ),
+                            },
+                        )),
+                    ),
+                    (
+                        value: Inline((
+                            name: "NURAY4",
+                            schematics: {
+                                "server::spatial::bundles::TransitionBundle": (
+                                    transition: (
+                                        zone: "The Roaring Lion",
+                                        position: IVec3 ( x: 0, y: 0, z: 0 ),
+                                    ),
+                                    depiction: (
+                                        name: "Door to The Roaring Lion",
+                                        short_name: "tavern",
+                                        description: "Nestled along the cobblestone path stands The Roaring Lion, an inviting tavern with a facade of weathered stone and sturdy wood. The door, kept ajar, reveals tantalizing glimpses of a lively interior, while the scent of roasting meats and baking bread mingles with the aroma of aged oak and lingering traces of ale, creating a hearty welcome.",
+                                        tags: ["tavern", "bar", "pub", "the roaring lion", "roaring", "lion"],
+                                        visible: false,
+                                    ),
+                                ),
+                            },
+                        )),
+                    ),
+                ],
+            )),
+        ),
+    ],
+),
