@@ -1,0 +1,22 @@
+(
+    name: "enemies.racoon",
+    schematics: {
+        "server::npc::bundles::NpcBundle": (
+            npc: (),
+            depiction: (
+                name: "Racoon",
+                short_name: "racoon",
+                description: "Its matted grey coat shimmers with an otherworldly gloom, the patches of darkness seeming to absorb light rather than reflect it. Stark black masks its eyes, the gaze within a disturbing yellow that seems to hold an ancient, malignant wisdom. Its paws, worn and rugged, move with an uncanny rhythm, each twitch a dissonant note in nature's symphony.",
+                tags: ["racoon", "trash", "creature", "animal", "abomination"],
+                visible: true,
+            )
+        ),
+        "server::combat::bundles::CombatBundle": (
+            attributes: (
+                vitality: 50,
+                proficiency: 3,
+            ),
+        ),
+        "server::interact::components::Interactions": ([Attack]),
+    },
+)
