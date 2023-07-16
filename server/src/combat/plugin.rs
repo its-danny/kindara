@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{bundles::*, commands::attack::*, components::*};
+use super::{bundles::*, commands::attack::*, components::*, systems::*};
 
 pub struct CombatPlugin;
 
@@ -9,6 +9,6 @@ impl Plugin for CombatPlugin {
         app.register_type::<Attributes>();
         app.register_type::<CombatBundle>();
 
-        app.add_system(attack);
+        app.add_systems((attack, update_attack_timer));
     }
 }

@@ -4,6 +4,7 @@ use bevy_proto::prelude::*;
 use super::components::{Attributes, State};
 
 #[derive(Bundle, Reflect, FromReflect)]
+#[reflect(Schematic)]
 pub struct CombatBundle {
     pub attributes: Attributes,
 }

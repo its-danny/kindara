@@ -15,6 +15,7 @@
             attributes: (
                 vitality: 50,
                 proficiency: 3,
+                speed: 5,
             ),
         ),
         "server::interact::components::Interactions": ([Attack]),
