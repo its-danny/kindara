@@ -132,12 +132,9 @@ pub fn handle_user_exists_task(
             outbox.send_text(
                 client.id,
                 if exists {
-                    format!(
-                        "Hail, returned {}! What is the secret word thou dost keep?",
-                        auth.name
-                    )
+                    format!("Hail, {}! What is the secret word you keep?", auth.name)
                 } else {
-                    format!("Hail, {}. Set for thyself a word of secrecy.", auth.name)
+                    format!("Hail, {}. Set for yourself a word of secrecy.", auth.name)
                 },
             );
 
@@ -278,7 +275,7 @@ pub fn handle_authenticate_task(
                 }
 
                 outbox.send_command(client.id, vec![IAC, WONT, ECHO]);
-                outbox.send_text(client.id, "May thy journey here be prosperous.");
+                outbox.send_text(client.id, "May your journey here be prosperous.");
 
                 proxy.send(ProxyCommand(ParsedCommand {
                     from: client.id,
@@ -289,7 +286,7 @@ pub fn handle_authenticate_task(
 
                 outbox.send_text(
                     client.id,
-                    "The secret word thou hast given is not the right one.",
+                    "The secret word you have given is not the right one.",
                 );
             }
 
@@ -385,7 +382,7 @@ mod tests {
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
         let content = get_message_content(&mut app, client_id).unwrap();
-        assert_eq!(content, "Hail, Icauna. Set for thyself a word of secrecy.");
+        assert_eq!(content, "Hail, Icauna. Set for yourself a word of secrecy.");
 
         send_message(&mut app, client_id, "secret");
         app.update();
@@ -397,7 +394,7 @@ mod tests {
         assert_eq!(command, vec![IAC, WONT, ECHO]);
 
         let content = get_message_content(&mut app, client_id).unwrap();
-        assert_eq!(content, "May thy journey here be prosperous.");
+        assert_eq!(content, "May your journey here be prosperous.");
 
         assert!(app.world.get::<Authenticating>(player).is_none());
         assert!(app.world.get::<Character>(player).is_some());
@@ -444,10 +441,7 @@ mod tests {
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
         let content = get_message_content(&mut app, client_id).unwrap();
-        assert_eq!(
-            content,
-            "Hail, returned Bres! What is the secret word thou dost keep?"
-        );
+        assert_eq!(content, "Hail, Bres! What is the secret word you keep?");
 
         send_message(&mut app, client_id, "secret");
         app.update();
@@ -459,7 +453,7 @@ mod tests {
         assert_eq!(command, vec![IAC, WONT, ECHO]);
 
         let content = get_message_content(&mut app, client_id).unwrap();
-        assert_eq!(content, "May thy journey here be prosperous.");
+        assert_eq!(content, "May your journey here be prosperous.");
 
         assert!(app.world.get::<Authenticating>(player).is_none());
         assert!(app.world.get::<Character>(player).is_some());
@@ -495,10 +489,7 @@ mod tests {
         assert_eq!(command, vec![IAC, WILL, ECHO]);
 
         let content = get_message_content(&mut app, client_id).unwrap();
-        assert_eq!(
-            content,
-            "Hail, returned Bres! What is the secret word thou dost keep?"
-        );
+        assert_eq!(content, "Hail, Bres! What is the secret word you keep?");
 
         send_message(&mut app, client_id, "wrong");
         app.update();
@@ -509,7 +500,7 @@ mod tests {
         let content = get_message_content(&mut app, client_id).unwrap();
         assert_eq!(
             content,
-            "The secret word thou hast given is not the right one."
+            "The secret word you have given is not the right one."
         );
 
         assert!(app.world.get::<Authenticating>(player).is_some());
