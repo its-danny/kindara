@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>⚔️  aureus</h1>
+  <h1>⚔️  kindara</h1>
 
   A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
 </div>
@@ -28,9 +28,9 @@ cargo run -p server  # Starts the server at 127.0.0.1:3000
 
 ## License
 
-The code is licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/aureus/blob/main/LICENSE-APACHE)
-or [MIT](https://github.com/its-danny/aureus/blob/main/LICENSE-MIT) license at your option. The content and assets
-are licensed under [CC BY-NC-SA 4.0](https://github.com/its-danny/aureus/blob/main/LICENSE-CC-BY-NC-SA).
+The code is licensed under either of [Apache License, Version 2.0](https://github.com/its-danny/kindara/blob/main/LICENSE-APACHE)
+or [MIT](https://github.com/its-danny/kindara/blob/main/LICENSE-MIT) license at your option. The content and assets
+are licensed under [CC BY-NC-SA 4.0](https://github.com/its-danny/kindara/blob/main/LICENSE-CC-BY-NC-SA).
 
 ## Contributing
 

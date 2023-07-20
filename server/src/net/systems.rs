@@ -40,7 +40,7 @@ pub fn on_network_event(
 
             outbox.send_text(
                 *id,
-                "Thou hast arrived in Aureus, wanderer. What name dost thou bear?",
+                "Thou hast arrived in Kindara, wanderer. What name dost thou bear?",
             );
         }
 
