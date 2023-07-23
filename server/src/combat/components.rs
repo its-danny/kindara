@@ -36,6 +36,12 @@ pub struct State {
     pub health: u32,
 }
 
+impl State {
+    pub fn apply_damage(&mut self, damage: i32) {
+        self.health = self.health.saturating_sub(damage as u32);
+    }
+}
+
 #[derive(Component)]
 pub struct HasAttacked {
     pub timer: Timer,

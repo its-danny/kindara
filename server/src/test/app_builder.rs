@@ -9,6 +9,7 @@ use crate::{
         systems::{handle_proxy_command, parse_command},
     },
     player::events::Prompt,
+    skills::resources::{Action, Skill, Skills},
     visual::paint,
     world::resources::{WorldState, WorldTime},
     Set,
@@ -31,6 +32,16 @@ impl AppBuilder {
     pub fn build(self) -> App {
         paint::toggle(false);
 
+        let mut skills = Skills::default();
+
+        skills.0.insert(
+            "attack".into(),
+            Skill {
+                name: "attack".into(),
+                actions: vec![Action::ApplyDamage(10)],
+            },
+        );
+
         let mut app = App::new();
 
         app.configure_set(Set::Input.before(CoreSet::Update))
@@ -38,6 +49,7 @@ impl AppBuilder {
             .add_plugin(NestPlugin)
             .insert_resource(WorldState::default())
             .insert_resource(WorldTime::default())
+            .insert_resource(skills)
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()

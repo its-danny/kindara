@@ -41,7 +41,6 @@ pub fn parse_command(
 
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_announce),
-            Box::new(handle_attack),
             Box::new(handle_chat),
             Box::new(handle_config),
             Box::new(handle_describe),
@@ -61,6 +60,9 @@ pub fn parse_command(
             Box::new(handle_time),
             Box::new(handle_who),
             Box::new(handle_yell),
+            // Attack is last because the commands are a catch-all and
+            // defined via ron files.
+            Box::new(handle_attack),
         ];
 
         match handlers.iter().find_map(|handler| match handler(&content) {
