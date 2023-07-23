@@ -2,6 +2,10 @@ use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
 use crate::{
+    combat::{
+        bundles::CombatBundle,
+        components::{Attributes, State},
+    },
     interact::components::{Interaction, Interactions},
     npc::{bundles::NpcBundle, components::Npc},
     visual::components::Depiction,
@@ -17,6 +21,7 @@ pub struct NpcBuilder {
     interactions: Option<Vec<Interaction>>,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
+    combat: bool,
 }
 
 #[allow(dead_code)]
@@ -55,6 +60,11 @@ impl NpcBuilder {
         self
     }
 
+    pub fn combat(mut self, combat: bool) -> Self {
+        self.combat = combat;
+        self
+    }
+
     pub fn build(self, app: &mut App) -> Entity {
         let mut entity = app.world.spawn(NpcBundle {
             npc: Npc,
@@ -73,6 +83,17 @@ impl NpcBuilder {
 
         if let Some(interactions) = self.interactions {
             entity.insert(Interactions(interactions));
+        }
+
+        if self.combat {
+            entity.insert((
+                CombatBundle {
+                    attributes: Attributes::default(),
+                },
+                State {
+                    health: Attributes::default().max_health(),
+                },
+            ));
         }
 
         entity.id()

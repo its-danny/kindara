@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    combat::components::{Attributes, HasAttacked},
+    combat::components::{Attributes, HasAttacked, State},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     npc::components::Npc,
@@ -13,6 +13,7 @@ use crate::{
         components::{Character, CharacterState, Client, Online},
         events::Prompt,
     },
+    skills::resources::{Action, Skills},
     spatial::components::Tile,
     value_or_continue,
     visual::components::Depiction,
@@ -21,16 +22,21 @@ use crate::{
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn handle_attack(content: &str) -> Result<Command, ParseError> {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(attack|atk|hit)( (?P<target>.*?))?$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(?P<skill>.*?)( (?P<target>.*?))?$").unwrap());
 
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
         Some(captures) => {
+            let skill = captures
+                .name("skill")
+                .map(|m| m.as_str().trim().to_lowercase())
+                .ok_or(ParseError::InvalidArguments("What skill?".into()))?;
+
             let target = captures
                 .name("target")
                 .map(|m| m.as_str().trim().to_lowercase());
 
-            Ok(Command::Attack(target))
+            Ok(Command::Attack((skill, target)))
         }
     }
 }
@@ -38,6 +44,15 @@ pub fn handle_attack(content: &str) -> Result<Command, ParseError> {
 pub fn attack(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
+    mut npcs: Query<
+        (
+            Entity,
+            &Depiction,
+            Option<&mut State>,
+            Option<&Interactions>,
+        ),
+        With<Npc>,
+    >,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<
         (
@@ -51,15 +66,21 @@ pub fn attack(
         With<Online>,
     >,
     mut prompts: EventWriter<Prompt>,
-    npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
+    skills: Res<Skills>,
     tiles: Query<&Children, With<Tile>>,
 ) {
     for command in commands.iter() {
-        if let Command::Attack(target) = &command.command {
+        if let Command::Attack((skill, target)) = &command.command {
             let (player, mut character, attributes, client, tile, has_attacked) =
                 value_or_continue!(players
                     .iter_mut()
                     .find(|(_, _, _, c, _, _)| c.id == command.from));
+
+            let Some(skill) = skills.0.get(skill.as_str()) else {
+                outbox.send_text(client.id, "You don't know how to do that.");
+
+                continue;
+            };
 
             if has_attacked.is_some() {
                 outbox.send_text(client.id, "You're not ready to attack again.");
@@ -70,10 +91,10 @@ pub fn attack(
             if let Some(target) = target {
                 let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
-                let Some((entity, _, interactions)) = siblings
+                let Some((entity, _, _,interactions)) = siblings
                     .iter()
                     .filter_map(|sibling| npcs.get(*sibling).ok())
-                    .find(|(entity, depiction, _)| depiction.matches_query(entity, target)) else {
+                    .find(|(entity, depiction,_, _)| depiction.matches_query(entity, target)) else {
                     outbox.send_text(client.id, format!("You don't see a {target} here."));
 
                     continue;
@@ -94,7 +115,21 @@ pub fn attack(
                 continue;
             };
 
-            let (_, depiction, _) = value_or_continue!(npcs.get(entity).ok());
+            let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(entity).ok());
+
+            let Some(mut state) = state else {
+                    outbox.send_text(client.id, format!("You can't attack the {}.", depiction.short_name));
+
+                    continue;
+            };
+
+            for action in &skill.actions {
+                match action {
+                    Action::ApplyDamage(damage) => {
+                        state.apply_damage(*damage);
+                    }
+                }
+            }
 
             bevy.entity(player).insert(HasAttacked {
                 timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
@@ -102,7 +137,10 @@ pub fn attack(
 
             outbox.send_text(
                 client.id,
-                format!("You attack the {}.", depiction.short_name),
+                format!(
+                    "You attack the {}. It's health is now {}.",
+                    depiction.short_name, state.health
+                ),
             );
 
             prompts.send(Prompt::new(client.id));
@@ -134,6 +172,7 @@ mod tests {
             .name("Pazuzu")
             .interactions(vec![Interaction::Attack])
             .tile(tile)
+            .combat(true)
             .build(&mut app);
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
@@ -158,6 +197,7 @@ mod tests {
             .name("Pazuzu")
             .interactions(vec![Interaction::Attack])
             .tile(tile)
+            .combat(true)
             .build(&mut app);
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);

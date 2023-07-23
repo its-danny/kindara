@@ -1,0 +1,6 @@
+(
+    name: "fireball",
+    actions: [
+        ApplyDamage(100),
+    ]
+)

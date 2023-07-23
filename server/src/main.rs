@@ -8,6 +8,7 @@ mod keycard;
 mod net;
 mod npc;
 mod player;
+mod skills;
 mod social;
 mod spatial;
 mod test;
@@ -32,8 +33,8 @@ use crate::{
     auth::plugin::AuthPlugin, combat::plugin::CombatPlugin, db::pool::DatabasePool,
     input::plugin::InputPlugin, interact::plugin::InteractPlugin, items::plugin::ItemPlugin,
     net::plugin::NetPlugin, npc::plugin::NpcPlugin, player::plugin::PlayerPlugin,
-    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
-    world::plugin::WorldPlugin,
+    skills::plugin::SkillsPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
+    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -102,6 +103,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugin(NestPlugin)
         .add_plugin(ProtoPlugin::new())
         // Our plugins
+        .add_plugin(SkillsPlugin)
         .add_plugin(AuthPlugin)
         .add_plugin(CombatPlugin)
         .add_plugin(InputPlugin)
