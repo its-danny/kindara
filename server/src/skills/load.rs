@@ -1,13 +1,11 @@
-use std::{env, path::PathBuf};
-
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{asset::FileAssetIo, prelude::*, utils::HashMap};
 
 use crate::skills::resources::Skill;
 
 use super::resources::Skills;
 
 pub fn load_skills(mut skills: ResMut<Skills>) {
-    let path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("assets/skills");
+    let path = FileAssetIo::get_base_path().join("assets/skills");
 
     debug!("Loading skills from: {:?}", path);
 

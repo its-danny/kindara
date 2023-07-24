@@ -3,7 +3,7 @@ WORKDIR /usr/src/app
 COPY . .
 RUN cargo install --path server
 
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 RUN apt-get update & apt-get install -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/apps/server
 COPY --from=builder /usr/src/app/server/migrations migrations/

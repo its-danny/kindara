@@ -1,15 +1,20 @@
+# fly.toml app configuration file generated for kindara on 2023-07-24T07:06:54-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
 app = "kindara"
 primary_region = "sea"
 
 [env]
-SERVER_PORT = "6012"
-RUST_LOG = "warn"
+  RUST_LOG = "warn"
+  SERVER_PORT = "6012"
 
 [[services]]
-protocol = "tcp"
-internal_port = 6012
-auto_stop_machines = false
-auto_start_machines = false
+  protocol = "tcp"
+  internal_port = 6012
+  auto_stop_machines = false
+  auto_start_machines = false
 
-[[services.ports]]
-port = 6012
+  [[services.ports]]
+    port = 6012
