@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
+/// What is rendered via the `map` command.
 #[derive(Component, Reflect, FromReflect)]
 pub struct Sprite {
     pub character: String,

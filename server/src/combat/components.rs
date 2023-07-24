@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+/// The base attributes of an entity that can do combat.
 #[derive(Component, Reflect, FromReflect, Clone)]
 pub struct Attributes {
     /// Determines base health, max health, and health regeneration amount.
@@ -31,17 +32,21 @@ impl Attributes {
     }
 }
 
+/// The current state of an entity that can do combat.
 #[derive(Component)]
 pub struct State {
     pub health: u32,
 }
 
 impl State {
+    /// Applies damage to the entity's health, saturating at 0.
     pub fn apply_damage(&mut self, damage: i32) {
         self.health = self.health.saturating_sub(damage as u32);
     }
 }
 
+/// Added to an entity when it has attacked to prevent acting faster
+/// than their attack speed. The timer is handled via the `update_attack_timer` system.
 #[derive(Component)]
 pub struct HasAttacked {
     pub timer: Timer,

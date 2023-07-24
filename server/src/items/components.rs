@@ -32,7 +32,10 @@ impl Size {
 #[derive(Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Surface {
+    /// The kind of surface this is.
     pub kind: SurfaceKind,
+    /// The maximum number of items that can be placed on this surface
+    /// as defined by their size.
     pub capacity: u8,
 }
 

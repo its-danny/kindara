@@ -73,4 +73,6 @@ pub struct ParsedCommand {
     pub command: Command,
 }
 
+/// A command sent from the server to the server as if
+/// it was sent from a client.
 pub struct ProxyCommand(pub ParsedCommand);

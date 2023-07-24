@@ -16,10 +16,12 @@ pub struct Tile {
     pub description: String,
 }
 
+/// A marker component that indicates an entity is a spawn point.
 #[derive(Debug, Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Spawn;
 
+/// A component that marks an entity as a transition to another zone.
 #[derive(Debug, Component, Schematic, Reflect, FromReflect)]
 #[reflect(Schematic)]
 pub struct Transition {
