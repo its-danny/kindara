@@ -10,6 +10,7 @@
 
 - [docker-compose](https://docs.docker.com/compose/)
 - [rust](https://rustup.rs/)
+- [just](https://github.com/casey/just)
 - [sqlx-cli](https://lib.rs/crates/sqlx-cli)
 - A MUD client, e.g. [blightmud](https://github.com/blightmud/blightmud)
 
