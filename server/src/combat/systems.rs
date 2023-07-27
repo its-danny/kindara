@@ -13,14 +13,17 @@ use super::components::HasAttacked;
 
 pub fn update_attack_timer(
     mut bevy: Commands,
-    mut timers: Query<(Entity, &mut HasAttacked)>,
+    mut timers: Query<(Entity, &Client, &mut HasAttacked)>,
     time: Res<Time>,
+    mut outbox: EventWriter<Outbox>,
 ) {
-    for (entity, mut has_attacked) in timers.iter_mut() {
+    for (entity, client, mut has_attacked) in timers.iter_mut() {
         has_attacked.timer.tick(time.delta());
 
         if has_attacked.timer.finished() {
             bevy.entity(entity).remove::<HasAttacked>();
+
+            outbox.send_text(client.id, "You are ready attack again.");
         }
     }
 }
