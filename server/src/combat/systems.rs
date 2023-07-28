@@ -3,27 +3,37 @@ use bevy_nest::prelude::*;
 
 use crate::{
     combat::components::State,
+    input::events::ProxyCommand,
     npc::components::Npc,
     player::components::{Character, CharacterState, Client, Online},
     spatial::components::Tile,
     visual::components::Depiction,
 };
 
-use super::components::HasAttacked;
+use super::components::{HasAttacked, QueuedAttack};
 
 pub fn update_attack_timer(
     mut bevy: Commands,
-    mut timers: Query<(Entity, &Client, &mut HasAttacked)>,
+    mut proxy: EventWriter<ProxyCommand>,
+    mut timers: Query<(Entity, &Client, &mut HasAttacked, Option<&QueuedAttack>)>,
     time: Res<Time>,
     mut outbox: EventWriter<Outbox>,
 ) {
-    for (entity, client, mut has_attacked) in timers.iter_mut() {
+    for (entity, client, mut has_attacked, queued_attack) in timers.iter_mut() {
         has_attacked.timer.tick(time.delta());
 
         if has_attacked.timer.finished() {
             bevy.entity(entity).remove::<HasAttacked>();
 
-            outbox.send_text(client.id, "You are ready attack again.");
+            match queued_attack {
+                Some(queued_attack) => {
+                    proxy.send(ProxyCommand(queued_attack.0.clone()));
+                    bevy.entity(entity).remove::<QueuedAttack>();
+                }
+                None => {
+                    outbox.send_text(client.id, "You are ready attack again.");
+                }
+            }
         }
     }
 }

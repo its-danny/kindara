@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::input::events::ParsedCommand;
+
 /// The base attributes of an entity that can do combat.
 #[derive(Component, Reflect, FromReflect, Clone)]
 pub struct Attributes {
@@ -51,3 +53,6 @@ impl State {
 pub struct HasAttacked {
     pub timer: Timer,
 }
+
+#[derive(Component)]
+pub struct QueuedAttack(pub ParsedCommand);
