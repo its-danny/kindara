@@ -5,7 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    combat::components::{Attributes, HasAttacked, State},
+    combat::components::{Attributes, HasAttacked, QueuedAttack, State},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     npc::components::Npc,
@@ -62,6 +62,7 @@ pub fn attack(
             &Client,
             &Parent,
             Option<&HasAttacked>,
+            Option<&mut QueuedAttack>,
         ),
         With<Online>,
     >,
@@ -71,22 +72,16 @@ pub fn attack(
 ) {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
-            let (player, mut character, attributes, client, tile, has_attacked) =
+            let (player, mut character, attributes, client, tile, has_attacked, queued_attack) =
                 value_or_continue!(players
                     .iter_mut()
-                    .find(|(_, _, _, c, _, _)| c.id == command.from));
+                    .find(|(_, _, _, c, _, _, _)| c.id == command.from));
 
             let Some(skill) = skills.0.get(skill.as_str()) else {
                 outbox.send_text(client.id, "You don't know how to do that.");
 
                 continue;
             };
-
-            if has_attacked.is_some() {
-                outbox.send_text(client.id, "You're not ready to attack again.");
-
-                continue;
-            }
 
             if let Some(target) = target {
                 let siblings = value_or_continue!(tiles.get(tile.get()).ok());
@@ -122,6 +117,23 @@ pub fn attack(
 
                     continue;
             };
+
+            if has_attacked.is_some() {
+                match queued_attack {
+                    Some(mut queued_attack) => {
+                        queued_attack.0 = command.clone();
+
+                        outbox.send_text(client.id, "Queued attack replaced.");
+                    }
+                    None => {
+                        bevy.entity(player).insert(QueuedAttack(command.clone()));
+
+                        outbox.send_text(client.id, "Attack queued.");
+                    }
+                }
+
+                continue;
+            }
 
             for action in &skill.actions {
                 match action {
