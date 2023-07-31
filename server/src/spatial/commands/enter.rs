@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn enters_by_tag() {
         let mut app = AppBuilder::new().build();
-        app.add_system(enter);
+        app.add_systems(Update, enter);
 
         let start_zone = ZoneBuilder::new().build(&mut app);
         let start = TileBuilder::new().build(&mut app, start_zone);
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn enters_first_if_no_tag() {
         let mut app = AppBuilder::new().build();
-        app.add_system(enter);
+        app.add_systems(Update, enter);
 
         let start_zone = ZoneBuilder::new().build(&mut app);
         let start = TileBuilder::new().build(&mut app, start_zone);
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn transition_not_found() {
         let mut app = AppBuilder::new().build();
-        app.add_system(enter);
+        app.add_systems(Update, enter);
 
         let start_zone = ZoneBuilder::new().build(&mut app);
         let start = TileBuilder::new().build(&mut app, start_zone);
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn no_transition() {
         let mut app = AppBuilder::new().build();
-        app.add_system(enter);
+        app.add_systems(Update, enter);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

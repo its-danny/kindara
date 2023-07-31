@@ -6,6 +6,6 @@ pub struct NetPlugin;
 
 impl Plugin for NetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(on_network_event);
+        app.add_systems(Update, on_network_event);
     }
 }

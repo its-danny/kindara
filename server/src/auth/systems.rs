@@ -358,11 +358,14 @@ mod tests {
     async fn new_character(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
 
-        app.add_systems((
-            authenticate,
-            handle_user_exists_task,
-            handle_authenticate_task,
-        ));
+        app.add_systems(
+            Update,
+            (
+                authenticate,
+                handle_user_exists_task,
+                handle_authenticate_task,
+            ),
+        );
 
         let zone = ZoneBuilder::new().build(&mut app);
         TileBuilder::new().is_spawn().build(&mut app, zone);
@@ -414,11 +417,14 @@ mod tests {
     fn existing_character(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
 
-        app.add_systems((
-            authenticate,
-            handle_user_exists_task,
-            handle_authenticate_task,
-        ));
+        app.add_systems(
+            Update,
+            (
+                authenticate,
+                handle_user_exists_task,
+                handle_authenticate_task,
+            ),
+        );
 
         let zone = ZoneBuilder::new().build(&mut app);
         TileBuilder::new().is_spawn().build(&mut app, zone);
@@ -465,11 +471,14 @@ mod tests {
     fn wrong_password(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
 
-        app.add_systems((
-            authenticate,
-            handle_user_exists_task,
-            handle_authenticate_task,
-        ));
+        app.add_systems(
+            Update,
+            (
+                authenticate,
+                handle_user_exists_task,
+                handle_authenticate_task,
+            ),
+        );
 
         let (player, client_id, _) = PlayerBuilder::new()
             .is_authenticating()

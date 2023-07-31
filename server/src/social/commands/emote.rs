@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn sends_to_sender() {
         let mut app = AppBuilder::new().build();
-        app.add_system(emote);
+        app.add_systems(Update, emote);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn sends_to_tile() {
         let mut app = AppBuilder::new().build();
-        app.add_system(emote);
+        app.add_systems(Update, emote);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn empty_message() {
         let mut app = AppBuilder::new().build();
-        app.add_system(emote);
+        app.add_systems(Update, emote);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

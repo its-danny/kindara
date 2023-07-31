@@ -6,13 +6,13 @@ use bevy_proto::prelude::*;
 #[derive(Component)]
 pub struct Inventory;
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct Item {
     pub size: Size,
 }
 
-#[derive(Copy, Clone, Reflect, FromReflect)]
+#[derive(Copy, Clone, Reflect)]
 pub enum Size {
     Small,
     Medium,
@@ -29,7 +29,7 @@ impl Size {
     }
 }
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct Surface {
     /// The kind of surface this is.
@@ -39,7 +39,7 @@ pub struct Surface {
     pub capacity: u8,
 }
 
-#[derive(Reflect, FromReflect)]
+#[derive(Reflect)]
 pub enum SurfaceKind {
     Floor,
     Wall,

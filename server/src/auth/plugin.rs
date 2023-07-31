@@ -6,8 +6,13 @@ pub struct AuthPlugin;
 
 impl Plugin for AuthPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(authenticate);
-        app.add_system(handle_user_exists_task);
-        app.add_system(handle_authenticate_task);
+        app.add_systems(
+            Update,
+            (
+                authenticate,
+                handle_user_exists_task,
+                handle_authenticate_task,
+            ),
+        );
     }
 }

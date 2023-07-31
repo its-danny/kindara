@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn by_name() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_systems(Update, take);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn by_tag() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_systems(Update, take);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn all() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_systems(Update, take);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn from_another() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_systems(Update, take);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn not_found() {
         let mut app = AppBuilder::new().build();
-        app.add_system(take);
+        app.add_systems(Update, take);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

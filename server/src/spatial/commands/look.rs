@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn sends_tile_info() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn sends_item_info() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn sends_player_info() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn items_on_surface() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn has_exits() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
 
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn other_player() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn multiple_other_player() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn one_item() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
@@ -542,7 +542,7 @@ mod tests {
     #[test]
     fn multiple_of_the_same_item() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()
@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn multiple_of_different_items() {
         let mut app = AppBuilder::new().build();
-        app.add_system(look);
+        app.add_systems(Update, look);
 
         let zone = ZoneBuilder::new().name("V").build(&mut app);
         let tile = TileBuilder::new()

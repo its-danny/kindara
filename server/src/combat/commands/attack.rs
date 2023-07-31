@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn valid_target() {
         let mut app = AppBuilder::new().build();
-        app.add_system(attack);
+        app.add_systems(Update, attack);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn existing_target() {
         let mut app = AppBuilder::new().build();
-        app.add_system(attack);
+        app.add_systems(Update, attack);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn invalid_target() {
         let mut app = AppBuilder::new().build();
-        app.add_system(attack);
+        app.add_systems(Update, attack);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

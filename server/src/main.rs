@@ -19,10 +19,11 @@ mod world;
 use std::{env, time::Duration};
 
 use bevy::{
-    app::ScheduleRunnerSettings,
+    app::ScheduleRunnerPlugin,
     asset::AssetPlugin,
     log::{Level, LogPlugin},
     prelude::*,
+    time::TimePlugin,
 };
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
@@ -36,13 +37,6 @@ use crate::{
     skills::plugin::SkillsPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
     visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
 };
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-#[system_set(base)]
-pub enum Set {
-    Input,
-    WorldSave,
-}
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
     match prototypes.load_folder("world/") {
@@ -84,40 +78,40 @@ async fn main() -> Result<(), sqlx::Error> {
     migrate!().run(&pool).await?;
 
     App::new()
-        // Stages
-        .configure_set(Set::Input.before(CoreSet::Update))
-        .configure_set(Set::WorldSave.after(CoreSet::Update))
         // Resources
-        .insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
-            1.0 / 60.0,
-        )))
         .insert_resource(DatabasePool(pool))
         // Bevy plugins
-        .add_plugins(MinimalPlugins)
-        .add_plugin(AssetPlugin::default())
-        .add_plugin(LogPlugin {
-            level: Level::DEBUG,
-            ..Default::default()
-        })
+        .add_plugins((
+            AssetPlugin::default(),
+            LogPlugin {
+                level: Level::DEBUG,
+                ..Default::default()
+            },
+            TaskPoolPlugin::default(),
+            TypeRegistrationPlugin,
+            TimePlugin,
+            ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0)),
+        ))
         // 3rd party plugins
-        .add_plugin(NestPlugin)
-        .add_plugin(ProtoPlugin::new())
+        .add_plugins((NestPlugin, ProtoPlugin::new()))
         // Our plugins
-        .add_plugin(SkillsPlugin)
-        .add_plugin(AuthPlugin)
-        .add_plugin(CombatPlugin)
-        .add_plugin(InputPlugin)
-        .add_plugin(InteractPlugin)
-        .add_plugin(ItemPlugin)
-        .add_plugin(NpcPlugin)
-        .add_plugin(NetPlugin)
-        .add_plugin(PlayerPlugin)
-        .add_plugin(SocialPlugin)
-        .add_plugin(SpatialPlugin)
-        .add_plugin(VisualPlugin)
-        .add_plugin(WorldPlugin)
+        .add_plugins((
+            AuthPlugin,
+            CombatPlugin,
+            InputPlugin,
+            InteractPlugin,
+            ItemPlugin,
+            NetPlugin,
+            NpcPlugin,
+            PlayerPlugin,
+            SkillsPlugin,
+            SocialPlugin,
+            SpatialPlugin,
+            VisualPlugin,
+            WorldPlugin,
+        ))
         // Get it started
-        .add_startup_systems((load_prototypes, setup_network))
+        .add_systems(Startup, (load_prototypes, setup_network))
         .run();
 
     Ok(())

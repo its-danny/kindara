@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
 /// What is rendered via the `map` command.
-#[derive(Component, Reflect, FromReflect)]
+#[derive(Component, Reflect)]
 pub struct Sprite {
     pub character: String,
 }
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct Depiction {
     pub name: String,

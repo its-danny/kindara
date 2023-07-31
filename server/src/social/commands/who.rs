@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn lists_online_characters() {
         let mut app = AppBuilder::new().build();
-        app.add_system(who);
+        app.add_systems(Update, who);
 
         let (_, client_id, _) = PlayerBuilder::new().name("Ashur").build(&mut app);
         PlayerBuilder::new().name("Bau").build(&mut app);

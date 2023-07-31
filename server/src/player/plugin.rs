@@ -14,15 +14,18 @@ impl Plugin for PlayerPlugin {
         app.add_event::<Prompt>();
         app.insert_resource(PromptTimer(Timer::from_seconds(60.0, TimerMode::Repeating)));
 
-        app.add_systems((
-            config,
-            handle_save_config_task,
-            describe,
-            handle_save_description_task,
-            send_prompt,
-            send_prompt_on_timer,
-        ));
+        app.add_systems(
+            Update,
+            (
+                config,
+                handle_save_config_task,
+                describe,
+                handle_save_description_task,
+                send_prompt,
+                send_prompt_on_timer,
+            ),
+        );
 
-        app.add_system(handle_client_width);
+        app.add_systems(Update, handle_client_width);
     }
 }

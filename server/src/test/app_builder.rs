@@ -12,7 +12,6 @@ use crate::{
     skills::resources::{Action, Skill, Skills},
     visual::paint,
     world::resources::{WorldState, WorldTime},
-    Set,
 };
 
 pub struct AppBuilder {
@@ -44,9 +43,7 @@ impl AppBuilder {
 
         let mut app = App::new();
 
-        app.configure_set(Set::Input.before(CoreSet::Update))
-            .add_plugins(MinimalPlugins)
-            .add_plugin(NestPlugin)
+        app.add_plugins((MinimalPlugins, NestPlugin))
             .insert_resource(WorldState::default())
             .insert_resource(WorldTime::default())
             .insert_resource(skills)
@@ -55,7 +52,7 @@ impl AppBuilder {
             .add_event::<ParsedCommand>()
             .add_event::<ProxyCommand>()
             .add_event::<Prompt>()
-            .add_systems((parse_command, handle_proxy_command).in_base_set(Set::Input));
+            .add_systems(First, (parse_command, handle_proxy_command));
 
         if let Some(database) = self.database {
             app.insert_resource(DatabasePool(database));

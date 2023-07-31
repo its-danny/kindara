@@ -8,9 +8,9 @@ Inflector = "0.11"
 ascii_table = "4.0"
 async-std = { version = "1.12", features = ["attributes"] }
 bcrypt = "0.15"
-bevy = { version = "0.10", default-features = false }
-bevy-nest = "0.1"
-bevy_proto = { git = "https://github.com/its-danny/bevy_proto.git", branch = "patch", default-features = false, features = [
+bevy = { version = "0.11", default-features = false }
+bevy-nest = "0.2"
+bevy_proto = { version = "0.11", default-features = false, features = [
   "auto_name",
   "ron",
 ] }
@@ -26,7 +26,7 @@ regex = "1.8"
 ron = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.7.0-alpha.3", features = [
+sqlx = { version = "0.7", features = [
   "chrono",
   "json",
   "postgres",

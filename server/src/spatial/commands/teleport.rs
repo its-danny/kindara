@@ -58,15 +58,14 @@ pub fn teleport(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Keycard, &Character, &Parent), With<Online>>,
+    players: Query<(Entity, &Client, &Keycard, &Character, &Parent), With<Online>>,
     tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
 ) {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
-            let (player, client, keycard, character, tile) = value_or_continue!(players
-                .iter_mut()
-                .find(|(_, c, _, _, _)| c.id == command.from));
+            let (player, client, keycard, character, tile) =
+                value_or_continue!(players.iter().find(|(_, c, _, _, _)| c.id == command.from));
 
             if !keycard.can(TELEPORT) {
                 continue;
@@ -128,7 +127,7 @@ mod tests {
     #[test]
     fn teleports_zones() {
         let mut app = AppBuilder::new().build();
-        app.add_system(teleport);
+        app.add_systems(Update, teleport);
 
         let start_zone = ZoneBuilder::new().build(&mut app);
         let start = TileBuilder::new()
@@ -154,7 +153,7 @@ mod tests {
     #[test]
     fn teleports_in_zone() {
         let mut app = AppBuilder::new().build();
-        app.add_system(teleport);
+        app.add_systems(Update, teleport);
 
         let zone = ZoneBuilder::new().build(&mut app);
 
@@ -180,7 +179,7 @@ mod tests {
     #[test]
     fn invalid_zone() {
         let mut app = AppBuilder::new().build();
-        app.add_system(teleport);
+        app.add_systems(Update, teleport);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -201,7 +200,7 @@ mod tests {
     #[test]
     fn invalid_location() {
         let mut app = AppBuilder::new().build();
-        app.add_system(teleport);
+        app.add_systems(Update, teleport);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -222,7 +221,7 @@ mod tests {
     #[test]
     fn forbidden() {
         let mut app = AppBuilder::new().build();
-        app.add_system(teleport);
+        app.add_systems(Update, teleport);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::input::events::ParsedCommand;
 
 /// The base attributes of an entity that can do combat.
-#[derive(Component, Reflect, FromReflect, Clone)]
+#[derive(Component, Reflect, Clone)]
 pub struct Attributes {
     /// Determines base health, max health, and health regeneration amount.
     pub vitality: u32,
