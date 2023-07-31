@@ -115,7 +115,7 @@ mod tests {
     #[sqlx::test]
     async fn valid(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_systems((describe, handle_save_description_task));
+        app.add_systems(Update, (describe, handle_save_description_task));
 
         let (player, client_id, _) = PlayerBuilder::new().store(&pool).await?.build(&mut app);
 
@@ -139,7 +139,7 @@ mod tests {
     #[sqlx::test]
     async fn current_value(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_systems((describe, handle_save_description_task));
+        app.add_systems(Update, (describe, handle_save_description_task));
 
         let (_, client_id, _) = PlayerBuilder::new()
             .description("A handsome fella.")
@@ -160,7 +160,7 @@ mod tests {
     #[sqlx::test]
     async fn no_current_value(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_systems((describe, handle_save_description_task));
+        app.add_systems(Update, (describe, handle_save_description_task));
 
         let (_, client_id, _) = PlayerBuilder::new().build(&mut app);
 

@@ -70,10 +70,14 @@ pub fn parse_command(
             Ok(command) => Some(Ok(command)),
             Err(err) => Some(Err(err)),
         }) {
-            Some(Ok(command)) => commands.send(ParsedCommand {
-                from: client.id,
-                command,
-            }),
+            Some(Ok(command)) => {
+                debug!("Parsed command: {:?}", command);
+
+                commands.send(ParsedCommand {
+                    from: client.id,
+                    command,
+                })
+            }
             Some(Err(error)) => outbox.send_text(client.id, error.to_string()),
             None => outbox.send_text(client.id, ParseError::UnknownCommand.to_string()),
         }

@@ -19,6 +19,6 @@ impl Plugin for SpatialPlugin {
             .register_type::<TileBundle>()
             .register_type::<TransitionBundle>();
 
-        app.add_systems((look, scan, map, movement, enter, teleport));
+        app.add_systems(Update, (look, scan, map, movement, enter, teleport));
     }
 }

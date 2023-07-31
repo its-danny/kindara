@@ -3,8 +3,6 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-use crate::Set;
-
 use super::{
     commands::time::*,
     resources::{SaveTimer, WorldState, WorldTime},
@@ -21,19 +19,22 @@ impl Plugin for WorldPlugin {
                 TimerMode::Repeating,
             )))
             .insert_resource(WorldTime::default())
-            .add_systems((
-                save_world_state.in_base_set(Set::WorldSave),
-                handle_save_world_state_task,
-                handle_load_world_state_task,
-            ))
-            .add_startup_systems((load_world_state,))
-            .add_systems((time, update_world_time));
+            .add_systems(Last, save_world_state)
+            .add_systems(
+                Update,
+                (handle_save_world_state_task, handle_load_world_state_task),
+            )
+            .add_systems(Startup, (load_world_state,))
+            .add_systems(Update, (time, update_world_time));
 
-        app.add_systems((
-            spawn_trinus_castra
-                .run_if(prototype_ready("world.trinus.trinus-castra").and_then(run_once())),
-            spawn_the_roaring_lion
-                .run_if(prototype_ready("world.trinus.the-roaring-lion").and_then(run_once())),
-        ));
+        app.add_systems(
+            Update,
+            (
+                spawn_trinus_castra
+                    .run_if(prototype_ready("world.trinus.trinus-castra").and_then(run_once())),
+                spawn_the_roaring_lion
+                    .run_if(prototype_ready("world.trinus.the-roaring-lion").and_then(run_once())),
+            ),
+        );
     }
 }

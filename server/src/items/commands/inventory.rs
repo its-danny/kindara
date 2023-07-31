@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn carrying_nothing() {
         let mut app = AppBuilder::new().build();
-        app.add_system(inventory);
+        app.add_systems(Update, inventory);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn carrying_an_item() {
         let mut app = AppBuilder::new().build();
-        app.add_system(inventory);
+        app.add_systems(Update, inventory);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

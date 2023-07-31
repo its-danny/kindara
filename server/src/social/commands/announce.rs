@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn sends_to_everyone() {
         let mut app = AppBuilder::new().build();
-        app.add_system(announce);
+        app.add_systems(Update, announce);
 
         let zone_one = ZoneBuilder::new().build(&mut app);
         let tile_one = TileBuilder::new().build(&mut app, zone_one);
@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn empty_message() {
         let mut app = AppBuilder::new().build();
-        app.add_system(announce);
+        app.add_systems(Update, announce);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn forbidden() {
         let mut app = AppBuilder::new().build();
-        app.add_system(announce);
+        app.add_systems(Update, announce);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

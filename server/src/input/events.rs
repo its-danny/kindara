@@ -1,5 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
+use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -67,7 +68,8 @@ impl Display for ParseError {
     }
 }
 
-#[derive(Clone, Debug)]
+/// A command sent from the client to the server.
+#[derive(Event, Clone, Debug)]
 pub struct ParsedCommand {
     pub from: ClientId,
     pub command: Command,
@@ -75,4 +77,5 @@ pub struct ParsedCommand {
 
 /// A command sent from the server to the server as if
 /// it was sent from a client.
+#[derive(Event, Debug)]
 pub struct ProxyCommand(pub ParsedCommand);

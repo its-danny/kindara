@@ -143,7 +143,7 @@ mod tests {
     #[sqlx::test]
     async fn valid(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_systems((config, handle_save_config_task));
+        app.add_systems(Update, (config, handle_save_config_task));
 
         let (player, client_id, _) = PlayerBuilder::new()
             .config(CharacterConfig {
@@ -175,7 +175,7 @@ mod tests {
     #[sqlx::test]
     async fn current_value(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_system(config);
+        app.add_systems(Update, config);
 
         let (_, client_id, _) = PlayerBuilder::new()
             .config(CharacterConfig {
@@ -197,7 +197,7 @@ mod tests {
     #[sqlx::test]
     fn invalid_option(pool: PgPool) {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_system(config);
+        app.add_systems(Update, config);
 
         let (_, client_id, _) = PlayerBuilder::new().build(&mut app);
 
@@ -212,7 +212,7 @@ mod tests {
     #[sqlx::test]
     fn invalid_value(pool: PgPool) {
         let mut app = AppBuilder::new().database(&pool).build();
-        app.add_system(config);
+        app.add_systems(Update, config);
 
         let (_, client_id, _) = PlayerBuilder::new().build(&mut app);
 

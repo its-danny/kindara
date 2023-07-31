@@ -9,6 +9,6 @@ impl Plugin for CombatPlugin {
         app.register_type::<Attributes>();
         app.register_type::<CombatBundle>();
 
-        app.add_systems((attack, update_attack_timer, on_npc_death));
+        app.add_systems(Update, (attack, update_attack_timer, on_npc_death));
     }
 }

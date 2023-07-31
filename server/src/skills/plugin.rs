@@ -8,6 +8,6 @@ impl Plugin for SkillsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Skills::default());
 
-        app.add_startup_systems((load_skills,));
+        app.add_systems(Startup, load_skills);
     }
 }

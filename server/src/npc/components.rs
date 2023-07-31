@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-#[derive(Component, Reflect, FromReflect)]
+#[derive(Component, Reflect)]
 pub struct Npc;
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct EnemySpawner {
     pub delay: f32,

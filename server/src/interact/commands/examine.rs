@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn lists_interactions() {
         let mut app = AppBuilder::new().build();
-        app.add_system(examine);
+        app.add_systems(Update, examine);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn performs_interaction() {
         let mut app = AppBuilder::new().build();
-        app.add_systems((examine, take));
+        app.add_systems(Update, (examine, take));
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

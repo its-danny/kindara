@@ -5,7 +5,7 @@ use crate::visual::components::Depiction;
 
 use super::components::Npc;
 
-#[derive(Bundle, Schematic, Reflect, FromReflect)]
+#[derive(Bundle, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct NpcBundle {
     pub npc: Npc,

@@ -5,7 +5,7 @@ use crate::visual::components::Depiction;
 
 use super::components::Item;
 
-#[derive(Bundle, Schematic, Reflect, FromReflect)]
+#[derive(Bundle, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct ItemBundle {
     pub item: Item,

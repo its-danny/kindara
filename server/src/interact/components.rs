@@ -3,11 +3,11 @@ use std::fmt::{Display, Formatter};
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-#[derive(Component, Schematic, Reflect, FromReflect)]
+#[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct Interactions(pub Vec<Interaction>);
 
-#[derive(PartialEq, Reflect, FromReflect, Debug)]
+#[derive(PartialEq, Reflect, Debug)]
 pub enum Interaction {
     Attack,
     Place,

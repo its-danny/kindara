@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn at_tile() {
         let mut app = AppBuilder::new().build();
-        app.add_system(scan);
+        app.add_systems(Update, scan);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn on_surface() {
         let mut app = AppBuilder::new().build();
-        app.add_system(scan);
+        app.add_systems(Update, scan);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn in_inventory() {
         let mut app = AppBuilder::new().build();
-        app.add_system(scan);
+        app.add_systems(Update, scan);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);

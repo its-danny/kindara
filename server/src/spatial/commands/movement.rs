@@ -90,7 +90,7 @@ mod tests {
     fn move_around() {
         let mut app = AppBuilder::new().build();
 
-        app.add_system(movement);
+        app.add_systems(Update, movement);
 
         let zone = ZoneBuilder::new().build(&mut app);
 
@@ -114,7 +114,7 @@ mod tests {
     fn no_exit() {
         let mut app = AppBuilder::new().build();
 
-        app.add_system(movement);
+        app.add_systems(Update, movement);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new()

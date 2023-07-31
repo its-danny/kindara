@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn place_an_item() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn object_not_found() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn object_not_placable() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn target_not_found() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn target_not_a_surface() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn target_at_capacity() {
         let mut app = AppBuilder::new().build();
-        app.add_system(place);
+        app.add_systems(Update, place);
 
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
