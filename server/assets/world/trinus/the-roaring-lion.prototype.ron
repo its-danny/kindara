@@ -80,7 +80,7 @@
                                     capacity: 5,
                                 ),
                                 "server::items::components::Seat": (
-                                    phrase: "sits at the <fg.item>wooden tables</>",
+                                    phrase: "at the <fg.item>wooden tables</>",
                                 ),
                                 "server::interact::components::Interactions": ([Sit]),
                             },
