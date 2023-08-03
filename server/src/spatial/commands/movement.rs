@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Character, Client, Online},
     spatial::{
-        components::{Position, Seated, Tile, Zone},
+        components::{Action, Position, Tile, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
@@ -66,7 +66,7 @@ pub fn movement(
             };
 
             bevy.entity(player).set_parent(target);
-            bevy.entity(player).remove::<Seated>();
+            bevy.entity(player).remove::<Action>();
 
             proxy.send(ProxyCommand(ParsedCommand {
                 from: client.id,
