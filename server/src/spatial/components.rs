@@ -29,8 +29,8 @@ pub struct Transition {
     pub position: IVec3,
 }
 
-/// A component that marks an entity as seated. The string is the
-/// phrase we use to describe the entity's position, e.g. "on the
-/// couch" or "in the chair".
+/// A component that marks an entity as performing an action. The string is the
+/// phrase we use to describe the entity's action, e.g. "is sitting" or
+/// "is fighting a goblin."
 #[derive(Component)]
-pub struct Seated(pub String);
+pub struct Action(pub String);

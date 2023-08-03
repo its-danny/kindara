@@ -10,7 +10,7 @@ use crate::{
     items::components::Seat,
     paint,
     player::components::{Client, Online},
-    spatial::components::{Seated, Tile},
+    spatial::components::{Action, Tile},
     value_or_continue,
     visual::components::Depiction,
 };
@@ -48,7 +48,7 @@ pub fn sit(
             let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
             let Some(target) = target else {
-                bevy.entity(player).insert(Seated("on the floor".into()));
+                bevy.entity(player).insert(Action("on the floor".into()));
 
                 outbox.send_text(client.id, "You sit on the floor.");
 
@@ -65,7 +65,7 @@ pub fn sit(
                     continue;
             };
 
-            bevy.entity(player).insert(Seated(seat.phrase.clone()));
+            bevy.entity(player).insert(Action(seat.phrase.clone()));
 
             outbox.send_text(client.id, paint!("You sit {}.", seat.phrase));
         }
@@ -104,7 +104,7 @@ mod tests {
 
         assert_eq!(content, "You sit on the floor.");
 
-        assert!(app.world.entity(player).get::<Seated>().is_some());
+        assert!(app.world.entity(player).get::<Action>().is_some());
     }
 
     #[test]
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(content, "You sit on the chair.");
 
         assert_eq!(
-            app.world.entity(player).get::<Seated>().unwrap().0,
+            app.world.entity(player).get::<Action>().unwrap().0,
             "on the chair"
         );
     }

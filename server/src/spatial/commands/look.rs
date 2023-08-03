@@ -16,7 +16,7 @@ use crate::{
         events::Prompt,
     },
     spatial::{
-        components::{Position, Seated, Tile, Transition, Zone},
+        components::{Action, Position, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
@@ -52,7 +52,7 @@ pub fn look(
     mut outbox: EventWriter<Outbox>,
     mut prompts: EventWriter<Prompt>,
     npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
-    players: Query<(&Client, &Character, &Parent, Option<&Seated>), With<Online>>,
+    players: Query<(&Client, &Character, &Parent, Option<&Action>), With<Online>>,
     tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
     transitions: Query<(Entity, &Depiction), With<Transition>>,
     world_time: Res<WorldTime>,
@@ -186,7 +186,7 @@ fn get_exits(
 fn get_players_line(
     client: &Client,
     siblings: Option<&Children>,
-    players: &Query<(&Client, &Character, &Parent, Option<&Seated>), With<Online>>,
+    players: &Query<(&Client, &Character, &Parent, Option<&Action>), With<Online>>,
 ) -> String {
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -196,7 +196,7 @@ fn get_players_line(
         .filter_map(|child| players.get(*child).ok())
         .filter(|(c, _, _, _)| c.id != client.id)
         .map(|(_, character, _, seated)| (character.name.clone(), seated))
-        .collect::<Vec<(String, Option<&Seated>)>>();
+        .collect::<Vec<(String, Option<&Action>)>>();
 
     for (name, seated) in &players_found {
         let entry = map
