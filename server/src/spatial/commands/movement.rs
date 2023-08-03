@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Character, Client, Online},
     spatial::{
-        components::{Action, Position, Tile, Zone},
+        components::{Action, Position, Seated, Tile, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
@@ -32,14 +32,15 @@ pub fn movement(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Character, &Parent), With<Online>>,
+    mut players: Query<(Entity, &Client, &Character, &Parent, Option<&Seated>), With<Online>>,
     tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let (player, client, character, tile) =
-                value_or_continue!(players.iter_mut().find(|(_, c, _, _)| c.id == command.from));
+            let (player, client, character, tile, seated) = value_or_continue!(players
+                .iter_mut()
+                .find(|(_, c, _, _, _)| c.id == command.from));
 
             if character.state.is_combat() {
                 outbox.send_text(client.id, "You can't move while in combat.");
@@ -66,7 +67,11 @@ pub fn movement(
             };
 
             bevy.entity(player).set_parent(target);
-            bevy.entity(player).remove::<Action>();
+
+            if seated.is_some() {
+                bevy.entity(player).remove::<Seated>();
+                bevy.entity(player).remove::<Action>();
+            }
 
             proxy.send(ProxyCommand(ParsedCommand {
                 from: client.id,

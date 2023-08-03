@@ -34,3 +34,7 @@ pub struct Transition {
 /// "is fighting a goblin."
 #[derive(Component)]
 pub struct Action(pub String);
+
+/// A marker component that indicates an entity is sitting.
+#[derive(Component)]
+pub struct Seated;
