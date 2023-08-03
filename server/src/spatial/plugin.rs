@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{
     bundles::{TileBundle, TransitionBundle},
-    commands::{enter::*, look::*, map::*, movement::*, scan::*, teleport::*},
+    commands::{enter::*, look::*, map::*, movement::*, scan::*, sit::*, teleport::*},
     components::*,
 };
 
@@ -19,6 +19,6 @@ impl Plugin for SpatialPlugin {
             .register_type::<TileBundle>()
             .register_type::<TransitionBundle>();
 
-        app.add_systems(Update, (look, scan, map, movement, enter, teleport));
+        app.add_systems(Update, (look, scan, map, movement, enter, teleport, sit));
     }
 }

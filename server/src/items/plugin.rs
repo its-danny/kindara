@@ -13,6 +13,7 @@ impl Plugin for ItemPlugin {
         app.register_type::<ItemBundle>()
             .register_type::<Item>()
             .register_type::<Surface>()
+            .register_type::<Seat>()
             .register_type::<SurfaceKind>()
             .register_type::<Size>();
 
