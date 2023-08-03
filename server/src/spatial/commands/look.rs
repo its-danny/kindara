@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_nest::prelude::*;
 use inflector::cases::titlecase::to_title_case;
 use regex::Regex;
@@ -16,7 +16,7 @@ use crate::{
         events::Prompt,
     },
     spatial::{
-        components::{Position, Tile, Transition, Zone},
+        components::{Position, Seated, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
@@ -52,7 +52,7 @@ pub fn look(
     mut outbox: EventWriter<Outbox>,
     mut prompts: EventWriter<Prompt>,
     npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
-    players: Query<(&Client, &Character, &Parent), With<Online>>,
+    players: Query<(&Client, &Character, &Parent, Option<&Seated>), With<Online>>,
     tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
     transitions: Query<(Entity, &Depiction), With<Transition>>,
     world_time: Res<WorldTime>,
@@ -60,8 +60,8 @@ pub fn look(
 ) {
     for command in commands.iter() {
         if let Command::Look(target) = &command.command {
-            let (client, character, tile) =
-                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
+            let (client, character, tile, _) =
+                value_or_continue!(players.iter().find(|(c, _, _, _)| c.id == command.from));
             let (tile, sprite, position, siblings, zone) =
                 value_or_continue!(tiles.get(tile.get()).ok());
 
@@ -90,7 +90,7 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| players.get(*sibling).ok())
-                    .find(|(_, c, _)| &c.name.to_lowercase() == target);
+                    .find(|(_, c, _, _)| &c.name.to_lowercase() == target);
 
                 if let Some((_, depiction, surface, children)) = matching_item {
                     let surface_line = surface
@@ -117,7 +117,7 @@ pub fn look(
                     output = paint!("{}", depiction.description,);
                 } else if let Some((_, depiction, _)) = matching_npc {
                     output = paint!("{}", depiction.description,);
-                } else if let Some((_, character, _)) = matching_player {
+                } else if let Some((_, character, _, _)) = matching_player {
                     output = character.description.clone().unwrap_or(format!(
                         "You can't quite make out what {} looks like.",
                         character.name
@@ -186,31 +186,53 @@ fn get_exits(
 fn get_players_line(
     client: &Client,
     siblings: Option<&Children>,
-    players: &Query<(&Client, &Character, &Parent), With<Online>>,
+    players: &Query<(&Client, &Character, &Parent, Option<&Seated>), With<Online>>,
 ) -> String {
+    let mut map: HashMap<String, Vec<String>> = HashMap::new();
+
     let players_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|child| players.get(*child).ok())
-        .filter(|(c, _, _)| c.id != client.id)
-        .map(|(_, character, _)| character.name.clone())
-        .collect::<Vec<String>>();
+        .filter(|(c, _, _, _)| c.id != client.id)
+        .map(|(_, character, _, seated)| (character.name.clone(), seated))
+        .collect::<Vec<(String, Option<&Seated>)>>();
+
+    for (name, seated) in &players_found {
+        let entry = map
+            .entry(seated.map_or("".into(), |s| s.0.clone()))
+            .or_insert(vec![]);
+
+        entry.push(name.clone())
+    }
 
     if players_found.is_empty() {
         return "".into();
     }
 
-    let player_names = name_list(&players_found, Some(Color::Player), false);
+    let players_found = map
+        .iter()
+        .map(|(phrase, names)| {
+            let player_names = name_list(names, Some(Color::Player), false);
 
-    format!(
-        "\n\n{} {} here.",
-        player_names,
-        if players_found.len() == 1 {
-            "is"
-        } else {
-            "are"
-        }
-    )
+            format!(
+                "{} {}",
+                player_names,
+                if phrase.is_empty() {
+                    if names.len() > 1 {
+                        "are standing here"
+                    } else {
+                        "is standing here"
+                    }
+                } else {
+                    phrase
+                }
+            )
+        })
+        .collect::<Vec<String>>()
+        .join(", ");
+
+    format!("\n\n{players_found}.")
 }
 
 fn get_npcs_line(
@@ -237,7 +259,7 @@ fn get_npcs_line(
         &npc_names[1..]
     );
 
-    format!("\n\n{} are here.", formatted,)
+    format!("\n\n{} stand here.", formatted,)
 }
 
 fn get_items_line(
@@ -470,7 +492,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid is here."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid is standing here."
         );
     }
 
@@ -505,7 +527,7 @@ mod tests {
 
         assert_eq!(
             content,
-            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid and Ramos are here."
+            "x The Void - V (00:00am)\nA vast, empty void.\n\nAstrid and Ramos are standing here."
         );
     }
 

@@ -45,6 +45,7 @@ pub enum Command {
     Place((String, String)),
     Say(String),
     Scan((bool, Option<String>)),
+    Sit(Option<String>),
     Take((String, bool, Option<String>)),
     Teleport((String, (i32, i32, i32))),
     Time,

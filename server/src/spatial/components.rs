@@ -28,3 +28,9 @@ pub struct Transition {
     pub zone: String,
     pub position: IVec3,
 }
+
+/// A component that marks an entity as seated. The string is the
+/// phrase we use to describe the entity's position, e.g. "on the
+/// couch" or "in the chair".
+#[derive(Component)]
+pub struct Seated(pub String);

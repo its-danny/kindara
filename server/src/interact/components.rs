@@ -11,6 +11,7 @@ pub struct Interactions(pub Vec<Interaction>);
 pub enum Interaction {
     Attack,
     Place,
+    Sit,
     Take,
 }
 
@@ -19,6 +20,7 @@ impl Display for Interaction {
         match self {
             Interaction::Attack => write!(f, "Attack"),
             Interaction::Place => write!(f, "Place"),
+            Interaction::Sit => write!(f, "Sit"),
             Interaction::Take => write!(f, "Take"),
         }
     }
@@ -29,6 +31,7 @@ impl Interaction {
         match self {
             Interaction::Attack => true,
             Interaction::Place => false,
+            Interaction::Sit => true,
             Interaction::Take => true,
         }
     }

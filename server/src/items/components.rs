@@ -57,3 +57,9 @@ impl Display for SurfaceKind {
         }
     }
 }
+
+#[derive(Component, Schematic, Reflect)]
+#[reflect(Schematic)]
+pub struct Seat {
+    pub phrase: String,
+}
