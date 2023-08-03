@@ -114,6 +114,10 @@ pub fn examine(
                             .nth(option - 1));
 
                         match interaction {
+                            Interaction::Sit => proxy.send(ProxyCommand(ParsedCommand {
+                                from: client.id,
+                                command: Command::Sit(Some(depiction.name.clone())),
+                            })),
                             Interaction::Take => proxy.send(ProxyCommand(ParsedCommand {
                                 from: client.id,
                                 command: Command::Take((depiction.name.clone(), false, None)),
