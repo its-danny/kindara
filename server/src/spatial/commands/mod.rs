@@ -4,4 +4,5 @@ pub mod map;
 pub mod movement;
 pub mod scan;
 pub mod sit;
+pub mod stand;
 pub mod teleport;
