@@ -16,7 +16,7 @@ use crate::{
         events::Prompt,
     },
     spatial::{
-        components::{Action, Position, Tile, Transition, Zone},
+        components::{Action, Door, Position, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
     timed_paint, value_or_continue,
@@ -47,7 +47,16 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
 }
 
 pub fn look(
-    items: Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
+    items: Query<
+        (
+            Entity,
+            &Depiction,
+            Option<&Surface>,
+            Option<&Door>,
+            Option<&Children>,
+        ),
+        With<Item>,
+    >,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut prompts: EventWriter<Prompt>,
@@ -72,7 +81,7 @@ pub fn look(
                     .iter()
                     .flat_map(|siblings| siblings.iter())
                     .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(entity, depiction, _, _)| depiction.matches_query(entity, target));
+                    .find(|(entity, depiction, _, _, _)| depiction.matches_query(entity, target));
 
                 let matching_transition = siblings
                     .iter()
@@ -92,7 +101,7 @@ pub fn look(
                     .filter_map(|sibling| players.get(*sibling).ok())
                     .find(|(_, c, _, _)| &c.name.to_lowercase() == target);
 
-                if let Some((_, depiction, surface, children)) = matching_item {
+                if let Some((_, depiction, surface, door, children)) = matching_item {
                     let surface_line = surface
                         .and_then(|s| children.map(|c| (s, c)))
                         .map(|(surface, children)| {
@@ -112,7 +121,19 @@ pub fn look(
                         })
                         .unwrap_or("".into());
 
-                    output = paint!("{}{}", depiction.description, surface_line);
+                    let mut description = depiction.description.clone();
+
+                    if let Some(door) = door {
+                        let door_line = if door.is_open {
+                            " It is open."
+                        } else {
+                            " It is closed."
+                        };
+
+                        description.push_str(door_line);
+                    }
+
+                    output = paint!("{}{}", description, surface_line);
                 } else if let Some((_, depiction)) = matching_transition {
                     output = paint!("{}", depiction.description,);
                 } else if let Some((_, depiction, _)) = matching_npc {
@@ -265,14 +286,23 @@ fn get_npcs_line(
 
 fn get_items_line(
     siblings: Option<&Children>,
-    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
+    items: &Query<
+        (
+            Entity,
+            &Depiction,
+            Option<&Surface>,
+            Option<&Door>,
+            Option<&Children>,
+        ),
+        With<Item>,
+    >,
 ) -> String {
     let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| items.get(*sibling).ok())
-        .filter(|(_, depiction, _, _)| depiction.visible)
-        .map(|(_, depiction, _, _)| depiction.short_name.clone())
+        .filter(|(_, depiction, _, _, _)| depiction.visible)
+        .map(|(_, depiction, _, _, _)| depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if items_found.is_empty() {
@@ -299,14 +329,23 @@ fn get_items_line(
 }
 
 fn items_on_surface(
-    items: &Query<(Entity, &Depiction, Option<&Surface>, Option<&Children>), With<Item>>,
+    items: &Query<
+        (
+            Entity,
+            &Depiction,
+            Option<&Surface>,
+            Option<&Door>,
+            Option<&Children>,
+        ),
+        With<Item>,
+    >,
     children: &Children,
 ) -> String {
     let on_surface = children
         .iter()
         .filter_map(|child| items.get(*child).ok())
-        .filter(|(_, depiction, _, _)| depiction.visible)
-        .map(|(_, depiction, _, _)| depiction.short_name.clone())
+        .filter(|(_, depiction, _, _, _)| depiction.visible)
+        .map(|(_, depiction, _, _, _)| depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if on_surface.is_empty() {

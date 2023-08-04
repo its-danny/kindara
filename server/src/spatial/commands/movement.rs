@@ -8,7 +8,7 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Character, Client, Online},
     spatial::{
-        components::{Position, Seated, Tile, Zone},
+        components::{Door, Position, Seated, Tile, Zone},
         utils::offset_for_direction,
     },
     value_or_continue,
@@ -33,8 +33,9 @@ pub fn movement(
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Character, &Parent, Option<&Seated>), With<Online>>,
-    tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
+    tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
+    doors: Query<&Door>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
@@ -48,7 +49,7 @@ pub fn movement(
                 continue;
             }
 
-            let (_, position, zone) = value_or_continue!(tiles.get(tile.get()).ok());
+            let (_, position, zone, siblings) = value_or_continue!(tiles.get(tile.get()).ok());
             let zone_tiles = value_or_continue!(zones.get(zone.get()).ok());
 
             let Some(offset) = offset_for_direction(direction) else {
@@ -58,13 +59,19 @@ pub fn movement(
             let Some(target) = zone_tiles.iter().find_map(|child| {
                 tiles.get(*child)
                     .ok()
-                    .filter(|(_, p, _)| p.0 == position.0 + offset)
-                    .map(|(e, _, _)| e)
+                    .filter(|(_, p, _, _)| p.0 == position.0 + offset)
+                    .map(|(e, _, _, _)| e)
             }) else {
                 outbox.send_text(client.id, "You can't go that way.");
 
                 continue;
             };
+
+            if blocked_by_door(&siblings, &doors, &offset) {
+                outbox.send_text(client.id, "Your way is blocked.");
+
+                continue;
+            }
 
             if seated.is_some() {
                 proxy.send(ProxyCommand(ParsedCommand {
@@ -81,6 +88,19 @@ pub fn movement(
             }));
         }
     }
+}
+
+/// Check if the target tile is blocked by a closed door.
+fn blocked_by_door(siblings: &Option<&Children>, doors: &Query<&Door>, offset: &IVec3) -> bool {
+    if let Some(siblings) = siblings {
+        for child in siblings.iter() {
+            if let Ok(door) = doors.get(*child) {
+                return door.blocks == *offset && !door.is_open;
+            }
+        }
+    }
+
+    false
 }
 
 #[cfg(test)]
