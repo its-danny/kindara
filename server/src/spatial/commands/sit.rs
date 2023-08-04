@@ -10,7 +10,7 @@ use crate::{
     items::components::Seat,
     paint,
     player::components::{Client, Online},
-    spatial::components::{Action, Tile},
+    spatial::components::{Action, Seated, Tile},
     value_or_continue,
     visual::components::Depiction,
 };
@@ -66,6 +66,7 @@ pub fn sit(
             };
 
             bevy.entity(player).insert(Action(seat.phrase.clone()));
+            bevy.entity(player).insert(Seated);
 
             outbox.send_text(client.id, paint!("You sit {}.", seat.phrase));
         }
