@@ -6,8 +6,11 @@ use std::sync::{
 use colored::{ColoredString, Colorize};
 use regex::Regex;
 
-static REGEX: OnceLock<Regex> = OnceLock::new();
-static REGEX_ATTR: OnceLock<Regex> = OnceLock::new();
+use crate::world::resources::WorldTime;
+
+static STYLE_REGEX: OnceLock<Regex> = OnceLock::new();
+static STYLE_REGEX_ATTR: OnceLock<Regex> = OnceLock::new();
+static TIME_REGEX: OnceLock<Regex> = OnceLock::new();
 
 static ENABLED: AtomicBool = AtomicBool::new(true);
 
@@ -39,15 +42,15 @@ pub fn toggle(enabled: bool) {
 
 pub fn style(text: &str) -> String {
     if !ENABLED.load(Ordering::Relaxed) {
-        return strip(text);
+        return strip_style(text);
     }
 
-    let regex = REGEX.get_or_init(|| {
+    let regex = STYLE_REGEX.get_or_init(|| {
         Regex::new(r"<(?P<attrs>((bg|fg|s)\.\S+\s*)+)>(?P<content>[^>]+)</>").unwrap()
     });
 
-    let regex_attr =
-        REGEX_ATTR.get_or_init(|| Regex::new(r"(?P<attr>(bg|fg|s))\.(?P<value>\S+)").unwrap());
+    let regex_attr = STYLE_REGEX_ATTR
+        .get_or_init(|| Regex::new(r"(?P<attr>(bg|fg|s))\.(?P<value>\S+)").unwrap());
 
     regex
         .replace_all(text, |cap: &regex::Captures| {
@@ -86,12 +89,50 @@ pub fn style(text: &str) -> String {
         .to_string()
 }
 
-pub fn strip(text: &str) -> String {
-    let regex = REGEX.get_or_init(|| {
+pub fn strip_style(text: &str) -> String {
+    let regex = STYLE_REGEX.get_or_init(|| {
         Regex::new(r"<(?P<attrs>((bg|fg|s)\.\S+\s*)+)>(?P<content>[^>]+)</>").unwrap()
     });
 
     regex.replace_all(text, "$content").to_string()
+}
+
+pub fn time(text: &str, time: &WorldTime) -> String {
+    let regex = TIME_REGEX.get_or_init(|| {
+        Regex::new(r"\[(?P<time>(dawn|day|dusk|night))\](?P<content>[^\[\]/]+)\[/\]").unwrap()
+    });
+
+    regex
+        .replace_all(text, |cap: &regex::Captures| {
+            let mut string = String::new();
+
+            match &cap["time"] {
+                "dawn" => {
+                    if time.is_dawn() {
+                        string = style(&cap["content"]);
+                    }
+                }
+                "day" => {
+                    if time.is_day() {
+                        string = style(&cap["content"]);
+                    }
+                }
+                "dusk" => {
+                    if time.is_dusk() {
+                        string = style(&cap["content"]);
+                    }
+                }
+                "night" => {
+                    if time.is_night() {
+                        string = style(&cap["content"]);
+                    }
+                }
+                _ => string = style(&cap["content"]),
+            }
+
+            string
+        })
+        .to_string()
 }
 
 #[macro_export]
@@ -100,5 +141,15 @@ macro_rules! paint {
         let formatted = format!($fmt $(, $args)*);
 
         $crate::visual::paint::style(&formatted)
+    }}
+}
+
+#[macro_export]
+macro_rules! timed_paint {
+    ($world_time:expr, $fmt:literal $(, $args:expr)* $(,)?) => {{
+        let formatted = format!($fmt $(, $args)*);
+        let timed = $crate::visual::paint::time(&formatted, $world_time);
+
+        $crate::visual::paint::style(&timed)
     }}
 }

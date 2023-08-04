@@ -32,7 +32,7 @@ pub fn parse_command(
 ) {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
-            Some((m, paint::strip(content)))
+            Some((m, paint::strip_style(content)))
         } else {
             None
         }

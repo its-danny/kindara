@@ -70,4 +70,20 @@ impl WorldTime {
             if self.hour < 12 { "am" } else { "pm" }
         )
     }
+
+    pub fn is_dawn(&self) -> bool {
+        self.hour > 5 && self.hour < 7
+    }
+
+    pub fn is_day(&self) -> bool {
+        self.hour > 7 && self.hour < 19
+    }
+
+    pub fn is_dusk(&self) -> bool {
+        self.hour > 19 && self.hour < 21
+    }
+
+    pub fn is_night(&self) -> bool {
+        self.hour > 21 || self.hour < 5
+    }
 }
