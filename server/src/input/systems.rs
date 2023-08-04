@@ -14,8 +14,9 @@ use crate::{
         who::handle_who, yell::handle_yell,
     },
     spatial::commands::{
-        enter::handle_enter, look::handle_look, map::handle_map, movement::handle_movement,
-        scan::handle_scan, sit::handle_sit, stand::handle_stand, teleport::handle_teleport,
+        close::handle_close, enter::handle_enter, look::handle_look, map::handle_map,
+        movement::handle_movement, open::handle_open, scan::handle_scan, sit::handle_sit,
+        stand::handle_stand, teleport::handle_teleport,
     },
     value_or_continue,
     visual::paint,
@@ -42,6 +43,7 @@ pub fn parse_command(
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_announce),
             Box::new(handle_chat),
+            Box::new(handle_close),
             Box::new(handle_config),
             Box::new(handle_describe),
             Box::new(handle_drop),
@@ -52,6 +54,7 @@ pub fn parse_command(
             Box::new(handle_look),
             Box::new(handle_map),
             Box::new(handle_movement),
+            Box::new(handle_open),
             Box::new(handle_place),
             Box::new(handle_say),
             Box::new(handle_scan),

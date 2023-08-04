@@ -4,12 +4,15 @@ use bevy_proto::prelude::*;
 #[derive(Component, Reflect)]
 pub struct Position(pub IVec3);
 
+/// A zone is a collection of tiles that make up a single area of the world.
 #[derive(Debug, Component, Schematic, Reflect)]
 #[reflect(Schematic)]
 pub struct Zone {
     pub name: String,
 }
 
+/// A tile is a single block of the world.
+/// When moving, the player becomes a child of the tile they are moving to.
 #[derive(Component, Reflect)]
 pub struct Tile {
     pub name: String,
@@ -38,3 +41,13 @@ pub struct Action(pub String);
 /// A marker component that indicates an entity is sitting.
 #[derive(Component)]
 pub struct Seated;
+
+/// A component that marks an entity as a door. The blocks field is the
+/// direction the door blocks, e.g. (0, 1, 0) means the door blocks the
+/// tile to the south.
+#[derive(Debug, Component, Schematic, Reflect)]
+#[reflect(Schematic)]
+pub struct Door {
+    pub blocks: IVec3,
+    pub is_open: bool,
+}
