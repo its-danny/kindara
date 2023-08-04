@@ -19,7 +19,7 @@ use crate::{
         components::{Action, Position, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
-    value_or_continue,
+    timed_paint, value_or_continue,
     visual::{
         components::{Depiction, Sprite},
         paint::Color,
@@ -136,7 +136,8 @@ pub fn look(
                 output = if character.config.brief {
                     format!("{} {}{}", sprite.character, tile.name, exits)
                 } else {
-                    paint!(
+                    timed_paint!(
+                        &world_time,
                         "{} {}{} - {} ({})\n{}{}{}{}",
                         sprite.character,
                         tile.name,
