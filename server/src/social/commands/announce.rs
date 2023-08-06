@@ -63,6 +63,18 @@ mod tests {
     };
 
     #[test]
+    fn parses() {
+        let message = handle_announce("announce Hello!");
+        assert_eq!(message, Ok(Command::Announce("Hello!".into())));
+
+        let no_message = handle_announce("announce");
+        assert_eq!(
+            no_message,
+            Err(ParseError::InvalidArguments("Announce what?".into()))
+        );
+    }
+
+    #[test]
     fn sends_to_everyone() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, announce);

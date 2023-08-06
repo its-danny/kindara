@@ -117,6 +117,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let target = handle_scan("scan rock");
+        assert_eq!(target, Ok(Command::Scan((false, Some("rock".into())))));
+
+        let inventory = handle_scan("scan inventory");
+        assert_eq!(inventory, Ok(Command::Scan((true, None))));
+
+        let no_target = handle_scan("scan");
+        assert_eq!(no_target, Ok(Command::Scan((false, None))));
+    }
+
+    #[test]
     fn at_tile() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, scan);

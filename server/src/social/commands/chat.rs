@@ -20,9 +20,10 @@ pub fn handle_chat(content: &str) -> Result<Command, ParseError> {
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
         Some(captures) => {
-            let channel = captures.name("channel").map(|m| m.as_str().trim()).ok_or(
-                ParseError::InvalidArguments("Who are you talking to?".into()),
-            )?;
+            let channel = captures
+                .name("channel")
+                .map(|m| m.as_str().trim())
+                .unwrap_or("chat");
 
             let channel = match channel {
                 "chat" | "c" => ChatChannel::Chat,
@@ -85,6 +86,21 @@ mod tests {
         tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
+
+    #[test]
+    fn parses() {
+        let message = handle_chat("chat Hello!");
+        assert_eq!(
+            message,
+            Ok(Command::Chat((ChatChannel::Chat, "Hello!".into())))
+        );
+
+        let no_message = handle_chat("chat");
+        assert_eq!(
+            no_message,
+            Err(ParseError::InvalidArguments("Say what?".into()))
+        );
+    }
 
     #[test]
     fn sends_to_sender() {

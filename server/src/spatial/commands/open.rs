@@ -72,3 +72,51 @@ pub fn open(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::test::{
+        app_builder::AppBuilder,
+        item_builder::ItemBuilder,
+        player_builder::PlayerBuilder,
+        tile_builder::{TileBuilder, ZoneBuilder},
+        utils::{get_message_content, send_message},
+    };
+
+    use super::*;
+
+    #[test]
+    fn parses() {
+        let target = handle_open("open door");
+        assert_eq!(target, Ok(Command::Open(Some("door".into()))));
+
+        let no_target = handle_open("open");
+        assert_eq!(no_target, Ok(Command::Open(None)));
+    }
+
+    #[test]
+    fn opens_door() {
+        let mut app = AppBuilder::new().build();
+        app.add_systems(Update, open);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        let door = ItemBuilder::new().name("door").tile(tile).build(&mut app);
+        app.world.entity_mut(door).insert(Door {
+            is_open: false,
+            blocks: IVec3::new(0, -1, 0),
+        });
+
+        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        send_message(&mut app, client_id, "open door");
+        app.update();
+
+        let content = get_message_content(&mut app, client_id).unwrap();
+
+        assert_eq!(content, "You open the door.");
+
+        assert!(app.world.get::<Door>(door).unwrap().is_open);
+    }
+}

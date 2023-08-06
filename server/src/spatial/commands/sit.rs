@@ -89,6 +89,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let target = handle_sit("sit chair");
+        assert_eq!(target, Ok(Command::Sit(Some("chair".into()))));
+
+        let no_target = handle_sit("sit");
+        assert_eq!(no_target, Ok(Command::Sit(None)));
+    }
+
+    #[test]
     fn sit_on_the_floor() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, sit);

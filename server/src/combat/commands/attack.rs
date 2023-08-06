@@ -173,6 +173,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let target = handle_attack("fireball goat");
+        assert_eq!(
+            target,
+            Ok(Command::Attack(("fireball".into(), Some("goat".into()))))
+        );
+
+        let no_target = handle_attack("fireball");
+        assert_eq!(no_target, Ok(Command::Attack(("fireball".into(), None))));
+    }
+
+    #[test]
     fn valid_target() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, attack);

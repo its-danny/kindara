@@ -150,6 +150,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let object_and_target = handle_place("place rock in pile");
+        assert_eq!(
+            object_and_target,
+            Ok(Command::Place(("rock".into(), "pile".into())))
+        );
+
+        let no_object = handle_place("place");
+        assert_eq!(
+            no_object,
+            Err(ParseError::InvalidArguments("Place what?".into()))
+        );
+
+        let no_target = handle_place("place rock");
+        assert_eq!(
+            no_target,
+            Err(ParseError::InvalidArguments("Place where?".into()))
+        );
+    }
+
+    #[test]
     fn place_an_item() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, place);

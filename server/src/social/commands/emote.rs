@@ -14,7 +14,7 @@ use crate::{
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn handle_emote(content: &str) -> Result<Command, ParseError> {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(emote |;)(?P<action>.*)?$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(emote( |$)|; ?)(?P<action>.*)?$").unwrap());
 
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
@@ -58,6 +58,21 @@ mod tests {
         tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
+
+    #[test]
+    fn parses() {
+        let message = handle_emote("emote waves");
+        assert_eq!(message, Ok(Command::Emote("waves".into())));
+
+        let no_message = handle_emote("emote");
+        assert_eq!(
+            no_message,
+            Err(ParseError::InvalidArguments("Do what?".into()))
+        );
+
+        let alias = handle_emote(";waves");
+        assert_eq!(alias, Ok(Command::Emote("waves".into())));
+    }
 
     #[test]
     fn sends_to_sender() {

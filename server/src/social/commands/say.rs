@@ -14,7 +14,7 @@ use crate::{
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn handle_say(content: &str) -> Result<Command, ParseError> {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(say |')(?P<message>.*)?$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(say( |$)|' ?)(?P<message>.*)?$").unwrap());
 
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
@@ -61,6 +61,21 @@ mod tests {
         tile_builder::{TileBuilder, ZoneBuilder},
         utils::{get_message_content, send_message},
     };
+
+    #[test]
+    fn parses() {
+        let message = handle_say("say Hello!");
+        assert_eq!(message, Ok(Command::Say("Hello!".into())));
+
+        let no_message = handle_say("say");
+        assert_eq!(
+            no_message,
+            Err(ParseError::InvalidArguments("Say what?".into()))
+        );
+
+        let alias = handle_say("'Hello!");
+        assert_eq!(alias, Ok(Command::Say("Hello!".into())));
+    }
 
     #[test]
     fn sends_to_sender() {
