@@ -110,6 +110,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let target = handle_enter("enter the void");
+        assert_eq!(target, Ok(Command::Enter(Some("the void".into()))));
+
+        let no_target = handle_enter("enter");
+        assert_eq!(no_target, Ok(Command::Enter(None)));
+    }
+
+    #[test]
     fn enters_by_tag() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, enter);

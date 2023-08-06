@@ -112,6 +112,12 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn parses() {
+        let content = handle_describe("describe A handsome fella.").unwrap();
+        assert_eq!(content, Command::Describe(Some("A handsome fella.".into())));
+    }
+
     #[sqlx::test]
     async fn valid(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();

@@ -140,6 +140,24 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn parses() {
+        let option = handle_config("config brief");
+        assert_eq!(
+            option,
+            Ok(Command::Config((Some("brief".to_string()), None)))
+        );
+
+        let option_value = handle_config("config brief true");
+        assert_eq!(
+            option_value,
+            Ok(Command::Config((
+                Some("brief".to_string()),
+                Some("true".to_string())
+            )))
+        );
+    }
+
     #[sqlx::test]
     async fn valid(pool: PgPool) -> sqlx::Result<()> {
         let mut app = AppBuilder::new().database(&pool).build();

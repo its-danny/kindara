@@ -149,6 +149,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let object = handle_take("take rock");
+        assert_eq!(object, Ok(Command::Take(("rock".into(), false, None))));
+
+        let all = handle_take("take all rock");
+        assert_eq!(all, Ok(Command::Take(("rock".into(), true, None))));
+
+        let object_and_target = handle_take("take rock from pile");
+        assert_eq!(
+            object_and_target,
+            Ok(Command::Take(("rock".into(), false, Some("pile".into()))))
+        );
+
+        let no_object = handle_take("take");
+        assert_eq!(
+            no_object,
+            Err(ParseError::InvalidArguments("Take what?".into()))
+        );
+    }
+
+    #[test]
     fn by_name() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, take);

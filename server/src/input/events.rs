@@ -3,7 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ChatChannel {
     Chat,
     Novice,
@@ -27,7 +27,7 @@ impl ChatChannel {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Command {
     Announce(String),
     Attack((String, Option<String>)),
@@ -56,6 +56,7 @@ pub enum Command {
     Yell(String),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     WrongCommand,
     InvalidArguments(String),

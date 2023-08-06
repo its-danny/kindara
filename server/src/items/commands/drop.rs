@@ -98,6 +98,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let object = handle_drop("drop rock");
+        assert_eq!(object, Ok(Command::Drop(("rock".into(), false))));
+
+        let all = handle_drop("drop all rock");
+        assert_eq!(all, Ok(Command::Drop(("rock".into(), true))));
+
+        let no_object = handle_drop("drop");
+        assert_eq!(
+            no_object,
+            Err(ParseError::InvalidArguments("Drop what?".into()))
+        );
+    }
+
+    #[test]
     fn by_name() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, drop);

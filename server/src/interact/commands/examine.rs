@@ -17,12 +17,17 @@ static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn handle_examine(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
-        Regex::new(r"^(examine|ex)(?: do (?P<option>\d+))?(?: (?P<target>.*))?$").unwrap()
+        Regex::new(r"^(examine|ex)(?: (?P<select>do)(?: (?P<option>\d+))?)?(?: (?P<target>.*))?$")
+            .unwrap()
     });
 
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
         Some(captures) => {
+            let select = captures
+                .name("select")
+                .map(|m| m.as_str().trim().to_lowercase());
+
             let option = captures
                 .name("option")
                 .and_then(|m| m.as_str().parse::<usize>().ok());
@@ -31,11 +36,13 @@ pub fn handle_examine(content: &str) -> Result<Command, ParseError> {
                 .name("target")
                 .map(|m| m.as_str().trim().to_lowercase());
 
-            if option.is_none() && target.is_none() {
-                return Err(ParseError::InvalidArguments("Examine what?".into()));
+            match (select, option, target) {
+                (None, None, None) => Err(ParseError::InvalidArguments("Examine what?".into())),
+                (Some(_), None, None) => Err(ParseError::InvalidArguments("Do what?".into())),
+                (None, None, Some(target)) => Ok(Command::Examine((Some(target), None))),
+                (Some(_), Some(option), None) => Ok(Command::Examine((None, Some(option)))),
+                _ => Err(ParseError::WrongCommand),
             }
-
-            Ok(Command::Examine((target, option)))
         }
     }
 }
@@ -152,6 +159,27 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn parses() {
+        let target = handle_examine("examine rock");
+        assert_eq!(target, Ok(Command::Examine((Some("rock".into()), None))));
+
+        let no_target = handle_examine("examine");
+        assert_eq!(
+            no_target,
+            Err(ParseError::InvalidArguments("Examine what?".into()))
+        );
+
+        let option = handle_examine("examine do 1");
+        assert_eq!(option, Ok(Command::Examine((None, Some(1)))));
+
+        let no_option = handle_examine("examine do");
+        assert_eq!(
+            no_option,
+            Err(ParseError::InvalidArguments("Do what?".into()))
+        );
+    }
 
     #[test]
     fn lists_interactions() {

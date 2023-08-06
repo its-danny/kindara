@@ -371,6 +371,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses() {
+        let target = handle_look("look at rock");
+        assert_eq!(target, Ok(Command::Look(Some("rock".into()))));
+
+        let no_target = handle_look("look");
+        assert_eq!(no_target, Ok(Command::Look(None)));
+
+        let no_at = handle_look("look rock");
+        assert_eq!(no_at, Ok(Command::Look(Some("rock".into()))));
+    }
+
+    #[test]
     fn sends_tile_info() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, look);
