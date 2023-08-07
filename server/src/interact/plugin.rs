@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{
-    commands::{examine::*, place::*, take::*},
+    commands::{examine::*, place::*, roll::*, take::*},
     components::*,
     systems::*,
 };
@@ -14,6 +14,9 @@ impl Plugin for InteractPlugin {
             .register_type::<Vec<Interaction>>()
             .register_type::<Interactions>();
 
-        app.add_systems(Update, (examine, take, place, remove_menu_if_changed_tiles));
+        app.add_systems(
+            Update,
+            (examine, take, place, remove_menu_if_changed_tiles, roll),
+        );
     }
 }

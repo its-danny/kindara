@@ -3,7 +3,9 @@ use bevy_nest::prelude::*;
 
 use crate::{
     combat::commands::attack::handle_attack,
-    interact::commands::{examine::handle_examine, place::handle_place, take::handle_take},
+    interact::commands::{
+        examine::handle_examine, place::handle_place, roll::handle_roll, take::handle_take,
+    },
     items::commands::{drop::handle_drop, inventory::handle_inventory},
     player::{
         commands::{config::handle_config, describe::handle_describe},
@@ -56,6 +58,7 @@ pub fn parse_command(
             Box::new(handle_movement),
             Box::new(handle_open),
             Box::new(handle_place),
+            Box::new(handle_roll),
             Box::new(handle_say),
             Box::new(handle_scan),
             Box::new(handle_sit),

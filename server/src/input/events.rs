@@ -45,6 +45,7 @@ pub enum Command {
     Movement(String),
     Open(Option<String>),
     Place((String, String)),
+    Roll(String),
     Say(String),
     Scan((bool, Option<String>)),
     Sit(Option<String>),
