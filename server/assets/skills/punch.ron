@@ -1,0 +1,7 @@
+(
+    name: "punch",
+    stat: Strength,
+    actions: [
+        ApplyDamage("1d8+3"),
+    ]
+)

@@ -9,8 +9,14 @@ pub struct Attributes {
     pub vitality: u32,
     /// Determines base damage, max potential, and potential regeneration amount.
     pub proficiency: u32,
-    /// Determines attack speed and movement speed.
+    /// Determines attack speed.
     pub speed: u32,
+    /// Modifier for brute force attacks.
+    pub strength: u32,
+    /// Modifier for finesse attacks.
+    pub dexterity: u32,
+    /// Modifier for magic attacks.
+    pub intelligence: u32,
 }
 
 impl Default for Attributes {
@@ -19,6 +25,9 @@ impl Default for Attributes {
             vitality: 10,
             proficiency: 5,
             speed: 3,
+            strength: 0,
+            dexterity: 0,
+            intelligence: 0,
         }
     }
 }
@@ -26,11 +35,6 @@ impl Default for Attributes {
 impl Attributes {
     pub fn max_health(&self) -> u32 {
         self.vitality * 10
-    }
-
-    #[allow(dead_code)]
-    pub fn base_damage(&self) -> u32 {
-        self.proficiency * 2
     }
 }
 
