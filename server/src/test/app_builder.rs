@@ -9,7 +9,7 @@ use crate::{
         systems::{handle_proxy_command, parse_command},
     },
     player::events::Prompt,
-    skills::resources::{Action, Skill, Skills},
+    skills::resources::{Action, RelevantStat, Skill, Skills},
     visual::paint,
     world::resources::{WorldState, WorldTime},
 };
@@ -37,7 +37,8 @@ impl AppBuilder {
             "attack".into(),
             Skill {
                 name: "attack".into(),
-                actions: vec![Action::ApplyDamage(10)],
+                stat: RelevantStat::Strength,
+                actions: vec![Action::ApplyDamage("2d10".into())],
             },
         );
 

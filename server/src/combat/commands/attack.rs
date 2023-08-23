@@ -2,6 +2,7 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
+use caith::Roller;
 use regex::Regex;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
         components::{Character, CharacterState, Client, Online},
         events::Prompt,
     },
-    skills::resources::{Action, Skills},
+    skills::resources::{Action, RelevantStat, Skills},
     spatial::components::Tile,
     value_or_continue,
     visual::components::Depiction,
@@ -118,6 +119,7 @@ pub fn attack(
                     continue;
             };
 
+            // If they've already attacked, queue the attack
             if has_attacked.is_some() {
                 match queued_attack {
                     Some(mut queued_attack) => {
@@ -135,10 +137,48 @@ pub fn attack(
                 continue;
             }
 
+            // Roll for attack quality
+            let roller = Roller::new("2d10").unwrap();
+            let quality = roller.roll().unwrap();
+            let quality = quality.as_single().unwrap();
+
+            // Roll enemy defense
+            let roller = Roller::new("2d10").unwrap();
+            let defense = roller.roll().unwrap();
+            let defense = defense.as_single().unwrap();
+
+            // Check if attack hits
+            if quality.get_total() < defense.get_total() {
+                outbox.send_text(
+                    client.id,
+                    format!("You attack the {}, but miss.", depiction.short_name),
+                );
+
+                continue;
+            }
+
+            // Apply skill actions
             for action in &skill.actions {
                 match action {
-                    Action::ApplyDamage(damage) => {
-                        state.apply_damage(*damage);
+                    Action::ApplyDamage(roll) => {
+                        let roller = Roller::new(roll).unwrap();
+                        let damage = roller.roll().unwrap();
+                        let result = damage.as_single().unwrap();
+                        let mut damage = result.get_total() as i32;
+
+                        match &skill.stat {
+                            RelevantStat::Strength => {
+                                damage += attributes.strength as i32;
+                            }
+                            RelevantStat::Dexterity => {
+                                damage += attributes.dexterity as i32;
+                            }
+                            RelevantStat::Intelligence => {
+                                damage += attributes.intelligence as i32;
+                            }
+                        }
+
+                        state.apply_damage(damage);
                     }
                 }
             }

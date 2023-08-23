@@ -2,14 +2,22 @@ use bevy::{prelude::*, utils::HashMap};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+pub enum RelevantStat {
+    Strength,
+    Dexterity,
+    Intelligence,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum Action {
-    ApplyDamage(i32),
+    ApplyDamage(String),
 }
 
 /// A skill definition.
 #[derive(Debug, Deserialize)]
 pub struct Skill {
     pub name: String,
+    pub stat: RelevantStat,
     pub actions: Vec<Action>,
 }
 
