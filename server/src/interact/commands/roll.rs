@@ -15,7 +15,7 @@ use crate::{
 static REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn handle_roll(content: &str) -> Result<Command, ParseError> {
-    let regex = REGEX.get_or_init(|| Regex::new(r"^(roll( |$)|' ?)(?P<roll>.*)?$").unwrap());
+    let regex = REGEX.get_or_init(|| Regex::new(r"^(roll( |$)|# ?)(?P<roll>.*)?$").unwrap());
 
     match regex.captures(content) {
         None => Err(ParseError::WrongCommand),
