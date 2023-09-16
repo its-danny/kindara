@@ -59,10 +59,11 @@ pub fn sit(
                 .iter()
                 .flat_map(|siblings| siblings.iter())
                 .filter_map(|sibling| seats.get(*sibling).ok())
-                .find(|(entity, _, _, depiction)| depiction.matches_query(entity, target)) else {
-                    outbox.send_text(client.id, "You can't sit there.");
+                .find(|(entity, _, _, depiction)| depiction.matches_query(entity, target))
+            else {
+                outbox.send_text(client.id, "You can't sit there.");
 
-                    continue;
+                continue;
             };
 
             bevy.entity(player).insert(Action(seat.phrase.clone()));

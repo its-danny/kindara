@@ -165,11 +165,12 @@ fn spawn_authenticate_task(
                 )
         } else if let Ok(hashed) = bcrypt::hash(&password, bcrypt::DEFAULT_COST) {
             let character = sqlx::query_as::<_, CharacterModel>(
-                "INSERT INTO characters (name, password, config) VALUES ($1, $2, $3) RETURNING *",
+                "INSERT INTO characters (name, password, config, mastery) VALUES ($1, $2, $3, $4) RETURNING *",
             )
             .bind(&name)
             .bind(&hashed)
             .bind(Json(CharacterConfig::default()))
+            .bind("freelancer")
             .fetch_one(&pool)
             .await?;
 
@@ -225,10 +226,11 @@ pub fn handle_authenticate_task(
                                 Role::Player => Keycard::player(),
                             },
                             character: Character {
-                                id: character.id,
-                                name: character.name,
-                                description: character.description,
                                 config: character.config.0,
+                                description: character.description,
+                                id: character.id,
+                                mastery: character.mastery,
+                                name: character.name,
                                 state: CharacterState::Idle,
                             },
                         },

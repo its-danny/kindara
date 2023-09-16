@@ -16,6 +16,7 @@ pub struct Character {
     pub name: String,
     pub description: Option<String>,
     pub config: CharacterConfig,
+    pub mastery: String,
     pub state: CharacterState,
 }
 

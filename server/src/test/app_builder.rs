@@ -8,6 +8,7 @@ use crate::{
         events::{ParsedCommand, ProxyCommand},
         systems::{handle_proxy_command, parse_command},
     },
+    mastery::resources::{Masteries, Mastery},
     player::events::Prompt,
     skills::resources::{Action, RelevantStat, Skill, Skills},
     visual::paint,
@@ -34,11 +35,21 @@ impl AppBuilder {
         let mut skills = Skills::default();
 
         skills.0.insert(
-            "attack".into(),
+            "punch".into(),
             Skill {
-                name: "attack".into(),
+                name: "Punch".into(),
                 stat: RelevantStat::Strength,
                 actions: vec![Action::ApplyDamage("2d10".into())],
+            },
+        );
+
+        let mut masteries = Masteries::default();
+
+        masteries.0.insert(
+            "freelancer".into(),
+            Mastery {
+                name: "Freelancer".into(),
+                skills: vec!["punch".into()],
             },
         );
 
@@ -48,6 +59,7 @@ impl AppBuilder {
             .insert_resource(WorldState::default())
             .insert_resource(WorldTime::default())
             .insert_resource(skills)
+            .insert_resource(masteries)
             .add_event::<Inbox>()
             .add_event::<Outbox>()
             .add_event::<ParsedCommand>()

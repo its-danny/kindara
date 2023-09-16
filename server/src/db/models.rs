@@ -16,6 +16,7 @@ pub struct CharacterModel {
     pub description: Option<String>,
     pub email: Option<String>,
     pub id: i64,
+    pub mastery: String,
     pub name: String,
     pub password: String,
     pub role: Role,
