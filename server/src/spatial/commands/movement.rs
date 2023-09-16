@@ -57,7 +57,8 @@ pub fn movement(
             };
 
             let Some(target) = zone_tiles.iter().find_map(|child| {
-                tiles.get(*child)
+                tiles
+                    .get(*child)
                     .ok()
                     .filter(|(_, p, _, _)| p.0 == position.0 + offset)
                     .map(|(e, _, _, _)| e)

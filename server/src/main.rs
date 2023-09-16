@@ -5,6 +5,7 @@ mod input;
 mod interact;
 mod items;
 mod keycard;
+mod mastery;
 mod net;
 mod npc;
 mod player;
@@ -28,6 +29,7 @@ use bevy::{
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
 use dotenvy::dotenv;
+use mastery::plugin::MasteryPlugin;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
@@ -101,6 +103,7 @@ async fn main() -> Result<(), sqlx::Error> {
             InputPlugin,
             InteractPlugin,
             ItemPlugin,
+            MasteryPlugin,
             NetPlugin,
             NpcPlugin,
             PlayerPlugin,

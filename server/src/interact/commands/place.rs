@@ -68,11 +68,9 @@ pub fn place(
                 .iter()
                 .flat_map(|children| children.iter())
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _, d, _, _)| d.matches_query(e, object)) else {
-                outbox.send_text(
-                    client.id,
-                    format!("You don't have a {object}."),
-                );
+                .find(|(e, _, d, _, _)| d.matches_query(e, object))
+            else {
+                outbox.send_text(client.id, format!("You don't have a {object}."));
 
                 continue;
             };
@@ -89,11 +87,9 @@ pub fn place(
             let Some((target, _, target_depiction, _, target_children)) = siblings
                 .iter()
                 .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _,d,  _, _)| d.matches_query(e, target)) else {
-                outbox.send_text(
-                    client.id,
-                    format!("You don't see a {target} here."),
-                );
+                .find(|(e, _, d, _, _)| d.matches_query(e, target))
+            else {
+                outbox.send_text(client.id, format!("You don't see a {target} here."));
 
                 continue;
             };
@@ -101,7 +97,10 @@ pub fn place(
             let Ok(surface) = surfaces.get(target) else {
                 outbox.send_text(
                     client.id,
-                    format!("You can't place the {} on the {}.", object_depiction.name, target_depiction.name),
+                    format!(
+                        "You can't place the {} on the {}.",
+                        object_depiction.name, target_depiction.name
+                    ),
                 );
 
                 continue;

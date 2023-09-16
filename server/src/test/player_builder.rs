@@ -25,6 +25,8 @@ pub struct PlayerBuilder {
     name: String,
     #[dummy(expr = "None")]
     description: Option<String>,
+    #[dummy(expr = "\"freelancer\".into()")]
+    mastery: String,
     #[dummy(faker = "Password(3..30)")]
     password: String,
     #[dummy(expr = "Keycard::player()")]
@@ -60,6 +62,11 @@ impl PlayerBuilder {
         self
     }
 
+    pub fn mastery(mut self, mastery: &str) -> Self {
+        self.mastery = mastery.into();
+        self
+    }
+
     pub fn password(mut self, password: &str) -> Self {
         self.password = bcrypt::hash(password, bcrypt::DEFAULT_COST).unwrap();
         self
@@ -91,10 +98,11 @@ impl PlayerBuilder {
     }
 
     pub async fn store(self, pool: &PgPool) -> Result<Self, sqlx::Error> {
-        sqlx::query("INSERT INTO characters (id, name, password, config) VALUES ($1, $2, $3, $4)")
+        sqlx::query("INSERT INTO characters (id, name, password, mastery, config) VALUES ($1, $2, $3, $4, $5)")
             .bind(&self.id)
             .bind(&self.name)
             .bind(&self.password)
+            .bind(&self.mastery)
             .bind(Json(self.config))
             .execute(pool)
             .await?;
@@ -119,10 +127,11 @@ impl PlayerBuilder {
                 PlayerBundle {
                     keycard: self.role,
                     character: Character {
-                        id: self.id,
-                        name: self.name,
-                        description: self.description,
                         config: self.config,
+                        description: self.description,
+                        id: self.id,
+                        mastery: self.mastery,
+                        name: self.name,
                         state: CharacterState::Idle,
                     },
                 },

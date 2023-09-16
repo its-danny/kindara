@@ -185,7 +185,7 @@ fn get_exits(
     zone_tiles: &Children,
     tiles: &Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
 ) -> String {
-    let directions = vec!["n", "ne", "e", "se", "s", "sw", "w", "nw", "u", "d"];
+    let directions = ["n", "ne", "e", "se", "s", "sw", "w", "nw", "u", "d"];
     let mut exits: Vec<String> = vec![];
 
     for tile in zone_tiles.iter() {

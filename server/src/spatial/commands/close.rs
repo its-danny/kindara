@@ -54,10 +54,11 @@ pub fn close(
                 .iter()
                 .flat_map(|siblings| siblings.iter())
                 .filter_map(|sibling| doors.get(*sibling).ok())
-                .find(|(entity, depiction)| depiction.matches_query(entity, target)) else {
-                    outbox.send_text(client.id, "You can't close that.");
+                .find(|(entity, depiction)| depiction.matches_query(entity, target))
+            else {
+                outbox.send_text(client.id, "You can't close that.");
 
-                    continue;
+                continue;
             };
 
             let Ok(mut door) = doors_mut.get_mut(entity) else {

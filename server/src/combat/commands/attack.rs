@@ -9,6 +9,7 @@ use crate::{
     combat::components::{Attributes, HasAttacked, QueuedAttack, State},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
+    mastery::resources::Masteries,
     npc::components::Npc,
     player::{
         components::{Character, CharacterState, Client, Online},
@@ -69,6 +70,7 @@ pub fn attack(
     >,
     mut prompts: EventWriter<Prompt>,
     skills: Res<Skills>,
+    masteries: Res<Masteries>,
     tiles: Query<&Children, With<Tile>>,
 ) {
     for command in commands.iter() {
@@ -77,6 +79,14 @@ pub fn attack(
                 value_or_continue!(players
                     .iter_mut()
                     .find(|(_, _, _, c, _, _, _)| c.id == command.from));
+
+            let mastery = value_or_continue!(masteries.0.get(&character.mastery));
+
+            if !mastery.skills.contains(skill) {
+                outbox.send_text(client.id, "You don't know how to do that.");
+
+                continue;
+            }
 
             let Some(skill) = skills.0.get(skill.as_str()) else {
                 outbox.send_text(client.id, "You don't know how to do that.");
@@ -87,10 +97,11 @@ pub fn attack(
             if let Some(target) = target {
                 let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
-                let Some((entity, _, _,interactions)) = siblings
+                let Some((entity, _, _, interactions)) = siblings
                     .iter()
                     .filter_map(|sibling| npcs.get(*sibling).ok())
-                    .find(|(entity, depiction,_, _)| depiction.matches_query(entity, target)) else {
+                    .find(|(entity, depiction, _, _)| depiction.matches_query(entity, target))
+                else {
                     outbox.send_text(client.id, format!("You don't see a {target} here."));
 
                     continue;
@@ -114,9 +125,12 @@ pub fn attack(
             let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(entity).ok());
 
             let Some(mut state) = state else {
-                    outbox.send_text(client.id, format!("You can't attack the {}.", depiction.short_name));
+                outbox.send_text(
+                    client.id,
+                    format!("You can't attack the {}.", depiction.short_name),
+                );
 
-                    continue;
+                continue;
             };
 
             // If they've already attacked, queue the attack
@@ -142,13 +156,13 @@ pub fn attack(
             let quality = roller.roll().unwrap();
             let quality = quality.as_single().unwrap();
 
-            // Roll enemy defense
-            let roller = Roller::new("2d10").unwrap();
-            let defense = roller.roll().unwrap();
-            let defense = defense.as_single().unwrap();
+            // Roll enemy dodge
+            let roller = Roller::new("1d8").unwrap();
+            let dodge = roller.roll().unwrap();
+            let dodge = dodge.as_single().unwrap();
 
             // Check if attack hits
-            if quality.get_total() < defense.get_total() {
+            if quality.get_total() < dodge.get_total() {
                 outbox.send_text(
                     client.id,
                     format!("You attack the {}, but miss.", depiction.short_name),
@@ -156,6 +170,8 @@ pub fn attack(
 
                 continue;
             }
+
+            // TODO: Roll resistances
 
             // Apply skill actions
             for action in &skill.actions {
@@ -241,7 +257,7 @@ mod tests {
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
-        send_message(&mut app, client_id, "attack pazuzu");
+        send_message(&mut app, client_id, "punch pazuzu");
         app.update();
 
         let character = app.world.get::<Character>(player).unwrap();
@@ -266,10 +282,10 @@ mod tests {
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
-        send_message(&mut app, client_id, "attack pazuzu");
+        send_message(&mut app, client_id, "punch pazuzu");
         app.update();
 
-        send_message(&mut app, client_id, "attack");
+        send_message(&mut app, client_id, "punch");
         app.update();
 
         let character = app.world.get::<Character>(player).unwrap();
@@ -289,7 +305,7 @@ mod tests {
 
         let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
-        send_message(&mut app, client_id, "attack pazuzu");
+        send_message(&mut app, client_id, "punch pazuzu");
         app.update();
 
         let content = get_message_content(&mut app, client_id).unwrap();

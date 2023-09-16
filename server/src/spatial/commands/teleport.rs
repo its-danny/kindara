@@ -17,7 +17,7 @@ static REGEX: OnceLock<Regex> = OnceLock::new();
 pub fn handle_teleport(content: &str) -> Result<Command, ParseError> {
     let regex = REGEX.get_or_init(|| {
         Regex::new(
-            r#"^(teleport|tp)( (?P<zone>here|(.*?)))?( (\((?P<x>\d) (?P<y>\d) (?P<z>\d)\)))?$"#,
+            r"^(teleport|tp)( (?P<zone>here|(.*?)))?( (\((?P<x>\d) (?P<y>\d) (?P<z>\d)\)))?$",
         )
         .unwrap()
     });
@@ -76,21 +76,20 @@ pub fn teleport(
 
             let position = IVec3::new(*x, *y, *z);
 
-            let Some((zone, zone_tiles)) = zones.iter().find(|(z, _)| {
-                match zone {
-                    name if name == "here" => z.name == here.name,
-                    name => z.name.to_lowercase() == *name,
-                }
-            }) else  {
+            let Some((zone, zone_tiles)) = zones.iter().find(|(z, _)| match zone {
+                name if name == "here" => z.name == here.name,
+                name => z.name.to_lowercase() == *name,
+            }) else {
                 outbox.send_text(client.id, format!("Zone \"{}\" not found.", zone));
 
                 continue;
             };
 
             let Some(target) = zone_tiles.iter().find_map(|child| {
-                tiles.get(*child)
+                tiles
+                    .get(*child)
                     .ok()
-                    .filter(|( _, p, _)| p.0 == position)
+                    .filter(|(_, p, _)| p.0 == position)
                     .map(|(e, _, _)| e)
             }) else {
                 outbox.send_text(client.id, format!("No tile found at {}", position));
