@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use enum_as_inner::EnumAsInner;
 
 use super::config::CharacterConfig;
 
@@ -17,13 +16,6 @@ pub struct Character {
     pub description: Option<String>,
     pub config: CharacterConfig,
     pub mastery: String,
-    pub state: CharacterState,
-}
-
-#[derive(EnumAsInner, PartialEq)]
-pub enum CharacterState {
-    Idle,
-    Combat(Entity),
 }
 
 #[derive(Component)]

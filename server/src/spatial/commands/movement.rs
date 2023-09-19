@@ -5,8 +5,9 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
+    combat::components::InCombat,
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
-    player::components::{Character, Client, Online},
+    player::components::{Client, Online},
     spatial::{
         components::{Door, Position, Seated, Tile, Zone},
         utils::offset_for_direction,
@@ -32,18 +33,21 @@ pub fn movement(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, &Character, &Parent, Option<&Seated>), With<Online>>,
+    mut players: Query<
+        (Entity, &Client, Option<&InCombat>, &Parent, Option<&Seated>),
+        With<Online>,
+    >,
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
     doors: Query<&Door>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let (player, client, character, tile, seated) = value_or_continue!(players
+            let (player, client, in_combat, tile, seated) = value_or_continue!(players
                 .iter_mut()
                 .find(|(_, c, _, _, _)| c.id == command.from));
 
-            if character.state.is_combat() {
+            if in_combat.is_some() {
                 outbox.send_text(client.id, "You can't move while in combat.");
 
                 continue;

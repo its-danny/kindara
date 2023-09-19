@@ -26,7 +26,7 @@ use crate::{
     paint,
     player::{
         bundles::PlayerBundle,
-        components::{Character, CharacterState, Client, Online},
+        components::{Character, Client, Online},
         config::CharacterConfig,
     },
     spatial::components::{Spawn, Tile},
@@ -35,8 +35,6 @@ use crate::{
 };
 
 use super::components::{AuthState, Authenticating};
-
-static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
 
 #[derive(Component)]
 pub struct UserExistsTask(Task<Result<(bool, ClientId), sqlx::Error>>);
@@ -231,7 +229,6 @@ pub fn handle_authenticate_task(
                                 id: character.id,
                                 mastery: character.mastery,
                                 name: character.name,
-                                state: CharacterState::Idle,
                             },
                         },
                         CombatBundle {
@@ -296,6 +293,8 @@ pub fn handle_authenticate_task(
         }
     }
 }
+
+static NAME_REGEX: OnceLock<Regex> = OnceLock::new();
 
 fn name_is_valid(name: &str) -> Result<(), &'static str> {
     if name.len() < 3 || name.len() > 25 {

@@ -13,7 +13,7 @@ use crate::{
     keycard::Keycard,
     player::{
         bundles::PlayerBundle,
-        components::{Character, CharacterState, Client, Online},
+        components::{Character, Client, Online},
         config::CharacterConfig,
     },
 };
@@ -132,7 +132,6 @@ impl PlayerBuilder {
                         id: self.id,
                         mastery: self.mastery,
                         name: self.name,
-                        state: CharacterState::Idle,
                     },
                 },
                 CombatBundle {

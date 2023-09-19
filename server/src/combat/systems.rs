@@ -5,12 +5,12 @@ use crate::{
     combat::components::State,
     input::events::ProxyCommand,
     npc::components::Npc,
-    player::components::{Character, CharacterState, Client, Online},
+    player::components::{Client, Online},
     spatial::components::Tile,
     visual::components::Depiction,
 };
 
-use super::components::{HasAttacked, QueuedAttack};
+use super::components::{HasAttacked, InCombat, QueuedAttack};
 
 pub fn update_attack_timer(
     mut bevy: Commands,
@@ -42,7 +42,7 @@ pub fn on_npc_death(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
     npcs: Query<(Entity, &Depiction, &State, &Parent), With<Npc>>,
-    mut players: Query<(&Client, &mut Character), With<Online>>,
+    mut players: Query<(Entity, &Client, &InCombat), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
     for (entity, depiction, state, parent) in npcs.iter() {
@@ -51,10 +51,10 @@ pub fn on_npc_death(
         if state.health == 0 {
             let players_in_combat = players
                 .iter_mut()
-                .filter(|(_, character)| character.state == CharacterState::Combat(entity));
+                .filter(|(_, _, in_combat)| in_combat.0 == entity);
 
-            for (_, mut character) in players_in_combat {
-                character.state = CharacterState::Idle;
+            for (player, _, _) in players_in_combat {
+                bevy.entity(player).remove::<InCombat>();
             }
 
             let players_on_tile = siblings
@@ -66,7 +66,7 @@ pub fn on_npc_death(
                 })
                 .unwrap_or_default();
 
-            for (client, _) in players_on_tile {
+            for (_, client, _) in players_on_tile {
                 outbox.send_text(client.id, format!("{} has died.", depiction.name));
             }
 

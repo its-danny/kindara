@@ -6,13 +6,13 @@ use caith::Roller;
 use regex::Regex;
 
 use crate::{
-    combat::components::{Attributes, HasAttacked, QueuedAttack, State},
+    combat::components::{Attributes, HasAttacked, InCombat, QueuedAttack, State},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
     npc::components::Npc,
     player::{
-        components::{Character, CharacterState, Client, Online},
+        components::{Character, Client, Online},
         events::Prompt,
     },
     skills::resources::{Action, RelevantStat, Skills},
@@ -63,6 +63,7 @@ pub fn attack(
             &Attributes,
             &Client,
             &Parent,
+            Option<&InCombat>,
             Option<&HasAttacked>,
             Option<&mut QueuedAttack>,
         ),
@@ -75,10 +76,18 @@ pub fn attack(
 ) {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
-            let (player, mut character, attributes, client, tile, has_attacked, queued_attack) =
-                value_or_continue!(players
-                    .iter_mut()
-                    .find(|(_, _, _, c, _, _, _)| c.id == command.from));
+            let (
+                player,
+                character,
+                attributes,
+                client,
+                tile,
+                in_combat,
+                has_attacked,
+                queued_attack,
+            ) = value_or_continue!(players
+                .iter_mut()
+                .find(|(_, _, _, c, _, _, _, _)| c.id == command.from));
 
             let mastery = value_or_continue!(masteries.0.get(&character.mastery));
 
@@ -113,16 +122,16 @@ pub fn attack(
                     continue;
                 }
 
-                character.state = CharacterState::Combat(entity);
+                bevy.entity(player).insert(InCombat(entity));
             }
 
-            let CharacterState::Combat(entity) = character.state else {
+            let Some(InCombat(entity)) = in_combat else {
                 outbox.send_text(client.id, "You are not in combat.");
 
                 continue;
             };
 
-            let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(entity).ok());
+            let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(*entity).ok());
 
             let Some(mut state) = state else {
                 outbox.send_text(
@@ -260,9 +269,7 @@ mod tests {
         send_message(&mut app, client_id, "punch pazuzu");
         app.update();
 
-        let character = app.world.get::<Character>(player).unwrap();
-
-        assert!(character.state.is_combat());
+        assert!(app.world.get::<InCombat>(player).is_some());
     }
 
     #[test]
@@ -288,9 +295,7 @@ mod tests {
         send_message(&mut app, client_id, "punch");
         app.update();
 
-        let character = app.world.get::<Character>(player).unwrap();
-
-        assert!(character.state.is_combat());
+        assert!(app.world.get::<InCombat>(player).is_some());
     }
 
     #[test]
@@ -303,7 +308,7 @@ mod tests {
 
         NpcBuilder::new().name("Pazuzu").tile(tile).build(&mut app);
 
-        let (_, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
         send_message(&mut app, client_id, "punch pazuzu");
         app.update();
@@ -311,5 +316,6 @@ mod tests {
         let content = get_message_content(&mut app, client_id).unwrap();
 
         assert_eq!(content, "You can't attack the pazuzu.");
+        assert!(app.world.get::<InCombat>(player).is_none());
     }
 }
