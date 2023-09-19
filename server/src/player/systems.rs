@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
-    combat::components::{Attributes, State},
+    combat::components::{Attributes, InCombat, State},
     net::telnet::NAWS,
     npc::components::Npc,
     paint, value_or_continue,
@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    components::{Character, CharacterState, Client, Online},
+    components::{Client, Online},
     events::Prompt,
     resources::PromptTimer,
 };
@@ -38,11 +38,11 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
 pub fn send_prompt(
     mut events: EventReader<Prompt>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Character, &Attributes, &State)>,
+    players: Query<(&Client, &Attributes, &State, Option<&InCombat>)>,
     npcs: Query<&Depiction, With<Npc>>,
 ) {
     for prompt in events.iter() {
-        let (client, character, attributes, state) =
+        let (client, attributes, state, in_combat) =
             value_or_continue!(players.iter().find(|(c, _, _, _)| c.id == prompt.client_id));
 
         let mut parts: Vec<String> = vec![];
@@ -53,10 +53,10 @@ pub fn send_prompt(
             attributes.max_health()
         ));
 
-        let target = match character.state {
-            CharacterState::Idle => None,
-            CharacterState::Combat(target) => {
-                if let Ok(depiction) = npcs.get(target) {
+        let target = match in_combat {
+            None => None,
+            Some(InCombat(target)) => {
+                if let Ok(depiction) = npcs.get(*target) {
                     Some(depiction.name.clone())
                 } else {
                     None

@@ -51,6 +51,9 @@ impl State {
     }
 }
 
+#[derive(Component)]
+pub struct InCombat(pub Entity);
+
 /// Added to an entity when it has attacked to prevent acting faster
 /// than their attack speed. The timer is handled via the `update_attack_timer` system.
 #[derive(Component)]
