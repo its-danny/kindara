@@ -104,7 +104,7 @@ pub fn take(
             }
 
             if items_found.iter().any(|(_, _, interactable, _)| {
-                interactable.map_or(true, |i| !i.0.contains(&Interaction::Take))
+                !interactable.map_or(false, |i| i.0.contains(&Interaction::Take))
             }) {
                 outbox.send_text(client.id, "You can't take that.");
 
