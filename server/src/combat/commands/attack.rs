@@ -116,7 +116,7 @@ pub fn attack(
                     continue;
                 };
 
-                if interactions.map_or(true, |i| !i.0.contains(&Interaction::Attack)) {
+                if !interactions.map_or(false, |i| i.0.contains(&Interaction::Attack)) {
                     outbox.send_text(client.id, format!("You can't attack the {target}."));
 
                     continue;
