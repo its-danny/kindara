@@ -46,8 +46,8 @@ pub struct State {
 
 impl State {
     /// Applies damage to the entity's health, saturating at 0.
-    pub fn apply_damage(&mut self, damage: i32) {
-        self.health = self.health.saturating_sub(damage as u32);
+    pub fn apply_damage(&mut self, damage: u32) {
+        self.health = self.health.saturating_sub(damage);
     }
 }
 

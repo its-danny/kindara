@@ -2,11 +2,13 @@ use std::sync::OnceLock;
 
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
-use caith::Roller;
 use regex::Regex;
 
 use crate::{
-    combat::components::{Attributes, HasAttacked, InCombat, QueuedAttack, State},
+    combat::{
+        components::{Attributes, HasAttacked, InCombat, QueuedAttack, State},
+        rolls::{roll_for_attack_quality, roll_for_dodge, roll_total},
+    },
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
@@ -160,18 +162,11 @@ pub fn attack(
                 continue;
             }
 
-            // Roll for attack quality
-            let roller = Roller::new("2d10").unwrap();
-            let quality = roller.roll().unwrap();
-            let quality = quality.as_single().unwrap();
-
-            // Roll enemy dodge
-            let roller = Roller::new("1d8").unwrap();
-            let dodge = roller.roll().unwrap();
-            let dodge = dodge.as_single().unwrap();
+            let quality = roll_for_attack_quality();
+            let dodge = roll_for_dodge();
 
             // Check if attack hits
-            if quality.get_total() < dodge.get_total() {
+            if quality < dodge {
                 outbox.send_text(
                     client.id,
                     format!("You attack the {}, but miss.", depiction.short_name),
@@ -186,22 +181,13 @@ pub fn attack(
             for action in &skill.actions {
                 match action {
                     Action::ApplyDamage(roll) => {
-                        let roller = Roller::new(roll).unwrap();
-                        let damage = roller.roll().unwrap();
-                        let result = damage.as_single().unwrap();
-                        let mut damage = result.get_total() as i32;
+                        let mut damage = roll_total(roll) as u32;
 
-                        match &skill.stat {
-                            RelevantStat::Strength => {
-                                damage += attributes.strength as i32;
-                            }
-                            RelevantStat::Dexterity => {
-                                damage += attributes.dexterity as i32;
-                            }
-                            RelevantStat::Intelligence => {
-                                damage += attributes.intelligence as i32;
-                            }
-                        }
+                        damage += match &skill.stat {
+                            RelevantStat::Strength => attributes.strength,
+                            RelevantStat::Dexterity => attributes.dexterity,
+                            RelevantStat::Intelligence => attributes.intelligence,
+                        };
 
                         state.apply_damage(damage);
                     }
