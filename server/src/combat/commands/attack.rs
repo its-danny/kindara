@@ -125,6 +125,7 @@ pub fn attack(
                 }
 
                 bevy.entity(player).insert(InCombat(entity));
+                bevy.entity(entity).insert(InCombat(player));
             }
 
             let Some(InCombat(entity)) = in_combat else {
@@ -243,7 +244,7 @@ mod tests {
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
 
-        NpcBuilder::new()
+        let npc = NpcBuilder::new()
             .name("Pazuzu")
             .interactions(vec![Interaction::Attack])
             .tile(tile)
@@ -256,6 +257,7 @@ mod tests {
         app.update();
 
         assert!(app.world.get::<InCombat>(player).is_some());
+        assert!(app.world.get::<InCombat>(npc).is_some());
     }
 
     #[test]

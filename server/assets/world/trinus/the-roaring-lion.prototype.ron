@@ -27,7 +27,9 @@
                             name: "jWtPbu",
                             schematics: {
                                 "server::npc::bundles::NpcBundle": (
-                                    npc: (),
+                                    npc: (
+                                        skills: [],
+                                    ),
                                     depiction: (
                                         name: "Barkeep",
                                         short_name: "barkeep",

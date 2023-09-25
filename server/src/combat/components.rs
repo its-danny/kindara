@@ -51,7 +51,7 @@ impl State {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct InCombat(pub Entity);
 
 /// Added to an entity when it has attacked to prevent acting faster

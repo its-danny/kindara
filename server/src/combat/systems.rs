@@ -15,11 +15,16 @@ use super::components::{HasAttacked, InCombat, QueuedAttack};
 pub fn update_attack_timer(
     mut bevy: Commands,
     mut proxy: EventWriter<ProxyCommand>,
-    mut timers: Query<(Entity, &Client, &mut HasAttacked, Option<&QueuedAttack>)>,
+    mut timers: Query<(
+        Entity,
+        &mut HasAttacked,
+        Option<&QueuedAttack>,
+        Option<&Client>,
+    )>,
     time: Res<Time>,
     mut outbox: EventWriter<Outbox>,
 ) {
-    for (entity, client, mut has_attacked, queued_attack) in timers.iter_mut() {
+    for (entity, mut has_attacked, queued_attack, client) in timers.iter_mut() {
         has_attacked.timer.tick(time.delta());
 
         if has_attacked.timer.finished() {
@@ -31,7 +36,9 @@ pub fn update_attack_timer(
                     bevy.entity(entity).remove::<QueuedAttack>();
                 }
                 None => {
-                    outbox.send_text(client.id, "You are ready attack again.");
+                    if let Some(client) = client {
+                        outbox.send_text(client.id, "You are ready attack again.");
+                    }
                 }
             }
         }
