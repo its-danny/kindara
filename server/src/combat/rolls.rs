@@ -1,17 +1,46 @@
 use caith::Roller;
 
-pub fn roll_total(roll: &str) -> i64 {
-    let roller = Roller::new(roll).unwrap();
+use crate::skills::resources::{Action, RelevantStat, Skill};
+
+use super::components::{Attributes, State};
+
+pub enum HitResponse {
+    Missed,
+    Hit,
+}
+
+pub fn roll_hit() -> HitResponse {
+    let roller = Roller::new("2d10").unwrap();
     let roll = roller.roll().unwrap();
-    let result = roll.as_single().unwrap();
+    let quality = roll.as_single().unwrap().get_total();
 
-    result.get_total()
+    let roller = Roller::new("1d10").unwrap();
+    let roll = roller.roll().unwrap();
+    let dodge = roll.as_single().unwrap().get_total();
+
+    if quality < dodge {
+        HitResponse::Missed
+    } else {
+        HitResponse::Hit
+    }
 }
 
-pub fn roll_for_attack_quality() -> i64 {
-    roll_total("2d10")
-}
+pub fn apply_actions(skill: &Skill, attributes: &Attributes, state: &mut State) {
+    for action in &skill.actions {
+        match action {
+            Action::ApplyDamage(roll) => {
+                let roller = Roller::new(roll).unwrap();
+                let roll = roller.roll().unwrap();
+                let mut damage = roll.as_single().unwrap().get_total() as u32;
 
-pub fn roll_for_dodge() -> i64 {
-    roll_total("1d10")
+                damage += match &skill.stat {
+                    RelevantStat::Strength => attributes.strength,
+                    RelevantStat::Dexterity => attributes.dexterity,
+                    RelevantStat::Intelligence => attributes.intelligence,
+                };
+
+                state.apply_damage(damage);
+            }
+        }
+    }
 }
