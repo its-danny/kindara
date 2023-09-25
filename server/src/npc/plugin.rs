@@ -12,6 +12,9 @@ impl Plugin for NpcPlugin {
             .register_type::<Npc>()
             .register_type::<EnemySpawner>();
 
-        app.add_systems(Update, handle_enemy_spawner);
+        app.add_systems(
+            Update,
+            (handle_enemy_spawner, on_enter_combat, attack_when_able),
+        );
     }
 }

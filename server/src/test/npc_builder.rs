@@ -22,6 +22,7 @@ pub struct NpcBuilder {
     #[dummy(expr = "None")]
     tile: Option<Entity>,
     combat: bool,
+    skills: Vec<String>,
 }
 
 #[allow(dead_code)]
@@ -65,9 +66,16 @@ impl NpcBuilder {
         self
     }
 
+    pub fn skills(mut self, skills: Vec<&str>) -> Self {
+        self.skills = skills.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
     pub fn build(self, app: &mut App) -> Entity {
         let mut entity = app.world.spawn(NpcBundle {
-            npc: Npc,
+            npc: Npc {
+                skills: self.skills,
+            },
             depiction: Depiction {
                 name: self.name,
                 short_name: self.short_name,

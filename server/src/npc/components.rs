@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
 #[derive(Component, Reflect)]
-pub struct Npc;
+pub struct Npc {
+    pub skills: Vec<String>,
+}
 
 #[derive(Component, Schematic, Reflect)]
 #[reflect(Schematic)]
