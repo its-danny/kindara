@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     combat::{
         components::{Attributes, HasAttacked, InCombat, QueuedAttack, State},
-        rolls::{roll_for_attack_quality, roll_for_dodge, roll_total},
+        rolls::{apply_actions, roll_hit, HitResponse},
     },
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
@@ -17,7 +17,7 @@ use crate::{
         components::{Character, Client, Online},
         events::Prompt,
     },
-    skills::resources::{Action, RelevantStat, Skills},
+    skills::resources::Skills,
     spatial::components::Tile,
     value_or_continue,
     visual::components::Depiction,
@@ -163,51 +163,31 @@ pub fn attack(
                 continue;
             }
 
-            let quality = roll_for_attack_quality();
-            let dodge = roll_for_dodge();
+            match roll_hit() {
+                HitResponse::Missed => {
+                    outbox.send_text(
+                        client.id,
+                        format!("You attack the {} but miss.", depiction.short_name),
+                    );
+                }
+                HitResponse::Hit => {
+                    apply_actions(skill, attributes, &mut state);
 
-            // Check if attack hits
-            if quality < dodge {
-                outbox.send_text(
-                    client.id,
-                    format!("You attack the {}, but miss.", depiction.short_name),
-                );
+                    bevy.entity(player).insert(HasAttacked {
+                        timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
+                    });
 
-                continue;
-            }
+                    outbox.send_text(
+                        client.id,
+                        format!(
+                            "You attack the {}. It's health is now {}.",
+                            depiction.short_name, state.health
+                        ),
+                    );
 
-            // TODO: Roll resistances
-
-            // Apply skill actions
-            for action in &skill.actions {
-                match action {
-                    Action::ApplyDamage(roll) => {
-                        let mut damage = roll_total(roll) as u32;
-
-                        damage += match &skill.stat {
-                            RelevantStat::Strength => attributes.strength,
-                            RelevantStat::Dexterity => attributes.dexterity,
-                            RelevantStat::Intelligence => attributes.intelligence,
-                        };
-
-                        state.apply_damage(damage);
-                    }
+                    prompts.send(Prompt::new(client.id));
                 }
             }
-
-            bevy.entity(player).insert(HasAttacked {
-                timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-            });
-
-            outbox.send_text(
-                client.id,
-                format!(
-                    "You attack the {}. It's health is now {}.",
-                    depiction.short_name, state.health
-                ),
-            );
-
-            prompts.send(Prompt::new(client.id));
         }
     }
 }
