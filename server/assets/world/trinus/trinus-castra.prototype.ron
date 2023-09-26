@@ -10,7 +10,7 @@
             value: Inline((
                 name: "lKLXk7",
                 schematics: {
-                    "server::spatial::components::Spawn": (),
+                    "server::spatial::components::LifeSpawn": (),
                     "server::spatial::bundles::TileBundle": (
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (

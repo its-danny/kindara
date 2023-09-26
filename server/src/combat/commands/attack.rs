@@ -145,7 +145,6 @@ pub fn attack(
                 continue;
             };
 
-            // If they've already attacked, queue the attack
             if has_attacked.is_some() {
                 match queued_attack {
                     Some(mut queued_attack) => {
@@ -173,10 +172,6 @@ pub fn attack(
                 HitResponse::Hit => {
                     apply_actions(skill, attributes, &mut state);
 
-                    bevy.entity(player).insert(HasAttacked {
-                        timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-                    });
-
                     outbox.send_text(
                         client.id,
                         format!(
@@ -184,10 +179,14 @@ pub fn attack(
                             depiction.short_name, state.health
                         ),
                     );
-
-                    prompts.send(Prompt::new(client.id));
                 }
             }
+
+            bevy.entity(player).insert(HasAttacked {
+                timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
+            });
+
+            prompts.send(Prompt::new(client.id));
         }
     }
 }

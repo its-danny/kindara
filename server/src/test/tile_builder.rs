@@ -8,7 +8,7 @@ use fake::{
 use crate::{
     spatial::{
         bundles::TileBundle,
-        components::{Position, Spawn, Tile, Zone},
+        components::{LifeSpawn, Position, Tile, Zone},
     },
     visual::components::Sprite,
 };
@@ -94,7 +94,7 @@ impl TileBuilder {
         entity.set_parent(zone);
 
         if self.is_spawn {
-            entity.insert(Spawn);
+            entity.insert(LifeSpawn);
         }
 
         entity.id()

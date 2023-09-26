@@ -19,10 +19,17 @@ pub struct Tile {
     pub description: String,
 }
 
-/// A marker component that indicates an entity is a spawn point.
+/// A marker component that indicates an entity is a spawn point for
+/// a living player.
 #[derive(Debug, Component, Schematic, Reflect)]
 #[reflect(Schematic)]
-pub struct Spawn;
+pub struct LifeSpawn;
+
+/// A marker component that indicates an entity is a spawn point for
+/// after a player dies.
+#[derive(Debug, Component, Schematic, Reflect)]
+#[reflect(Schematic)]
+pub struct DeathSpawn;
 
 /// A component that marks an entity as a transition to another zone.
 #[derive(Debug, Component, Schematic, Reflect)]

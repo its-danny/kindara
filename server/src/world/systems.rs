@@ -16,6 +16,10 @@ use crate::{
 
 use super::resources::{SaveTimer, WorldState, WorldStateCharacter, WorldTime};
 
+pub fn spawn_abyss(mut commands: ProtoCommands) {
+    commands.spawn("world.abyss");
+}
+
 pub fn spawn_trinus_castra(mut commands: ProtoCommands) {
     commands.spawn("world.trinus.trinus-castra");
 }

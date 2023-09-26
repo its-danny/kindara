@@ -45,10 +45,6 @@ pub fn on_enter_combat(
             HitResponse::Hit => {
                 apply_actions(skill, attributes, &mut state);
 
-                bevy.entity(entity).insert(HasAttacked {
-                    timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-                });
-
                 outbox.send_text(
                     client.id,
                     format!(
@@ -56,10 +52,14 @@ pub fn on_enter_combat(
                         depiction.name, state.health
                     ),
                 );
-
-                prompts.send(Prompt::new(client.id));
             }
         }
+
+        bevy.entity(entity).insert(HasAttacked {
+            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
+        });
+
+        prompts.send(Prompt::new(client.id));
     }
 }
 
@@ -91,10 +91,6 @@ pub fn attack_when_able(
             HitResponse::Hit => {
                 apply_actions(skill, attributes, &mut state);
 
-                bevy.entity(entity).insert(HasAttacked {
-                    timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-                });
-
                 outbox.send_text(
                     client.id,
                     format!(
@@ -102,10 +98,14 @@ pub fn attack_when_able(
                         depiction.name, state.health
                     ),
                 );
-
-                prompts.send(Prompt::new(client.id));
             }
         }
+
+        bevy.entity(entity).insert(HasAttacked {
+            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
+        });
+
+        prompts.send(Prompt::new(client.id));
     }
 }
 
