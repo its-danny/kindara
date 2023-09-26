@@ -30,6 +30,7 @@ impl Plugin for WorldPlugin {
         app.add_systems(
             Update,
             (
+                spawn_abyss.run_if(prototype_ready("world.abyss").and_then(run_once())),
                 spawn_trinus_castra
                     .run_if(prototype_ready("world.trinus.trinus-castra").and_then(run_once())),
                 spawn_the_roaring_lion

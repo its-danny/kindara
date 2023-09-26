@@ -29,7 +29,7 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
-    spatial::components::{Spawn, Tile},
+    spatial::components::{LifeSpawn, Tile},
     value_or_continue,
     world::resources::WorldState,
 };
@@ -188,7 +188,7 @@ pub fn handle_authenticate_task(
     mut tasks: Query<(Entity, &mut AuthenticateTask)>,
     online_characters: Query<(&Client, &Character), With<Online>>,
     server: Res<Server>,
-    spawn_tiles: Query<Entity, (With<Tile>, With<Spawn>)>,
+    spawn_tiles: Query<Entity, (With<Tile>, With<LifeSpawn>)>,
     tiles: Query<(Entity, &Name), With<Tile>>,
     world_state: Res<WorldState>,
 ) {

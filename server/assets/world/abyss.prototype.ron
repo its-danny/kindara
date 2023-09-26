@@ -1,0 +1,50 @@
+(
+    name: "world.abyss",
+    schematics: {
+        "server::spatial::components::Zone": (
+            name: "Abyss",
+        ),
+    },
+    children: [
+        (
+            value: Inline((
+                name: "8Yh1t5",
+                schematics: {
+                    "server::spatial::components::DeathSpawn": (),
+                    "server::spatial::bundles::TileBundle": (
+                        position: (IVec3 ( x: 0, y: 0, z: 0 )),
+                        tile: (
+                            name: "Among a Pool",
+                            description: "In this vast, shadowed cavern, a lone <fg.transition>pool</> exists in perpetual twilight, amid silent ruins whispering forgotten sorrow. The realm is thick with ashen fog and the quiet echoes of abandoned spirits, weaving an aura of solitude, overseen by the shadows of silent guardians.",
+                        ),
+                        sprite: (
+                            character: "=",
+                        ),
+                    ),
+                },
+                children: [
+                    (
+                        value: Inline((
+                            name: "UTSw9a",
+                            schematics: {
+                                "server::spatial::bundles::TransitionBundle": (
+                                    transition: (
+                                        zone: "Trinus Castra",
+                                        position: IVec3 ( x: 0, y: 0, z: 0 ),
+                                    ),
+                                    depiction: (
+                                        name: "A pool",
+                                        short_name: "pool",
+                                        description: "The pool is a still, spectral body of water, its surface like a sheet of obsidian, unbroken and calm, reflecting the whispering shadows around it.",
+                                        tags: ["pool", "water"],
+                                        visible: false,
+                                    ),
+                                ),
+                            },
+                        )),
+                    ),
+                ],
+            )),
+        ),
+    ],
+),

@@ -3,14 +3,14 @@ use bevy_nest::prelude::*;
 
 use crate::{
     combat::components::State,
-    input::events::ProxyCommand,
+    input::events::{Command, ParsedCommand, ProxyCommand},
     npc::components::Npc,
     player::components::{Client, Online},
-    spatial::components::Tile,
+    spatial::components::{DeathSpawn, Tile},
     visual::components::Depiction,
 };
 
-use super::components::{HasAttacked, InCombat, QueuedAttack};
+use super::components::{Attributes, HasAttacked, InCombat, QueuedAttack};
 
 pub fn update_attack_timer(
     mut bevy: Commands,
@@ -78,6 +78,42 @@ pub fn on_npc_death(
             }
 
             bevy.entity(entity).despawn();
+        }
+    }
+}
+
+pub fn on_player_death(
+    mut bevy: Commands,
+    mut npcs: Query<(Entity, &InCombat), With<Npc>>,
+    mut outbox: EventWriter<Outbox>,
+    mut proxy: EventWriter<ProxyCommand>,
+    mut players: Query<(Entity, &Client, &mut State, &Attributes), (With<Online>, With<InCombat>)>,
+    spawn_tiles: Query<Entity, With<DeathSpawn>>,
+) {
+    for (player, client, mut state, attributes) in players.iter_mut() {
+        if state.health == 0 {
+            outbox.send_text(client.id, "You have died.");
+
+            bevy.entity(player).remove::<InCombat>();
+            bevy.entity(player).remove::<QueuedAttack>();
+
+            let npcs_in_combat = npcs
+                .iter_mut()
+                .filter(|(_, in_combat)| in_combat.0 == player);
+
+            for (npc, _) in npcs_in_combat {
+                bevy.entity(npc).remove::<InCombat>();
+            }
+
+            if let Some(tile) = spawn_tiles.iter().next() {
+                bevy.entity(player).set_parent(tile);
+                state.health = attributes.max_health();
+
+                proxy.send(ProxyCommand(ParsedCommand {
+                    from: client.id,
+                    command: Command::Look(None),
+                }));
+            }
         }
     }
 }
