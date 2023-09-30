@@ -5,10 +5,7 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    combat::{
-        components::{Attributes, HasAttacked, InCombat, QueuedAttack, State},
-        rolls::{apply_actions, roll_hit, HitResponse},
-    },
+    combat::components::{Attributes, HasAttacked, HitError, InCombat, QueuedAttack, State},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
@@ -78,13 +75,15 @@ pub fn attack(
 ) {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
+            let mut first_attack: Option<InCombat> = None;
+
             let (
                 player,
                 character,
                 attributes,
                 client,
                 tile,
-                in_combat,
+                mut in_combat,
                 has_attacked,
                 queued_attack,
             ) = value_or_continue!(players
@@ -124,17 +123,33 @@ pub fn attack(
                     continue;
                 }
 
-                bevy.entity(player).insert(InCombat(entity));
-                bevy.entity(entity).insert(InCombat(player));
+                first_attack = Some(InCombat {
+                    target: entity,
+                    distance: skill.distance,
+                });
+
+                bevy.entity(player).insert(InCombat {
+                    target: entity,
+                    distance: skill.distance,
+                });
+
+                bevy.entity(entity).insert(InCombat {
+                    target: player,
+                    distance: skill.distance,
+                });
             }
 
-            let Some(InCombat(entity)) = in_combat else {
+            if first_attack.is_some() {
+                in_combat = first_attack.as_ref();
+            }
+
+            let Some(in_combat) = in_combat else {
                 outbox.send_text(client.id, "You are not in combat.");
 
                 continue;
             };
 
-            let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(*entity).ok());
+            let (_, depiction, state, _) = value_or_continue!(npcs.get_mut(in_combat.target).ok());
 
             let Some(mut state) = state else {
                 outbox.send_text(
@@ -162,16 +177,8 @@ pub fn attack(
                 continue;
             }
 
-            match roll_hit() {
-                HitResponse::Missed => {
-                    outbox.send_text(
-                        client.id,
-                        format!("You attack the {} but miss.", depiction.short_name),
-                    );
-                }
-                HitResponse::Hit => {
-                    apply_actions(skill, attributes, &mut state);
-
+            match in_combat.attack(&mut bevy, player, skill, attributes, &mut state) {
+                Ok(_) => {
                     outbox.send_text(
                         client.id,
                         format!(
@@ -180,11 +187,13 @@ pub fn attack(
                         ),
                     );
                 }
+                Err(HitError::Missed) => {
+                    outbox.send_text(
+                        client.id,
+                        format!("You attack the {} but miss.", depiction.short_name),
+                    );
+                }
             }
-
-            bevy.entity(player).insert(HasAttacked {
-                timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-            });
 
             prompts.send(Prompt::new(client.id));
         }

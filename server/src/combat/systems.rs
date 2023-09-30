@@ -58,7 +58,7 @@ pub fn on_npc_death(
         if state.health == 0 {
             let players_in_combat = players
                 .iter_mut()
-                .filter(|(_, _, in_combat)| in_combat.0 == entity);
+                .filter(|(_, _, in_combat)| in_combat.target == entity);
 
             for (player, _, _) in players_in_combat {
                 bevy.entity(player).remove::<InCombat>();
@@ -99,7 +99,7 @@ pub fn on_player_death(
 
             let npcs_in_combat = npcs
                 .iter_mut()
-                .filter(|(_, in_combat)| in_combat.0 == player);
+                .filter(|(_, in_combat)| in_combat.target == player);
 
             for (npc, _) in npcs_in_combat {
                 bevy.entity(npc).remove::<InCombat>();

@@ -1,6 +1,11 @@
 use bevy::prelude::*;
+use caith::Roller;
+use serde::Deserialize;
 
-use crate::input::events::ParsedCommand;
+use crate::{
+    input::events::ParsedCommand,
+    skills::resources::{Action, RelevantStat, Skill},
+};
 
 /// The base attributes of an entity that can do combat.
 #[derive(Component, Reflect, Clone)]
@@ -51,8 +56,91 @@ impl State {
     }
 }
 
-#[derive(Component, Debug)]
-pub struct InCombat(pub Entity);
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub enum Distance {
+    Near,
+    Far,
+}
+
+#[derive(Component)]
+pub struct InCombat {
+    pub target: Entity,
+    pub distance: Distance,
+}
+
+pub enum HitError {
+    Missed,
+}
+
+impl InCombat {
+    /// Attacks the target entity with the given skill.
+    pub fn attack(
+        &self,
+        bevy: &mut Commands,
+        attacker: Entity,
+        skill: &Skill,
+        attacker_attributes: &Attributes,
+        target_state: &mut State,
+    ) -> Result<(), HitError> {
+        self.add_attack_timer(bevy, attacker, attacker_attributes);
+
+        match self.roll_hit() {
+            Ok(_) => {
+                self.apply_actions(skill, attacker_attributes, target_state);
+
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    fn roll_hit(&self) -> Result<(), HitError> {
+        let roller = Roller::new("2d10").unwrap();
+        let roll = roller.roll().unwrap();
+        let quality = roll.as_single().unwrap().get_total();
+
+        let roller = Roller::new("1d10").unwrap();
+        let roll = roller.roll().unwrap();
+        let dodge = roll.as_single().unwrap().get_total();
+
+        if quality < dodge {
+            Err(HitError::Missed)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn apply_actions(
+        &self,
+        skill: &Skill,
+        attacker_attributes: &Attributes,
+        target_state: &mut State,
+    ) {
+        for action in &skill.actions {
+            match action {
+                Action::ApplyDamage(roll) => {
+                    let roller = Roller::new(roll).unwrap();
+                    let roll = roller.roll().unwrap();
+                    let mut damage = roll.as_single().unwrap().get_total() as u32;
+
+                    damage += match &skill.stat {
+                        RelevantStat::Strength => attacker_attributes.strength,
+                        RelevantStat::Dexterity => attacker_attributes.dexterity,
+                        RelevantStat::Intelligence => attacker_attributes.intelligence,
+                    };
+
+                    target_state.apply_damage(damage);
+                }
+            }
+        }
+    }
+
+    fn add_attack_timer(&self, bevy: &mut Commands, attacker: Entity, attributes: &Attributes) {
+        bevy.entity(attacker).insert(HasAttacked {
+            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
+        });
+    }
+}
 
 /// Added to an entity when it has attacked to prevent acting faster
 /// than their attack speed. The timer is handled via the `update_attack_timer` system.

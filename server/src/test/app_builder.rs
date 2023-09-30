@@ -3,6 +3,7 @@ use bevy_nest::prelude::*;
 use sqlx::PgPool;
 
 use crate::{
+    combat::components::Distance,
     db::pool::DatabasePool,
     input::{
         events::{ParsedCommand, ProxyCommand},
@@ -39,6 +40,7 @@ impl AppBuilder {
             Skill {
                 name: "Punch".into(),
                 stat: RelevantStat::Strength,
+                distance: Distance::Near,
                 actions: vec![Action::ApplyDamage("2d10".into())],
             },
         );

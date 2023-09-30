@@ -1,6 +1,8 @@
 use bevy::{prelude::*, utils::HashMap};
 use serde::Deserialize;
 
+use crate::combat::components::Distance;
+
 #[derive(Debug, Deserialize)]
 pub enum RelevantStat {
     Strength,
@@ -18,6 +20,7 @@ pub enum Action {
 pub struct Skill {
     pub name: String,
     pub stat: RelevantStat,
+    pub distance: Distance,
     pub actions: Vec<Action>,
 }
 
