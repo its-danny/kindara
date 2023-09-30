@@ -4,10 +4,7 @@ use bevy_proto::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::{
-        components::{Attributes, HasAttacked, InCombat, State},
-        rolls::{apply_actions, roll_hit, HitResponse},
-    },
+    combat::components::{Attributes, HasAttacked, HitError, InCombat, State},
     player::{
         components::{Client, Online},
         events::Prompt,
@@ -29,22 +26,14 @@ pub fn on_enter_combat(
     skills: Res<Skills>,
 ) {
     for (entity, npc, depiction, attributes, in_combat) in npcs.iter() {
-        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.0).ok());
+        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.target).ok());
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
         let skill = value_or_continue!(skills.0.get(&npc.skills[index]));
 
-        match roll_hit() {
-            HitResponse::Missed => {
-                outbox.send_text(
-                    client.id,
-                    format!("{} attacks you but misses.", depiction.name),
-                );
-            }
-            HitResponse::Hit => {
-                apply_actions(skill, attributes, &mut state);
-
+        match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
+            Ok(_) => {
                 outbox.send_text(
                     client.id,
                     format!(
@@ -53,11 +42,13 @@ pub fn on_enter_combat(
                     ),
                 );
             }
+            Err(HitError::Missed) => {
+                outbox.send_text(
+                    client.id,
+                    format!("{} attacks you but misses.", depiction.name),
+                );
+            }
         }
-
-        bevy.entity(entity).insert(HasAttacked {
-            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-        });
 
         prompts.send(Prompt::new(client.id));
     }
@@ -75,22 +66,14 @@ pub fn attack_when_able(
     for entity in ready.iter() {
         let (entity, npc, depiction, attributes, in_combat) =
             value_or_continue!(npcs.get(entity).ok());
-        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.0).ok());
+        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.target).ok());
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
         let skill = value_or_continue!(skills.0.get(&npc.skills[index]));
 
-        match roll_hit() {
-            HitResponse::Missed => {
-                outbox.send_text(
-                    client.id,
-                    format!("{} attacks you but misses.", depiction.name),
-                );
-            }
-            HitResponse::Hit => {
-                apply_actions(skill, attributes, &mut state);
-
+        match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
+            Ok(_) => {
                 outbox.send_text(
                     client.id,
                     format!(
@@ -99,11 +82,13 @@ pub fn attack_when_able(
                     ),
                 );
             }
+            Err(HitError::Missed) => {
+                outbox.send_text(
+                    client.id,
+                    format!("{} attacks you but misses.", depiction.name),
+                );
+            }
         }
-
-        bevy.entity(entity).insert(HasAttacked {
-            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-        });
 
         prompts.send(Prompt::new(client.id));
     }

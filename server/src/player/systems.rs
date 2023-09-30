@@ -55,7 +55,7 @@ pub fn send_prompt(
 
         let target = match in_combat {
             None => None,
-            Some(InCombat(target)) => {
+            Some(InCombat { target, .. }) => {
                 if let Ok(depiction) = npcs.get(*target) {
                     Some(depiction.name.clone())
                 } else {
