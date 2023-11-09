@@ -5,8 +5,9 @@ use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
-    combat::components::InCombat,
+    combat::components::{Attributes, InCombat, QueuedAttack},
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
+    npc::components::Npc,
     player::components::{Client, Online},
     spatial::{
         components::{Door, Position, Seated, Tile, Zone},
@@ -34,23 +35,36 @@ pub fn movement(
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<
-        (Entity, &Client, Option<&InCombat>, &Parent, Option<&Seated>),
+        (
+            Entity,
+            &Client,
+            Option<&InCombat>,
+            Option<&QueuedAttack>,
+            &Parent,
+            Option<&Seated>,
+        ),
         With<Online>,
     >,
+    npc_attrs: Query<&Attributes, With<Npc>>,
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
     doors: Query<&Door>,
 ) {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let (player, client, in_combat, tile, seated) = value_or_continue!(players
-                .iter_mut()
-                .find(|(_, c, _, _, _)| c.id == command.from));
+            let (player, client, in_combat, queued_attack, tile, seated) =
+                value_or_continue!(players
+                    .iter_mut()
+                    .find(|(_, c, _, _, _, _)| c.id == command.from));
 
-            if in_combat.is_some() {
-                outbox.send_text(client.id, "You can't move while in combat.");
+            if let Some(in_combat) = in_combat {
+                let attrs = value_or_continue!(npc_attrs.get(in_combat.target).ok());
 
-                continue;
+                if !in_combat.can_move(attrs, &queued_attack) {
+                    outbox.send_text(client.id, "You failed to get away.");
+
+                    continue;
+                }
             }
 
             let (_, position, zone, siblings) = value_or_continue!(tiles.get(tile.get()).ok());

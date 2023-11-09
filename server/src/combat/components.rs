@@ -22,6 +22,8 @@ pub struct Attributes {
     pub dexterity: u32,
     /// Modifier for magic attacks.
     pub intelligence: u32,
+    /// How likely an entity is to flee from you.
+    pub dominance: u32,
 }
 
 impl Default for Attributes {
@@ -33,6 +35,7 @@ impl Default for Attributes {
             strength: 0,
             dexterity: 0,
             intelligence: 0,
+            dominance: 0,
         }
     }
 }
@@ -139,6 +142,28 @@ impl InCombat {
         bevy.entity(attacker).insert(HasAttacked {
             timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
         });
+    }
+
+    // You can move if you have no attack queued and if you roll a 1d10 greater than
+    // the enemy's 1d10 + their dominance.
+    pub fn can_move(
+        &self,
+        target_attributes: &Attributes,
+        queued_attack: &Option<&QueuedAttack>,
+    ) -> bool {
+        if queued_attack.is_some() {
+            return false;
+        }
+
+        let attacker_roller = Roller::new("1d10").unwrap();
+        let attacker_roll = attacker_roller.roll().unwrap();
+        let attacker_roll = attacker_roll.as_single().unwrap().get_total();
+
+        let target_roller = Roller::new("1d10").unwrap();
+        let target_roll = target_roller.roll().unwrap();
+        let target_roll = target_roll.as_single().unwrap().get_total();
+
+        attacker_roll > target_roll + target_attributes.dominance as i64
     }
 }
 

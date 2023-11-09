@@ -60,7 +60,7 @@ pub fn scan(
                     .iter()
                     .find_map(|child| inventories.get(*child).ok())
                     .map(|(_, inventory)| inventory.iter().collect())
-                    .unwrap_or_else(Vec::new)
+                    .unwrap_or_default()
             } else if let Some(target) = target {
                 items
                     .iter()
@@ -74,7 +74,7 @@ pub fn scan(
                     .get(tile.get())
                     .ok()
                     .map(|siblings| siblings.iter().collect())
-                    .unwrap_or_else(Vec::new)
+                    .unwrap_or_default()
             };
 
             let output: Vec<String> = entities_to_scan
