@@ -21,6 +21,7 @@
                 strength: 0,
                 dexterity: 0,
                 intelligence: 0,
+                dominance: 3,
             ),
         ),
         "server::interact::components::Interactions": ([Attack]),
