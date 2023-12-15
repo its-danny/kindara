@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use bevy::prelude::*;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     combat::components::{Attributes, HasAttacked, HitError, InCombat, QueuedAttack, State},
@@ -14,7 +15,7 @@ use crate::{
         components::{Character, Client, Online},
         events::Prompt,
     },
-    skills::resources::Skills,
+    skills::resources::{Skill, Skills},
     spatial::components::Tile,
     value_or_continue,
     visual::components::Depiction,
@@ -90,18 +91,13 @@ pub fn attack(
                 .iter_mut()
                 .find(|(_, _, _, c, _, _, _, _)| c.id == command.from));
 
-            let mastery = value_or_continue!(masteries.0.get(&character.mastery));
+            let skill = match get_skill(&skills, &masteries, &character, skill) {
+                Ok(skill) => skill,
+                Err(e) => {
+                    outbox.send_text(client.id, e.to_string());
 
-            if !mastery.skills.contains(skill) {
-                outbox.send_text(client.id, "You don't know how to do that.");
-
-                continue;
-            }
-
-            let Some(skill) = skills.0.get(skill.as_str()) else {
-                outbox.send_text(client.id, "You don't know how to do that.");
-
-                continue;
+                    continue;
+                }
             };
 
             if let Some(target) = target {
@@ -198,6 +194,26 @@ pub fn attack(
             prompts.send(Prompt::new(client.id));
         }
     }
+}
+
+#[derive(Error, Debug)]
+enum SkillError {
+    #[error("You don't know how to do that.")]
+    UnknownSkill,
+}
+
+fn get_skill<'a>(
+    skills: &'a Res<'a, Skills>,
+    masteries: &Res<Masteries>,
+    character: &Character,
+    skill: &String,
+) -> Result<&'a Skill, SkillError> {
+    masteries
+        .0
+        .get(&character.mastery)
+        .filter(|mastery| mastery.skills.contains(skill))
+        .and_then(|_| skills.0.get(skill))
+        .ok_or(SkillError::UnknownSkill)
 }
 
 #[cfg(test)]
