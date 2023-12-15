@@ -57,9 +57,9 @@ pub struct NpcQuery {
 #[world_query(mutable)]
 pub struct PlayerQuery {
     entity: Entity,
+    client: &'static Client,
     character: &'static mut Character,
     attributes: &'static Attributes,
-    client: &'static Client,
     tile: &'static Parent,
     in_combat: Option<&'static InCombat>,
     has_attacked: Option<&'static HasAttacked>,
@@ -71,8 +71,8 @@ pub fn attack(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut npcs: Query<NpcQuery>,
-    mut outbox: EventWriter<Outbox>,
     mut players: Query<PlayerQuery>,
+    mut outbox: EventWriter<Outbox>,
     mut prompts: EventWriter<Prompt>,
     skills: Res<Skills>,
     masteries: Res<Masteries>,
@@ -80,12 +80,9 @@ pub fn attack(
 ) {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
-            let mut first_attack: Option<InCombat> = None;
+            let player = value_or_continue!(players.iter().find(|p| p.client.id == command.from));
 
-            let mut player =
-                value_or_continue!(players.iter_mut().find(|p| p.client.id == command.from));
-
-            let skill = match get_skill(&skills, &masteries, &player.character, skill) {
+            let skill = match get_skill(&skills, &masteries, player.character, skill) {
                 Ok(skill) => skill,
                 Err(e) => {
                     outbox.send_text(player.client.id, e.to_string());
@@ -97,7 +94,7 @@ pub fn attack(
             if let Some(target) = target {
                 let siblings = value_or_continue!(tiles.get(player.tile.get()).ok());
 
-                let entity = match get_target(target, siblings, &npcs) {
+                let target = match get_target(target, siblings, &npcs) {
                     Ok(entity) => entity,
                     Err(error) => {
                         outbox.send_text(player.client.id, error.to_string());
@@ -106,86 +103,17 @@ pub fn attack(
                     }
                 };
 
-                first_attack = Some(InCombat {
-                    target: entity,
-                    distance: skill.distance,
-                });
-
-                bevy.entity(player.entity).insert(InCombat {
-                    target: entity,
-                    distance: skill.distance,
-                });
-
-                bevy.entity(entity).insert(InCombat {
-                    target: player.entity,
-                    distance: skill.distance,
-                });
+                instantiate_combat(&mut bevy, target, &player, skill);
             }
 
-            if first_attack.is_some() {
-                player.in_combat = first_attack.as_ref();
+            let id = player.client.id;
+
+            match execute_attack(&mut bevy, command, &mut npcs, &mut players, skill) {
+                Ok(message) => outbox.send_text(id, message),
+                Err(error) => outbox.send_text(id, error.to_string()),
             }
 
-            let Some(in_combat) = player.in_combat else {
-                outbox.send_text(player.client.id, "You are not in combat.");
-
-                continue;
-            };
-
-            let npc = value_or_continue!(npcs.get_mut(in_combat.target).ok());
-
-            let Some(mut state) = npc.state else {
-                outbox.send_text(
-                    player.client.id,
-                    format!("You can't attack the {}.", npc.depiction.short_name),
-                );
-
-                continue;
-            };
-
-            if player.has_attacked.is_some() {
-                match player.queued_attack {
-                    Some(mut queued_attack) => {
-                        queued_attack.0 = command.clone();
-
-                        outbox.send_text(player.client.id, "Queued attack replaced.");
-                    }
-                    None => {
-                        bevy.entity(player.entity)
-                            .insert(QueuedAttack(command.clone()));
-
-                        outbox.send_text(player.client.id, "Attack queued.");
-                    }
-                }
-
-                continue;
-            }
-
-            match in_combat.attack(
-                &mut bevy,
-                player.entity,
-                skill,
-                player.attributes,
-                &mut state,
-            ) {
-                Ok(_) => {
-                    outbox.send_text(
-                        player.client.id,
-                        format!(
-                            "You attack the {}. It's health is now {}.",
-                            npc.depiction.short_name, state.health
-                        ),
-                    );
-                }
-                Err(HitError::Missed) => {
-                    outbox.send_text(
-                        player.client.id,
-                        format!("You attack the {} but miss.", npc.depiction.short_name),
-                    );
-                }
-            }
-
-            prompts.send(Prompt::new(player.client.id));
+            prompts.send(Prompt::new(id));
         }
     }
 }
@@ -243,6 +171,95 @@ fn get_target(
     }
 
     Ok(npc.entity)
+}
+
+fn instantiate_combat(
+    bevy: &mut Commands,
+    entity: Entity,
+    player: &PlayerQueryReadOnlyItem,
+    skill: &Skill,
+) {
+    bevy.entity(player.entity).insert(InCombat {
+        target: entity,
+        distance: skill.distance,
+    });
+
+    bevy.entity(entity).insert(InCombat {
+        target: player.entity,
+        distance: skill.distance,
+    });
+}
+
+#[derive(Error, Debug)]
+enum AttackError {
+    #[error("You are not in combat.")]
+    NotInCombat,
+    #[error("You can't attack the {0}.")]
+    InvalidTarget(String),
+    #[error("Could not find target.")]
+    TargetNotFound,
+}
+
+fn execute_attack(
+    bevy: &mut Commands,
+    command: &ParsedCommand,
+    npcs: &mut Query<NpcQuery>,
+    players: &mut Query<PlayerQuery>,
+    skill: &Skill,
+) -> Result<String, AttackError> {
+    let Some(player) = players
+        .iter_mut()
+        .find(|player| player.client.id == command.from)
+    else {
+        debug!("Player not found: {:?}", command.from);
+
+        return Err(AttackError::NotInCombat);
+    };
+
+    let Some(in_combat) = player.in_combat else {
+        return Err(AttackError::NotInCombat);
+    };
+
+    let npc = match npcs.get_mut(in_combat.target) {
+        Ok(npc) => npc,
+        Err(_) => return Err(AttackError::TargetNotFound),
+    };
+
+    let Some(mut state) = npc.state else {
+        debug!(
+            "Target has Attack interaction but no state: {:?}",
+            npc.depiction.name
+        );
+
+        return Err(AttackError::InvalidTarget(npc.depiction.name.clone()));
+    };
+
+    if player.has_attacked.is_some() {
+        return match player.queued_attack {
+            Some(mut queued_attack) => {
+                queued_attack.0 = command.clone();
+
+                Ok("Queued attack replaced.".into())
+            }
+            None => {
+                bevy.entity(player.entity)
+                    .insert(QueuedAttack(command.clone()));
+
+                Ok("Attack queued.".into())
+            }
+        };
+    }
+
+    match in_combat.attack(bevy, player.entity, skill, player.attributes, &mut state) {
+        Ok(_) => Ok(format!(
+            "You attack the {}. It's health is now {}.",
+            npc.depiction.short_name, state.health
+        )),
+        Err(HitError::Missed) => Ok(format!(
+            "You attack the {} but miss.",
+            npc.depiction.short_name
+        )),
+    }
 }
 
 #[cfg(test)]
