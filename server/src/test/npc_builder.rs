@@ -21,6 +21,7 @@ pub struct NpcBuilder {
     interactions: Option<Vec<Interaction>>,
     #[dummy(expr = "None")]
     tile: Option<Entity>,
+    #[dummy(expr = "false")]
     combat: bool,
     skills: Vec<String>,
 }
@@ -61,6 +62,7 @@ impl NpcBuilder {
         self
     }
 
+    /// Gives the entity the Combat bundle, State, and an Attack interaction.
     pub fn combat(mut self, combat: bool) -> Self {
         self.combat = combat;
         self
@@ -102,6 +104,14 @@ impl NpcBuilder {
                     health: Attributes::default().max_health(),
                 },
             ));
+
+            let interactions = entity.get_mut::<Interactions>();
+
+            if let Some(mut interactions) = interactions {
+                interactions.0.push(Interaction::Attack);
+            } else {
+                entity.insert(Interactions(vec![Interaction::Attack]));
+            }
         }
 
         entity.id()
