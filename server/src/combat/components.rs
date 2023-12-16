@@ -65,7 +65,7 @@ pub enum Distance {
     Far,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct InCombat {
     pub target: Entity,
     pub distance: Distance,
