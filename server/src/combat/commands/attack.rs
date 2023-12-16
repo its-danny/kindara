@@ -93,8 +93,8 @@ pub fn attack(
 
             let skill = match get_skill(&skills, &masteries, player.character, skill) {
                 Ok(skill) => skill,
-                Err(e) => {
-                    outbox.send_text(player.client.id, e.to_string());
+                Err(err) => {
+                    outbox.send_text(player.client.id, err.to_string());
 
                     continue;
                 }
@@ -103,8 +103,8 @@ pub fn attack(
             if let Some(target) = target {
                 let target = match get_target(target, &tiles, &player.tile.get(), &npcs) {
                     Ok(entity) => entity,
-                    Err(error) => {
-                        outbox.send_text(player.client.id, error.to_string());
+                    Err(err) => {
+                        outbox.send_text(player.client.id, err.to_string());
 
                         continue;
                     }
@@ -131,7 +131,7 @@ pub fn attack(
                 &in_combat.as_ref(),
             ) {
                 Ok(message) => outbox.send_text(id, message),
-                Err(error) => outbox.send_text(id, error.to_string()),
+                Err(err) => outbox.send_text(id, err.to_string()),
             }
 
             prompts.send(Prompt::new(id));
@@ -409,7 +409,6 @@ mod tests {
             .name("Goat")
             .tile(tile)
             .combat(true)
-            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         let mut system_state: SystemState<(Query<NpcQuery>, Query<TileQuery>)> =
@@ -513,7 +512,6 @@ mod tests {
             .short_name("goat")
             .tile(tile)
             .combat(true)
-            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         app.world.entity_mut(player).insert(InCombat {
@@ -571,7 +569,6 @@ mod tests {
             .short_name("goat")
             .tile(tile)
             .combat(true)
-            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         app.world.entity_mut(player).insert(InCombat {
@@ -626,7 +623,6 @@ mod tests {
             .short_name("goat")
             .tile(tile)
             .combat(true)
-            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         app.world.entity_mut(player).insert(InCombat {
@@ -759,16 +755,15 @@ mod tests {
         let tile = TileBuilder::new().build(&mut app, zone);
 
         let npc = NpcBuilder::new()
-            .name("Pazuzu")
-            .short_name("pazuzu")
+            .name("Goat")
+            .short_name("goat")
             .tile(tile)
             .combat(true)
-            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
 
-        send_message(&mut app, client_id, "punch pazuzu");
+        send_message(&mut app, client_id, "punch goat");
         app.update();
 
         assert_eq!(app.world.get::<InCombat>(player).unwrap().target, npc);
@@ -776,6 +771,6 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert!(content.starts_with("You attack the pazuzu"));
+        assert!(content.starts_with("You attack the goat"));
     }
 }
