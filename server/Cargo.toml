@@ -38,4 +38,5 @@ thiserror = "1.0.50"
 
 [dev-dependencies]
 fake = { version = "2.6", features = ["derive"] }
+rstest = "0.18.2"
 rusty-hook = "0.11"
