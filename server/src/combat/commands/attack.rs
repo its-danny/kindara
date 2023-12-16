@@ -67,6 +67,13 @@ pub struct PlayerQuery {
     with_online: With<Online>,
 }
 
+#[derive(WorldQuery)]
+pub struct TileQuery {
+    entity: Entity,
+    children: &'static Children,
+    with_tile: With<Tile>,
+}
+
 pub fn attack(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -76,7 +83,7 @@ pub fn attack(
     mut prompts: EventWriter<Prompt>,
     skills: Res<Skills>,
     masteries: Res<Masteries>,
-    tiles: Query<&Children, With<Tile>>,
+    tiles: Query<TileQuery>,
 ) {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
@@ -92,9 +99,7 @@ pub fn attack(
             };
 
             if let Some(target) = target {
-                let siblings = value_or_continue!(tiles.get(player.tile.get()).ok());
-
-                let target = match get_target(target, siblings, &npcs) {
+                let target = match get_target(target, &tiles, &player.tile.get(), &npcs) {
                     Ok(entity) => entity,
                     Err(error) => {
                         outbox.send_text(player.client.id, error.to_string());
@@ -103,7 +108,7 @@ pub fn attack(
                     }
                 };
 
-                instantiate_combat(&mut bevy, target, &player, skill);
+                instantiate_combat(&mut bevy, &target, &player.entity, skill);
             }
 
             let id = player.client.id;
@@ -118,28 +123,30 @@ pub fn attack(
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 enum SkillError {
     #[error("You don't know how to do that.")]
     UnknownSkill,
 }
 
 fn get_skill<'a>(
-    skills: &'a Res<'a, Skills>,
-    masteries: &Res<Masteries>,
+    skills: &'a Skills,
+    masteries: &Masteries,
     character: &Character,
-    skill: &String,
+    skill: &str,
 ) -> Result<&'a Skill, SkillError> {
     masteries
         .0
         .get(&character.mastery)
-        .filter(|mastery| mastery.skills.contains(skill))
+        .filter(|mastery| mastery.skills.contains(&skill.to_string()))
         .and_then(|_| skills.0.get(skill))
         .ok_or(SkillError::UnknownSkill)
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 enum TargetError {
+    #[error("You don't see anything here.")]
+    NoTile,
     #[error("You don't see a {0} here.")]
     NoTarget(String),
     #[error("You can't attack the {0}.")]
@@ -147,51 +154,52 @@ enum TargetError {
 }
 
 fn get_target(
-    target: &String,
-    siblings: &Children,
+    target: &str,
+    tiles: &Query<TileQuery>,
+    tile: &Entity,
     npcs: &Query<NpcQuery>,
 ) -> Result<Entity, TargetError> {
+    let siblings = tiles.get(*tile).ok().ok_or(TargetError::NoTile)?;
+
     let npc = siblings
+        .children
         .iter()
         .filter_map(|sibling| npcs.get(*sibling).ok())
         .find(|npc| npc.depiction.matches_query(&npc.entity, target))
-        .ok_or_else(|| TargetError::NoTarget(target.clone()))?;
+        .ok_or_else(|| TargetError::NoTarget(target.into()))?;
 
     if !npc
         .interactions
         .map_or(false, |i| i.0.contains(&Interaction::Attack))
     {
-        return Err(TargetError::InvalidTarget(target.clone()));
+        return Err(TargetError::InvalidTarget(target.into()));
     }
 
     if npc.state.is_none() {
         debug!("Target has Attack interaction but no state: {:?}", target);
 
-        return Err(TargetError::InvalidTarget(target.clone()));
+        return Err(TargetError::InvalidTarget(target.into()));
     }
 
     Ok(npc.entity)
 }
 
-fn instantiate_combat(
-    bevy: &mut Commands,
-    entity: Entity,
-    player: &PlayerQueryReadOnlyItem,
-    skill: &Skill,
-) {
-    bevy.entity(player.entity).insert(InCombat {
-        target: entity,
+fn instantiate_combat(bevy: &mut Commands, target: &Entity, player: &Entity, skill: &Skill) {
+    bevy.entity(*player).insert(InCombat {
+        target: *target,
         distance: skill.distance,
     });
 
-    bevy.entity(entity).insert(InCombat {
-        target: player.entity,
+    bevy.entity(*target).insert(InCombat {
+        target: *player,
         distance: skill.distance,
     });
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 enum AttackError {
+    #[error("You don't see anything here.")]
+    NoPlayer,
     #[error("You are not in combat.")]
     NotInCombat,
     #[error("You can't attack the {0}.")]
@@ -213,7 +221,7 @@ fn execute_attack(
     else {
         debug!("Player not found: {:?}", command.from);
 
-        return Err(AttackError::NotInCombat);
+        return Err(AttackError::NoPlayer);
     };
 
     let Some(in_combat) = player.in_combat else {
@@ -264,30 +272,214 @@ fn execute_attack(
 
 #[cfg(test)]
 mod tests {
-    use crate::test::{
-        app_builder::AppBuilder,
-        npc_builder::NpcBuilder,
-        player_builder::PlayerBuilder,
-        tile_builder::{TileBuilder, ZoneBuilder},
-        utils::{get_message_content, send_message},
+    use crate::{
+        combat::components::Distance,
+        test::{
+            app_builder::AppBuilder,
+            npc_builder::NpcBuilder,
+            player_builder::PlayerBuilder,
+            tile_builder::{TileBuilder, ZoneBuilder},
+            utils::send_message,
+        },
     };
 
     use super::*;
 
-    #[test]
-    fn parses() {
-        let target = handle_attack("fireball goat");
-        assert_eq!(
-            target,
-            Ok(Command::Attack(("fireball".into(), Some("goat".into()))))
-        );
+    use bevy::ecs::system::SystemState;
+    use rstest::*;
 
-        let no_target = handle_attack("fireball");
-        assert_eq!(no_target, Ok(Command::Attack(("fireball".into(), None))));
+    #[fixture]
+    fn app() -> App {
+        AppBuilder::new().build()
+    }
+
+    #[rstest]
+    #[case("fireball goat", Some(("fireball".into(), Some("goat".into()))))]
+    #[case("fireball", Some(("fireball".into(), None)))]
+    fn parses(#[case] input: &str, #[case] expected: Option<(String, Option<String>)>) {
+        let result = handle_attack(input).ok().and_then(|command| match command {
+            Command::Attack((skill, target)) => Some((skill, target)),
+            _ => None,
+        });
+
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(None, "punch", Ok("Punch".into()))]
+    #[case(None, "kick", Err(SkillError::UnknownSkill))]
+    #[case(Some("unknown"), "punch", Err(SkillError::UnknownSkill))]
+    fn gets_skill(
+        mut app: App,
+        #[case] mastery: Option<&str>,
+        #[case] skill: &str,
+        #[case] expected: Result<String, SkillError>,
+    ) {
+        let (player, _, _) = PlayerBuilder::new().build(&mut app);
+
+        if let Some(mastery) = mastery {
+            let mut character = app.world.get_mut::<Character>(player).unwrap();
+            character.mastery = mastery.to_string();
+        }
+
+        let skills = app.world.get_resource::<Skills>().unwrap();
+        let masteries = app.world.get_resource::<Masteries>().unwrap();
+        let character = app.world.get::<Character>(player).unwrap();
+
+        let result = get_skill(skills, masteries, &character, skill).map(|s| s.name.clone());
+
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case("goat", true, Ok("Goat".into()))]
+    #[case("goat", false, Err(TargetError::InvalidTarget("goat".into())))]
+    #[case("horse", false, Err(TargetError::NoTarget("horse".into())))]
+    fn gets_target(
+        mut app: App,
+        #[case] name: &str,
+        #[case] valid_target: bool,
+        #[case] expected: Result<String, TargetError>,
+    ) {
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        PlayerBuilder::new().tile(tile).build(&mut app);
+
+        NpcBuilder::new()
+            .name("Goat")
+            .tile(tile)
+            .combat(valid_target)
+            .interactions(if valid_target {
+                vec![Interaction::Attack]
+            } else {
+                vec![]
+            })
+            .build(&mut app);
+
+        let mut system_state: SystemState<(Query<NpcQuery>, Query<TileQuery>)> =
+            SystemState::new(&mut app.world);
+        let (npc_query, tile_query) = system_state.get_mut(&mut app.world);
+
+        let result = get_target(&name, &tile_query, &tile, &npc_query).map(|e| {
+            let depiction = app.world.get::<Depiction>(e).unwrap();
+            depiction.name.clone()
+        });
+
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    fn instantiates_combat(mut app: App) {
+        let npc = NpcBuilder::new().build(&mut app);
+        let (player, _, _) = PlayerBuilder::new().build(&mut app);
+
+        let mut system_state: SystemState<(Commands, Res<Skills>)> =
+            SystemState::new(&mut app.world);
+        let (mut commands, skills) = system_state.get_mut(&mut app.world);
+        let skill = skills.0.get("punch").unwrap();
+
+        instantiate_combat(&mut commands, &npc, &player, &skill);
+        system_state.apply(&mut app.world);
+
+        let player_in_combat = app.world.get::<InCombat>(player).unwrap();
+        let npc_in_combat = app.world.get::<InCombat>(npc).unwrap();
+
+        assert_eq!(player_in_combat.target, npc);
+        assert_eq!(npc_in_combat.target, player);
+    }
+
+    #[rstest]
+    #[case(false, false, false, false, Err(AttackError::NotInCombat))]
+    #[case(true, false, false, false, Err(AttackError::InvalidTarget("Goat".into())))]
+    #[case(true, true, true, false, Ok("Attack queued.".into()))]
+    #[case(true, true, true, true, Ok("Queued attack replaced.".into()))]
+    #[case(true, true, false, false, Ok("You attack the goat.".into()))]
+    fn executes_attack(
+        mut app: App,
+        #[case] in_combat: bool,
+        #[case] valid_target: bool,
+        #[case] has_attacked: bool,
+        #[case] queued_attack: bool,
+        #[case] expected: Result<String, AttackError>,
+    ) {
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+        let (player, client, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        let goat = NpcBuilder::new()
+            .name("Goat")
+            .short_name("goat")
+            .tile(tile)
+            .combat(valid_target)
+            .interactions(if valid_target {
+                vec![Interaction::Attack]
+            } else {
+                vec![]
+            })
+            .build(&mut app);
+
+        if in_combat {
+            app.world.entity_mut(player).insert(InCombat {
+                target: goat,
+                distance: Distance::Near,
+            });
+
+            app.world.entity_mut(goat).insert(InCombat {
+                target: player,
+                distance: Distance::Near,
+            });
+        }
+
+        if has_attacked {
+            app.world.entity_mut(player).insert(HasAttacked {
+                timer: Timer::from_seconds(1.0, TimerMode::Once),
+            });
+        }
+
+        if queued_attack {
+            app.world
+                .entity_mut(player)
+                .insert(QueuedAttack(ParsedCommand {
+                    from: client,
+                    command: Command::Attack(("punch".into(), None)),
+                }));
+        }
+
+        let mut system_state: SystemState<(
+            Commands,
+            Query<NpcQuery>,
+            Query<PlayerQuery>,
+            Res<Skills>,
+        )> = SystemState::new(&mut app.world);
+        let (mut commands, mut npc_query, mut player_query, skills) =
+            system_state.get_mut(&mut app.world);
+
+        let skill = skills.0.get("punch").unwrap();
+
+        let result = execute_attack(
+            &mut commands,
+            &ParsedCommand {
+                from: client,
+                command: Command::Attack(("punch".into(), None)),
+            },
+            &mut npc_query,
+            &mut player_query,
+            &skill,
+        )
+        .map(|s| {
+            if s.starts_with("You attack the goat") {
+                "You attack the goat.".into()
+            } else {
+                s
+            }
+        });
+
+        assert_eq!(result, expected);
     }
 
     #[test]
-    fn valid_target() {
+    fn attacks() {
         let mut app = AppBuilder::new().build();
         app.add_systems(Update, attack);
 
@@ -296,9 +488,9 @@ mod tests {
 
         let npc = NpcBuilder::new()
             .name("Pazuzu")
-            .interactions(vec![Interaction::Attack])
             .tile(tile)
             .combat(true)
+            .interactions(vec![Interaction::Attack])
             .build(&mut app);
 
         let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
@@ -308,52 +500,5 @@ mod tests {
 
         assert!(app.world.get::<InCombat>(player).is_some());
         assert!(app.world.get::<InCombat>(npc).is_some());
-    }
-
-    #[test]
-    fn existing_target() {
-        let mut app = AppBuilder::new().build();
-        app.add_systems(Update, attack);
-
-        let zone = ZoneBuilder::new().build(&mut app);
-        let tile = TileBuilder::new().build(&mut app, zone);
-
-        NpcBuilder::new()
-            .name("Pazuzu")
-            .interactions(vec![Interaction::Attack])
-            .tile(tile)
-            .combat(true)
-            .build(&mut app);
-
-        let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
-
-        send_message(&mut app, client_id, "punch pazuzu");
-        app.update();
-
-        send_message(&mut app, client_id, "punch");
-        app.update();
-
-        assert!(app.world.get::<InCombat>(player).is_some());
-    }
-
-    #[test]
-    fn invalid_target() {
-        let mut app = AppBuilder::new().build();
-        app.add_systems(Update, attack);
-
-        let zone = ZoneBuilder::new().build(&mut app);
-        let tile = TileBuilder::new().build(&mut app, zone);
-
-        NpcBuilder::new().name("Pazuzu").tile(tile).build(&mut app);
-
-        let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
-
-        send_message(&mut app, client_id, "punch pazuzu");
-        app.update();
-
-        let content = get_message_content(&mut app, client_id).unwrap();
-
-        assert_eq!(content, "You can't attack the pazuzu.");
-        assert!(app.world.get::<InCombat>(player).is_none());
     }
 }
