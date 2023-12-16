@@ -1,8 +1,12 @@
 use std::sync::OnceLock;
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::query::{QueryEntityError, WorldQuery},
+    prelude::*,
+};
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
@@ -47,8 +51,15 @@ pub fn handle_examine(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct InteractableQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    interactions: Option<&'static Interactions>,
+}
+
 pub fn examine(
-    interactable: Query<(Entity, &Depiction, Option<&Interactions>)>,
+    interactables: Query<InteractableQuery>,
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
@@ -63,86 +74,150 @@ pub fn examine(
             let siblings = value_or_continue!(tiles.get(tile.get()).ok());
 
             if let Some(target) = target {
-                let found = siblings
-                    .iter()
-                    .filter_map(|sibling| interactable.get(*sibling).ok())
-                    .find(|(e, d, _)| d.matches_query(e, target));
-
-                let Some((entity, depiction, interactions)) = found else {
-                    outbox.send_text(client.id, format!("You don't see a {target} here."));
-
-                    continue;
-                };
-
-                if let Some(interactions) = interactions {
-                    let opts: Vec<String> = interactions
-                        .0
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, i)| i.usable_in_menu())
-                        .map(|(idx, int)| format!("[{}] {int}", idx + 1))
-                        .collect();
-
-                    outbox.send_text(
-                        client.id,
-                        format!(
-                            "After thorough inspection, you find you are able to do the following:\n\n{}",
-                            opts.join(", ")
-                        ),
-                    );
-
-                    bevy.entity(player)
-                        .insert(InMenu(MenuType::Examine(entity)));
-                } else {
-                    outbox.send_text(
-                        client.id,
-                        format!("{} has no interactions.", depiction.name),
-                    );
+                match execute_examine(&mut bevy, player, target, siblings, &interactables) {
+                    Ok(msg) => outbox.send_text(client.id, msg),
+                    Err(err) => outbox.send_text(client.id, err.to_string()),
                 }
             }
 
             if let Some(option) = option {
-                let Some(menu) = in_menu else {
-                    outbox.send_text(client.id, "You are not in a menu.");
-
-                    continue;
-                };
-
-                #[allow(irrefutable_let_patterns)]
-                if let MenuType::Examine(entity) = menu.0 {
-                    let (_, depiction, interactions) =
-                        value_or_continue!(interactable.get(entity).ok());
-
-                    if let Some(interactions) = interactions {
-                        let interaction = value_or_continue!(interactions
-                            .0
-                            .iter()
-                            .filter(|i| i.usable_in_menu())
-                            .nth(option - 1));
-
-                        match interaction {
-                            Interaction::Sit => proxy.send(ProxyCommand(ParsedCommand {
-                                from: client.id,
-                                command: Command::Sit(Some(depiction.name.clone())),
-                            })),
-                            Interaction::Take => proxy.send(ProxyCommand(ParsedCommand {
-                                from: client.id,
-                                command: Command::Take((depiction.name.clone(), false, None)),
-                            })),
-                            _ => debug!("Unhandled interaction: {:?}", interaction),
-                        }
-
-                        bevy.entity(player).remove::<InMenu>();
-                    } else {
-                        outbox.send_text(
-                            client.id,
-                            format!("{} has no interactions.", depiction.name),
-                        );
-                    }
+                match execute_interaction(
+                    &mut bevy,
+                    &mut proxy,
+                    player,
+                    client,
+                    &in_menu,
+                    option,
+                    &interactables,
+                ) {
+                    Ok(_) => {}
+                    Err(err) => outbox.send_text(client.id, err.to_string()),
                 }
             }
         }
     }
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum ExamineError {
+    #[error("You don't see a {0} here")]
+    NoTarget(#[from] TargetError),
+    #[error("Something broke!")]
+    QueryEntityError(#[from] QueryEntityError),
+}
+
+fn execute_examine(
+    bevy: &mut Commands,
+    player: Entity,
+    target: &str,
+    siblings: &Children,
+    interactables: &Query<InteractableQuery>,
+) -> Result<String, ExamineError> {
+    let interactable = get_target(target, siblings, interactables)?;
+    let interactable = interactables.get(interactable)?;
+
+    if let Some(interactions) = interactable.interactions {
+        let opts = get_interactions(&interactions.0);
+
+        bevy.entity(player)
+            .insert(InMenu(MenuType::Examine(interactable.entity)));
+
+        Ok(format!(
+            "After thorough inspection, you find you are able to do the following:\n\n{}",
+            opts.join(", ")
+        ))
+    } else {
+        Ok(format!(
+            "{} has no interactions.",
+            interactable.depiction.name
+        ))
+    }
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum TargetError {
+    #[error("You don't see a {0} here")]
+    NoTarget(String),
+}
+
+fn get_target(
+    target: &str,
+    siblings: &Children,
+    interactables: &Query<InteractableQuery>,
+) -> Result<Entity, TargetError> {
+    siblings
+        .iter()
+        .filter_map(|sibling| interactables.get(*sibling).ok())
+        .find(|i| i.depiction.matches_query(&i.entity, target))
+        .map(|i| i.entity)
+        .ok_or(TargetError::NoTarget(target.into()))
+}
+
+fn get_interactions(interactions: &[Interaction]) -> Vec<String> {
+    interactions
+        .iter()
+        .enumerate()
+        .filter(|(_, i)| i.usable_in_menu())
+        .map(|(idx, int)| format!("[{}] {int}", idx + 1))
+        .collect()
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum InteractionError {
+    #[error("You are not in a menu.")]
+    NotInMenu,
+    #[error("{0} has no interactions.")]
+    NoInteractions(String),
+    #[error("Incorrect option.")]
+    IncorrectOption,
+    #[error("Something broke!")]
+    QueryEntityError(#[from] QueryEntityError),
+}
+
+fn execute_interaction(
+    bevy: &mut Commands,
+    proxy: &mut EventWriter<ProxyCommand>,
+    player: Entity,
+    client: &Client,
+    in_menu: &Option<&InMenu>,
+    option: &usize,
+    interactables: &Query<InteractableQuery>,
+) -> Result<(), InteractionError> {
+    let menu = in_menu.ok_or(InteractionError::NotInMenu)?;
+
+    #[allow(irrefutable_let_patterns)]
+    if let MenuType::Examine(entity) = menu.0 {
+        let interactable = interactables.get(entity)?;
+
+        if let Some(interactions) = interactable.interactions {
+            let interaction = interactions
+                .0
+                .iter()
+                .filter(|i| i.usable_in_menu())
+                .nth(option - 1)
+                .ok_or(InteractionError::IncorrectOption)?;
+
+            match interaction {
+                Interaction::Sit => proxy.send(ProxyCommand(ParsedCommand {
+                    from: client.id,
+                    command: Command::Sit(Some(interactable.depiction.name.clone())),
+                })),
+                Interaction::Take => proxy.send(ProxyCommand(ParsedCommand {
+                    from: client.id,
+                    command: Command::Take((interactable.depiction.name.clone(), false, None)),
+                })),
+                _ => debug!("Unhandled interaction: {:?}", interaction),
+            }
+
+            bevy.entity(player).remove::<InMenu>();
+        } else {
+            return Err(InteractionError::NoInteractions(
+                interactable.depiction.name.clone(),
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
