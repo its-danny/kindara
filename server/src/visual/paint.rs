@@ -75,7 +75,7 @@ pub fn style(text: &str) -> String {
                         "italic" => styled.italic(),
                         "underline" => styled.underline(),
                         "blink" => styled.blink(),
-                        "reverse" => styled.reverse(),
+                        "reverse" => styled.reversed(),
                         "hidden" => styled.hidden(),
                         "strikethrough" => styled.strikethrough(),
                         _ => styled.normal(),
