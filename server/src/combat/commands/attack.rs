@@ -89,6 +89,8 @@ pub fn attack(
         if let Command::Attack((skill, target)) = &command.command {
             let player = value_or_continue!(players.iter().find(|p| p.client.id == command.from));
 
+            let mut in_combat: Option<InCombat> = player.in_combat.cloned();
+
             let skill = match get_skill(&skills, &masteries, player.character, skill) {
                 Ok(skill) => skill,
                 Err(e) => {
@@ -108,12 +110,26 @@ pub fn attack(
                     }
                 };
 
+                // We store this here because the insert in `instantiate_combat` won't
+                // happen until next game tick. This lets the player attack immediately.
+                in_combat = Some(InCombat {
+                    target,
+                    distance: skill.distance,
+                });
+
                 instantiate_combat(&mut bevy, &target, &player.entity, skill);
             }
 
             let id = player.client.id;
 
-            match execute_attack(&mut bevy, command, &mut npcs, &mut players, skill) {
+            match execute_attack(
+                &mut bevy,
+                command,
+                &mut npcs,
+                &mut players,
+                skill,
+                &in_combat.as_ref(),
+            ) {
                 Ok(message) => outbox.send_text(id, message),
                 Err(error) => outbox.send_text(id, error.to_string()),
             }
@@ -214,6 +230,7 @@ fn execute_attack(
     npcs: &mut Query<NpcQuery>,
     players: &mut Query<PlayerQuery>,
     skill: &Skill,
+    in_combat: &Option<&InCombat>,
 ) -> Result<String, AttackError> {
     let Some(player) = players
         .iter_mut()
@@ -224,7 +241,7 @@ fn execute_attack(
         return Err(AttackError::NoPlayer);
     };
 
-    let Some(in_combat) = player.in_combat else {
+    let Some(in_combat) = in_combat else {
         return Err(AttackError::NotInCombat);
     };
 
@@ -279,7 +296,7 @@ mod tests {
             npc_builder::NpcBuilder,
             player_builder::PlayerBuilder,
             tile_builder::{TileBuilder, ZoneBuilder},
-            utils::send_message,
+            utils::{get_message_content, send_message},
         },
     };
 
@@ -453,19 +470,43 @@ mod tests {
         assert_eq!(npc_in_combat.target, player);
     }
 
+    struct ExecuteAttackSetup {
+        app: App,
+        tile: Entity,
+        player: Entity,
+        client: ClientId,
+        command: ParsedCommand,
+    }
+
     #[fixture]
-    fn execute_attack_setup() -> (App, Entity, ClientId, Entity) {
+    fn execute_attack_setup() -> ExecuteAttackSetup {
         let mut app = AppBuilder::new().build();
         let zone = ZoneBuilder::new().build(&mut app);
         let tile = TileBuilder::new().build(&mut app, zone);
         let (player, client, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+        let command = ParsedCommand {
+            from: client,
+            command: Command::Attack(("punch".into(), None)),
+        };
 
-        (app, player, client, tile)
+        ExecuteAttackSetup {
+            app,
+            tile,
+            player,
+            client,
+            command,
+        }
     }
 
     #[rstest]
-    fn executes_attack_ready(execute_attack_setup: (App, Entity, ClientId, Entity)) {
-        let (mut app, player, client, tile) = execute_attack_setup;
+    fn execute_attack_ready(execute_attack_setup: ExecuteAttackSetup) {
+        let ExecuteAttackSetup {
+            mut app,
+            tile,
+            player,
+            command,
+            ..
+        } = execute_attack_setup;
 
         let goat = NpcBuilder::new()
             .name("Goat")
@@ -493,17 +534,16 @@ mod tests {
         )> = SystemState::new(&mut app.world);
         let (mut commands, mut npc_query, mut player_query, skills) =
             system_state.get_mut(&mut app.world);
+        let in_combat = player_query.get_mut(player).unwrap().in_combat.cloned();
         let skill = skills.0.get("punch").unwrap();
 
         let result = execute_attack(
             &mut commands,
-            &ParsedCommand {
-                from: client,
-                command: Command::Attack(("punch".into(), None)),
-            },
+            &command,
             &mut npc_query,
             &mut player_query,
             &skill,
+            &in_combat.as_ref(),
         )
         .map(|s| {
             if s.starts_with("You attack the goat") {
@@ -517,8 +557,14 @@ mod tests {
     }
 
     #[rstest]
-    fn execute_attack_queued(execute_attack_setup: (App, Entity, ClientId, Entity)) {
-        let (mut app, player, client, tile) = execute_attack_setup;
+    fn execute_attack_queued(execute_attack_setup: ExecuteAttackSetup) {
+        let ExecuteAttackSetup {
+            mut app,
+            tile,
+            player,
+            command,
+            ..
+        } = execute_attack_setup;
 
         let goat = NpcBuilder::new()
             .name("Goat")
@@ -550,25 +596,30 @@ mod tests {
         )> = SystemState::new(&mut app.world);
         let (mut commands, mut npc_query, mut player_query, skills) =
             system_state.get_mut(&mut app.world);
+        let in_combat = player_query.get_mut(player).unwrap().in_combat.cloned();
         let skill = skills.0.get("punch").unwrap();
 
         let result = execute_attack(
             &mut commands,
-            &ParsedCommand {
-                from: client,
-                command: Command::Attack(("punch".into(), None)),
-            },
+            &command,
             &mut npc_query,
             &mut player_query,
             &skill,
+            &in_combat.as_ref(),
         );
 
         assert_eq!(result, Ok("Attack queued.".into()));
     }
 
     #[rstest]
-    fn execute_attack_queue_replaced(execute_attack_setup: (App, Entity, ClientId, Entity)) {
-        let (mut app, player, client, tile) = execute_attack_setup;
+    fn execute_attack_queue_replaced(execute_attack_setup: ExecuteAttackSetup) {
+        let ExecuteAttackSetup {
+            mut app,
+            tile,
+            player,
+            client,
+            command,
+        } = execute_attack_setup;
 
         let goat = NpcBuilder::new()
             .name("Goat")
@@ -607,32 +658,36 @@ mod tests {
         )> = SystemState::new(&mut app.world);
         let (mut commands, mut npc_query, mut player_query, skills) =
             system_state.get_mut(&mut app.world);
+        let in_combat = player_query.get_mut(player).unwrap().in_combat.cloned();
         let skill = skills.0.get("punch").unwrap();
 
         let result = execute_attack(
             &mut commands,
-            &ParsedCommand {
-                from: client,
-                command: Command::Attack(("punch".into(), None)),
-            },
+            &command,
             &mut npc_query,
             &mut player_query,
             &skill,
+            &in_combat.as_ref(),
         );
 
         assert_eq!(result, Ok("Queued attack replaced.".into()));
     }
 
     #[rstest]
-    fn execute_attack_invalid_target(execute_attack_setup: (App, Entity, ClientId, Entity)) {
-        let (mut app, player, client, tile) = execute_attack_setup;
+    fn execute_attack_invalid_target(execute_attack_setup: ExecuteAttackSetup) {
+        let ExecuteAttackSetup {
+            mut app,
+            tile,
+            player,
+            command,
+            ..
+        } = execute_attack_setup;
 
         let goat = NpcBuilder::new()
             .name("Goat")
             .short_name("goat")
             .tile(tile)
             .combat(false)
-            .interactions(vec![])
             .build(&mut app);
 
         app.world.entity_mut(player).insert(InCombat {
@@ -648,25 +703,29 @@ mod tests {
         )> = SystemState::new(&mut app.world);
         let (mut commands, mut npc_query, mut player_query, skills) =
             system_state.get_mut(&mut app.world);
+        let in_combat = player_query.get_mut(player).unwrap().in_combat.cloned();
         let skill = skills.0.get("punch").unwrap();
 
         let result = execute_attack(
             &mut commands,
-            &ParsedCommand {
-                from: client,
-                command: Command::Attack(("punch".into(), None)),
-            },
+            &command,
             &mut npc_query,
             &mut player_query,
             &skill,
+            &in_combat.as_ref(),
         );
 
         assert_eq!(result, Err(AttackError::InvalidTarget("Goat".into())));
     }
 
     #[rstest]
-    fn execute_attack_not_in_combat(execute_attack_setup: (App, Entity, ClientId, Entity)) {
-        let (mut app, _, client, _) = execute_attack_setup;
+    fn execute_attack_not_in_combat(execute_attack_setup: ExecuteAttackSetup) {
+        let ExecuteAttackSetup {
+            mut app,
+            command,
+            player,
+            ..
+        } = execute_attack_setup;
 
         let mut system_state: SystemState<(
             Commands,
@@ -676,17 +735,16 @@ mod tests {
         )> = SystemState::new(&mut app.world);
         let (mut commands, mut npc_query, mut player_query, skills) =
             system_state.get_mut(&mut app.world);
+        let in_combat = player_query.get(player).unwrap().in_combat.cloned();
         let skill = skills.0.get("punch").unwrap();
 
         let result = execute_attack(
             &mut commands,
-            &ParsedCommand {
-                from: client,
-                command: Command::Attack(("punch".into(), None)),
-            },
+            &command,
             &mut npc_query,
             &mut player_query,
             &skill,
+            &in_combat.as_ref(),
         );
 
         assert_eq!(result, Err(AttackError::NotInCombat));
@@ -702,6 +760,7 @@ mod tests {
 
         let npc = NpcBuilder::new()
             .name("Pazuzu")
+            .short_name("pazuzu")
             .tile(tile)
             .combat(true)
             .interactions(vec![Interaction::Attack])
@@ -712,7 +771,11 @@ mod tests {
         send_message(&mut app, client_id, "punch pazuzu");
         app.update();
 
-        assert!(app.world.get::<InCombat>(player).is_some());
-        assert!(app.world.get::<InCombat>(npc).is_some());
+        assert_eq!(app.world.get::<InCombat>(player).unwrap().target, npc);
+        assert_eq!(app.world.get::<InCombat>(npc).unwrap().target, player);
+
+        let content = get_message_content(&mut app, client_id).unwrap();
+
+        assert!(content.starts_with("You attack the pazuzu"));
     }
 }
