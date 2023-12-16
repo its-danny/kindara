@@ -97,6 +97,8 @@ pub fn on_player_death(
             bevy.entity(player).remove::<InCombat>();
             bevy.entity(player).remove::<QueuedAttack>();
 
+            state.health = attributes.max_health();
+
             let npcs_in_combat = npcs
                 .iter_mut()
                 .filter(|(_, in_combat)| in_combat.target == player);
@@ -107,7 +109,6 @@ pub fn on_player_death(
 
             if let Some(tile) = spawn_tiles.iter().next() {
                 bevy.entity(player).set_parent(tile);
-                state.health = attributes.max_health();
 
                 proxy.send(ProxyCommand(ParsedCommand {
                     from: client.id,
@@ -115,5 +116,115 @@ pub fn on_player_death(
                 }));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::*;
+    use std::time::Duration;
+
+    use crate::test::tile_builder::{TileBuilder, ZoneBuilder};
+    use crate::test::utils::get_message_content;
+    use crate::test::{
+        app_builder::AppBuilder, npc_builder::NpcBuilder, player_builder::PlayerBuilder,
+    };
+
+    use crate::combat::components::{Distance, State};
+
+    use super::*;
+
+    #[fixture]
+    fn setup() -> (App, Entity, ClientId, Entity) {
+        let mut app = AppBuilder::new().build();
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        let (player, client_id, _) = PlayerBuilder::new().tile(tile).build(&mut app);
+
+        let npc = NpcBuilder::new()
+            .name("Goat")
+            .combat(true)
+            .tile(tile)
+            .build(&mut app);
+
+        app.world.entity_mut(player).insert(InCombat {
+            target: npc,
+            distance: Distance::Near,
+        });
+
+        (app, player, client_id, npc)
+    }
+
+    #[rstest]
+    fn update_attack_timer_removes_component(setup: (App, Entity, ClientId, Entity)) {
+        let (mut app, player, _, _) = setup;
+        app.add_systems(Update, update_attack_timer);
+
+        let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
+        timer.set_elapsed(Duration::from_secs(1));
+        app.world.entity_mut(player).insert(HasAttacked { timer });
+
+        app.update();
+
+        assert!(app.world.get::<HasAttacked>(player).is_none());
+    }
+
+    #[rstest]
+    fn on_npc_death_destroys_entity(setup: (App, Entity, ClientId, Entity)) {
+        let (mut app, _, _, npc) = setup;
+        app.add_systems(Update, on_npc_death);
+
+        app.world.entity_mut(npc).insert(State { health: 0 });
+        app.update();
+
+        assert!(app.world.get_entity(npc).is_none());
+    }
+
+    #[rstest]
+    fn on_npc_death_alerts_neighbors(setup: (App, Entity, ClientId, Entity)) {
+        let (mut app, _, client_id, npc) = setup;
+        app.add_systems(Update, on_npc_death);
+
+        app.world.entity_mut(npc).insert(State { health: 0 });
+
+        app.update();
+
+        let content = get_message_content(&mut app, client_id).unwrap();
+
+        assert_eq!(content, "Goat has died.");
+    }
+
+    #[rstest]
+    fn on_player_death_resets_state(setup: (App, Entity, ClientId, Entity)) {
+        let (mut app, player, _, _) = setup;
+        app.add_systems(Update, on_player_death);
+
+        app.world.entity_mut(player).insert(State { health: 0 });
+        app.update();
+
+        assert!(app.world.get::<InCombat>(player).is_none());
+
+        assert_eq!(
+            app.world.get::<State>(player).unwrap().health,
+            app.world.get::<Attributes>(player).unwrap().max_health()
+        );
+    }
+
+    #[rstest]
+    fn on_player_death_teleports_player(setup: (App, Entity, ClientId, Entity)) {
+        let (mut app, player, _, _) = setup;
+        app.add_systems(Update, on_player_death);
+
+        let zone = ZoneBuilder::new().build(&mut app);
+        let tile = TileBuilder::new().build(&mut app, zone);
+
+        app.world.entity_mut(tile).insert(DeathSpawn);
+
+        app.world.entity_mut(player).insert(State { health: 0 });
+        app.update();
+
+        assert_eq!(app.world.get::<Parent>(player).unwrap().get(), tile);
     }
 }

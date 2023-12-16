@@ -85,7 +85,9 @@ impl InCombat {
         attacker_attributes: &Attributes,
         target_state: &mut State,
     ) -> Result<(), HitError> {
-        self.add_attack_timer(bevy, attacker, attacker_attributes);
+        bevy.entity(attacker).insert(HasAttacked {
+            timer: Timer::from_seconds(attacker_attributes.speed as f32, TimerMode::Once),
+        });
 
         match self.roll_hit() {
             Ok(_) => {
@@ -136,12 +138,6 @@ impl InCombat {
                 }
             }
         }
-    }
-
-    fn add_attack_timer(&self, bevy: &mut Commands, attacker: Entity, attributes: &Attributes) {
-        bevy.entity(attacker).insert(HasAttacked {
-            timer: Timer::from_seconds(attributes.speed as f32, TimerMode::Once),
-        });
     }
 
     // You can move if you have no attack queued and if you roll a 1d10 greater than
