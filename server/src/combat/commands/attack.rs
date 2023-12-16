@@ -142,7 +142,7 @@ pub fn attack(
 #[derive(Error, Debug, PartialEq)]
 enum SkillError {
     #[error("You don't know how to do that.")]
-    UnknownSkill,
+    Unknown,
 }
 
 fn get_skill<'a>(
@@ -156,7 +156,7 @@ fn get_skill<'a>(
         .get(&character.mastery)
         .filter(|mastery| mastery.skills.contains(&skill.to_string()))
         .and_then(|_| skills.0.get(skill))
-        .ok_or(SkillError::UnknownSkill)
+        .ok_or(SkillError::Unknown)
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -164,9 +164,9 @@ enum TargetError {
     #[error("You don't see anything here.")]
     NoTile,
     #[error("You don't see a {0} here.")]
-    NoTarget(String),
+    NotFound(String),
     #[error("You can't attack the {0}.")]
-    InvalidTarget(String),
+    Invalid(String),
 }
 
 fn get_target(
@@ -182,19 +182,19 @@ fn get_target(
         .iter()
         .filter_map(|sibling| npcs.get(*sibling).ok())
         .find(|npc| npc.depiction.matches_query(&npc.entity, target))
-        .ok_or_else(|| TargetError::NoTarget(target.into()))?;
+        .ok_or_else(|| TargetError::NotFound(target.into()))?;
 
     if !npc
         .interactions
         .map_or(false, |i| i.0.contains(&Interaction::Attack))
     {
-        return Err(TargetError::InvalidTarget(target.into()));
+        return Err(TargetError::Invalid(target.into()));
     }
 
     if npc.state.is_none() {
         debug!("Target has Attack interaction but no state: {:?}", target);
 
-        return Err(TargetError::InvalidTarget(target.into()));
+        return Err(TargetError::Invalid(target.into()));
     }
 
     Ok(npc.entity)
@@ -367,7 +367,7 @@ mod tests {
         )
         .map(|s| s.name.clone());
 
-        assert_eq!(result, Err(SkillError::UnknownSkill));
+        assert_eq!(result, Err(SkillError::Unknown));
     }
 
     #[rstest]
@@ -387,7 +387,7 @@ mod tests {
         )
         .map(|s| s.name.clone());
 
-        assert_eq!(result, Err(SkillError::UnknownSkill));
+        assert_eq!(result, Err(SkillError::Unknown));
     }
 
     #[fixture]
@@ -432,7 +432,7 @@ mod tests {
 
         let result = get_target("goat", &tile_query, &tile, &npc_query);
 
-        assert_eq!(result, Err(TargetError::InvalidTarget("goat".into())));
+        assert_eq!(result, Err(TargetError::Invalid("goat".into())));
     }
 
     #[rstest]
@@ -445,7 +445,7 @@ mod tests {
 
         let result = get_target("goat", &tile_query, &tile, &npc_query);
 
-        assert_eq!(result, Err(TargetError::NoTarget("goat".into())));
+        assert_eq!(result, Err(TargetError::NotFound("goat".into())));
     }
 
     #[test]

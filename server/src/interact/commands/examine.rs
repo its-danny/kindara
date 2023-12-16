@@ -101,7 +101,7 @@ pub fn examine(
 #[derive(Error, Debug, PartialEq)]
 enum ExamineError {
     #[error("You don't see a {0} here")]
-    NoTarget(#[from] TargetError),
+    NotFound(#[from] TargetError),
     #[error("Something broke!")]
     QueryEntityError(#[from] QueryEntityError),
 }
@@ -137,7 +137,7 @@ fn execute_examine(
 #[derive(Error, Debug, PartialEq)]
 enum TargetError {
     #[error("You don't see a {0} here")]
-    NoTarget(String),
+    NotFound(String),
 }
 
 fn get_target(
@@ -150,7 +150,7 @@ fn get_target(
         .filter_map(|sibling| interactables.get(*sibling).ok())
         .find(|i| i.depiction.matches_query(&i.entity, target))
         .map(|i| i.entity)
-        .ok_or(TargetError::NoTarget(target.into()))
+        .ok_or(TargetError::NotFound(target.into()))
 }
 
 fn get_interactions(interactions: &[Interaction]) -> Vec<String> {

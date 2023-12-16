@@ -1,8 +1,12 @@
 use std::sync::OnceLock;
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::query::{QueryEntityError, WorldQuery},
+    prelude::*,
+};
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -39,20 +43,29 @@ pub fn handle_place(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct InventoryQuery {
+    children: Option<&'static Children>,
+    with_inventory: With<Inventory>,
+}
+
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    item: &'static Item,
+    depiction: &'static Depiction,
+    interactions: Option<&'static Interactions>,
+    children: Option<&'static Children>,
+}
+
 pub fn place(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
-    inventories: Query<Option<&Children>, With<Inventory>>,
+    inventories: Query<InventoryQuery>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(
-        Entity,
-        &Item,
-        &Depiction,
-        Option<&Interactions>,
-        Option<&Children>,
-    )>,
+    items: Query<ItemQuery>,
     surfaces: Query<&Surface>,
 ) {
     for command in commands.iter() {
@@ -64,73 +77,134 @@ pub fn place(
                 .iter()
                 .find_map(|child| inventories.get(*child).ok()));
 
-            let Some((object, object_item, object_depiction, object_interactable, _)) = inventory
-                .iter()
-                .flat_map(|children| children.iter())
-                .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _, d, _, _)| d.matches_query(e, object))
-            else {
-                outbox.send_text(client.id, format!("You don't have a {object}."));
+            let object = match get_object(object, &inventory, &items) {
+                Ok(object) => object,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-                continue;
+                    continue;
+                }
             };
 
-            if !object_interactable.map_or(false, |i| i.0.contains(&Interaction::Place)) {
-                outbox.send_text(
-                    client.id,
-                    format!("You can't place the {}.", object_depiction.name),
-                );
+            let target = match get_target(target, siblings, &items) {
+                Ok(target) => target,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-                continue;
+                    continue;
+                }
+            };
+
+            match place_object(
+                &mut bevy,
+                target,
+                object,
+                &surfaces.get(target).ok(),
+                &items,
+            ) {
+                Ok(msg) => outbox.send_text(client.id, msg),
+                Err(err) => outbox.send_text(client.id, err.to_string()),
             }
-
-            let Some((target, _, target_depiction, _, target_children)) = siblings
-                .iter()
-                .filter_map(|child| items.get(*child).ok())
-                .find(|(e, _, d, _, _)| d.matches_query(e, target))
-            else {
-                outbox.send_text(client.id, format!("You don't see a {target} here."));
-
-                continue;
-            };
-
-            let Ok(surface) = surfaces.get(target) else {
-                outbox.send_text(
-                    client.id,
-                    format!(
-                        "You can't place the {} on the {}.",
-                        object_depiction.name, target_depiction.name
-                    ),
-                );
-
-                continue;
-            };
-
-            if target_children.map_or(false, |children| {
-                children
-                    .iter()
-                    .filter_map(|child| items.get(*child).ok())
-                    .map(|(_, item, _, _, _)| item.size.value())
-                    .sum::<u8>()
-                    + object_item.size.value()
-                    > surface.capacity
-            }) {
-                outbox.send_text(client.id, format!("The {} is full.", target_depiction.name));
-
-                continue;
-            }
-
-            bevy.entity(object).set_parent(target);
-
-            outbox.send_text(
-                client.id,
-                format!(
-                    "You place the {} {} the {}.",
-                    object_depiction.name, surface.kind, target_depiction.name,
-                ),
-            );
         }
     }
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum ObjectError {
+    #[error("You don't have a {0}.")]
+    NotFound(String),
+    #[error("You can't place the {0}.")]
+    NotPlacable(String),
+}
+
+fn get_object(
+    target: &str,
+    inventory: &InventoryQueryItem,
+    items: &Query<ItemQuery>,
+) -> Result<Entity, ObjectError> {
+    let object = inventory
+        .children
+        .iter()
+        .flat_map(|children| children.iter())
+        .filter_map(|child| items.get(*child).ok())
+        .find(|item| item.depiction.matches_query(&item.entity, target))
+        .ok_or(ObjectError::NotFound(target.into()))?;
+
+    if !object
+        .interactions
+        .map_or(false, |i| i.0.contains(&Interaction::Place))
+    {
+        return Err(ObjectError::NotPlacable(object.depiction.name.clone()));
+    }
+
+    Ok(object.entity)
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum TargetError {
+    #[error("You don't see a {0} here.")]
+    NotFound(String),
+}
+
+fn get_target(
+    target: &str,
+    children: &Children,
+    items: &Query<ItemQuery>,
+) -> Result<Entity, TargetError> {
+    let target = children
+        .iter()
+        .filter_map(|child| items.get(*child).ok())
+        .find(|item| item.depiction.matches_query(&item.entity, target))
+        .ok_or(TargetError::NotFound(target.into()))?;
+
+    Ok(target.entity)
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum PlaceError {
+    #[error("The {0} is full.")]
+    AtCapacity(String),
+    #[error("You can't place the {0} on the {1}.")]
+    NotPlacable(String, String),
+    #[error("Something broke!")]
+    QueryEntityError(#[from] QueryEntityError),
+}
+
+fn place_object(
+    bevy: &mut Commands,
+    target: Entity,
+    object: Entity,
+    surface: &Option<&Surface>,
+    items: &Query<ItemQuery>,
+) -> Result<String, PlaceError> {
+    let Some(surface) = surface else {
+        return Err(PlaceError::NotPlacable(
+            items.get(object)?.depiction.name.clone(),
+            items.get(target)?.depiction.name.clone(),
+        ));
+    };
+
+    let target = items.get(target)?;
+    let object = items.get(object)?;
+
+    if target.children.map_or(false, |children| {
+        children
+            .iter()
+            .filter_map(|child| items.get(*child).ok())
+            .map(|item| item.item.size.value())
+            .sum::<u8>()
+            + object.item.size.value()
+            > surface.capacity
+    }) {
+        return Err(PlaceError::AtCapacity(target.depiction.name.clone()));
+    }
+
+    bevy.entity(object.entity).set_parent(target.entity);
+
+    Ok(format!(
+        "You place the {} {} the {}.",
+        object.depiction.name, surface.kind, target.depiction.name,
+    ))
 }
 
 #[cfg(test)]
