@@ -1,10 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::{
-    ecs::query::{QueryEntityError, WorldQuery},
-    prelude::*,
-};
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
@@ -175,8 +172,6 @@ enum PlaceError {
     AtCapacity(String),
     #[error("You can't place the {0} on the {1}.")]
     NotPlacable(String, String),
-    #[error("Something broke!")]
-    QueryEntityError(#[from] QueryEntityError),
 }
 
 fn place_object(
@@ -185,12 +180,12 @@ fn place_object(
     object: Entity,
     surface: &Option<&Surface>,
     items: &Query<ItemQuery>,
-) -> Result<String, PlaceError> {
+) -> Result<String, anyhow::Error> {
     let Some(surface) = surface else {
-        return Err(PlaceError::NotPlacable(
+        Err(PlaceError::NotPlacable(
             items.get(object)?.depiction.name.clone(),
             items.get(target)?.depiction.name.clone(),
-        ));
+        ))?
     };
 
     let target = items.get(target)?;
@@ -205,7 +200,7 @@ fn place_object(
             + object.item.size.value()
             > surface.capacity
     }) {
-        return Err(PlaceError::AtCapacity(target.depiction.name.clone()));
+        Err(PlaceError::AtCapacity(target.depiction.name.clone()))?
     }
 
     bevy.entity(object.entity).set_parent(target.entity);
