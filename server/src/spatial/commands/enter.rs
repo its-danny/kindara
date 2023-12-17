@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     combat::components::InCombat,
@@ -31,6 +32,29 @@ pub fn handle_enter(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct TransitionQuery {
+    entity: Entity,
+    transition: &'static Transition,
+    depiction: &'static Depiction,
+}
+
+#[derive(WorldQuery)]
+pub struct TileQuery {
+    entity: Entity,
+    position: &'static Position,
+    parent: &'static Parent,
+    children: Option<&'static Children>,
+    with_tile: With<Tile>,
+}
+
+#[derive(WorldQuery)]
+pub struct ZoneQuery {
+    entity: Entity,
+    zone: &'static Zone,
+    with_zone: With<Zone>,
+}
+
 #[sysfail(log)]
 pub fn enter(
     mut bevy: Commands,
@@ -38,9 +62,9 @@ pub fn enter(
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, Option<&InCombat>, &Parent), With<Online>>,
-    transitions: Query<(&Transition, &Depiction)>,
-    tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
-    zones: Query<&Zone>,
+    transitions: Query<TransitionQuery>,
+    tiles: Query<TileQuery>,
+    zones: Query<ZoneQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
@@ -55,47 +79,34 @@ pub fn enter(
                 continue;
             }
 
-            let (_, _, _, siblings) = tiles.get(tile.get())?;
+            let tile = tiles.get(tile.get())?;
 
-            let transitions = siblings
-                .map(|siblings| {
-                    siblings
-                        .iter()
-                        .filter_map(|child| transitions.get(*child).ok())
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_else(Vec::new);
+            let transitions_here = match get_transitions(&tile.children, &transitions) {
+                Ok(transitions) => transitions,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-            if transitions.is_empty() {
-                outbox.send_text(client.id, "There is nowhere to enter from here.");
-
-                continue;
-            }
-
-            let Some((transition, _)) = transitions.iter().find(|(_, depiction)| {
-                target
-                    .as_ref()
-                    .map_or(true, |tag| depiction.tags.contains(tag))
-            }) else {
-                outbox.send_text(client.id, "Could not find entrance.");
-
-                continue;
+                    continue;
+                }
             };
 
-            let target = tiles
-                .iter()
-                .find_map(|(e, p, z, _)| {
-                    zones.get(z.get()).ok().and_then(|zone| {
-                        if zone.name == transition.zone && p.0 == transition.position {
-                            Some(e)
-                        } else {
-                            None
-                        }
-                    })
-                })
-                .context("Target not found")?;
+            let found_transition = match find_transition(target, &transitions_here, &transitions) {
+                Ok(transition) => transition,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-            bevy.entity(player).set_parent(target);
+                    continue;
+                }
+            };
+
+            match execute_enter(&mut bevy, &player, &tiles, &zones, found_transition) {
+                Ok(_) => (),
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
+
+                    continue;
+                }
+            }
 
             proxy.send(ProxyCommand(ParsedCommand {
                 from: client.id,
@@ -103,6 +114,85 @@ pub fn enter(
             }));
         }
     }
+
+    Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum GetTransitionsError {
+    #[error("There is nowhere to enter from here.")]
+    NoTransitions,
+}
+
+fn get_transitions(
+    siblings: &Option<&Children>,
+    transitions: &Query<TransitionQuery>,
+) -> Result<Vec<Entity>, GetTransitionsError> {
+    let transitions = siblings
+        .map(|siblings| {
+            siblings
+                .iter()
+                .filter_map(|child| transitions.get(*child).ok())
+                .map(|transition| transition.entity)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if transitions.is_empty() {
+        Err(GetTransitionsError::NoTransitions)?
+    }
+
+    Ok(transitions)
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum FindTransitionError {
+    #[error("Could not find entrance.")]
+    NotFound,
+}
+
+fn find_transition<'a>(
+    target: &Option<String>,
+    transitions: &[Entity],
+    query: &'a Query<TransitionQuery>,
+) -> Result<&'a Transition, FindTransitionError> {
+    transitions
+        .iter()
+        .find_map(|&transition| {
+            let transition = query.get(transition).ok()?;
+
+            match target {
+                Some(target_str) if transition.depiction.tags.contains(target_str) => {
+                    Some(transition.transition)
+                }
+                None => Some(transition.transition),
+                _ => None,
+            }
+        })
+        .ok_or(FindTransitionError::NotFound)
+}
+
+fn execute_enter(
+    bevy: &mut Commands,
+    player: &Entity,
+    tiles: &Query<TileQuery>,
+    zones: &Query<ZoneQuery>,
+    transition: &Transition,
+) -> Result<(), anyhow::Error> {
+    let target = tiles
+        .iter()
+        .find_map(|tile| {
+            zones.get(tile.parent.get()).ok().and_then(|zone| {
+                if zone.zone.name == transition.zone && tile.position.0 == transition.position {
+                    Some(tile.entity)
+                } else {
+                    None
+                }
+            })
+        })
+        .context("Target not found")?;
+
+    bevy.entity(*player).set_parent(target);
 
     Ok(())
 }
