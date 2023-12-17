@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -9,7 +11,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -30,6 +31,7 @@ pub fn handle_enter(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn enter(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -39,11 +41,13 @@ pub fn enter(
     transitions: Query<(&Transition, &Depiction)>,
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Zone>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let (player, client, in_combat, tile) =
-                value_or_continue!(players.iter_mut().find(|(_, c, _, _)| c.id == command.from));
+            let (player, client, in_combat, tile) = players
+                .iter_mut()
+                .find(|(_, c, _, _)| c.id == command.from)
+                .context("Player not found")?;
 
             if in_combat.is_some() {
                 outbox.send_text(client.id, "You can't move while in combat.");
@@ -51,7 +55,7 @@ pub fn enter(
                 continue;
             }
 
-            let (_, _, _, siblings) = value_or_continue!(tiles.get(tile.get()).ok());
+            let (_, _, _, siblings) = tiles.get(tile.get())?;
 
             let transitions = siblings
                 .map(|siblings| {
@@ -78,15 +82,18 @@ pub fn enter(
                 continue;
             };
 
-            let target = value_or_continue!(tiles.iter().find_map(|(e, p, z, _)| {
-                zones.get(z.get()).ok().and_then(|zone| {
-                    if zone.name == transition.zone && p.0 == transition.position {
-                        Some(e)
-                    } else {
-                        None
-                    }
+            let target = tiles
+                .iter()
+                .find_map(|(e, p, z, _)| {
+                    zones.get(z.get()).ok().and_then(|zone| {
+                        if zone.name == transition.zone && p.0 == transition.position {
+                            Some(e)
+                        } else {
+                            None
+                        }
+                    })
                 })
-            }));
+                .context("Target not found")?;
 
             bevy.entity(player).set_parent(target);
 
@@ -96,6 +103,8 @@ pub fn enter(
             }));
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

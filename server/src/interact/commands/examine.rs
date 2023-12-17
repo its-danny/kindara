@@ -1,9 +1,11 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{
     ecs::query::{QueryEntityError, WorldQuery},
     prelude::*,
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 use thiserror::Error;
@@ -13,7 +15,6 @@ use crate::{
     interact::components::{InMenu, Interaction, Interactions, MenuType},
     player::components::{Client, Online},
     spatial::components::Tile,
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -58,6 +59,7 @@ pub struct InteractableQuery {
     interactions: Option<&'static Interactions>,
 }
 
+#[sysfail(log)]
 pub fn examine(
     interactables: Query<InteractableQuery>,
     mut bevy: Commands,
@@ -66,12 +68,15 @@ pub fn examine(
     mut proxy: EventWriter<ProxyCommand>,
     players: Query<(Entity, &Client, &Parent, Option<&InMenu>), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Examine((target, option)) = &command.command {
-            let (player, client, tile, in_menu) =
-                value_or_continue!(players.iter().find(|(_, c, _, _)| c.id == command.from));
-            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
+            let (player, client, tile, in_menu) = players
+                .iter()
+                .find(|(_, c, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let siblings = tiles.get(tile.get())?;
 
             if let Some(target) = target {
                 match execute_examine(&mut bevy, player, target, siblings, &interactables) {
@@ -96,6 +101,8 @@ pub fn examine(
             }
         }
     }
+
+    Ok(())
 }
 
 #[derive(Error, Debug, PartialEq)]

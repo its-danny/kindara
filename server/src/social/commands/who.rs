@@ -1,13 +1,14 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -21,15 +22,18 @@ pub fn handle_who(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn who(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character), With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Who = &command.command {
-            let (client, _) =
-                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
+            let (client, _) = players
+                .iter()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
             let online = players
                 .iter()
@@ -39,6 +43,8 @@ pub fn who(
             outbox.send_text(client.id, online.join(", "));
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

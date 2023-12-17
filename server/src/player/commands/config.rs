@@ -1,10 +1,12 @@
 use std::{fmt::Display, sync::OnceLock};
 
+use anyhow::Context;
 use ascii_table::AsciiTable;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use futures_lite::future;
 use regex::Regex;
@@ -17,7 +19,6 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -41,17 +42,20 @@ pub fn handle_config(content: &str) -> Result<Command, ParseError> {
 #[derive(Component)]
 pub struct SaveConfigTask(Task<Result<ClientId, sqlx::Error>>);
 
+#[sysfail(log)]
 pub fn config(
     database: Res<DatabasePool>,
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Character), With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Config((option, value)) = &command.command {
-            let (client, mut character) =
-                value_or_continue!(players.iter_mut().find(|(c, _)| c.id == command.from));
+            let (client, mut character) = players
+                .iter_mut()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
             match (option, value) {
                 (None, None) => {
@@ -92,6 +96,8 @@ pub fn config(
             }
         }
     }
+
+    Ok(())
 }
 
 fn spawn_save_config_task(
@@ -111,21 +117,27 @@ fn spawn_save_config_task(
     })
 }
 
+#[sysfail(log)]
 pub fn handle_save_config_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut SaveConfigTask)>,
     mut outbox: EventWriter<Outbox>,
     players: Query<&Client, With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
-            let client = value_or_continue!(players.iter().find(|c| c.id == client_id));
+            let client = players
+                .iter()
+                .find(|c| c.id == client_id)
+                .context("Player not found")?;
 
             outbox.send_text(client.id, "Config saved.");
 
             bevy.entity(entity).remove::<SaveConfigTask>();
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

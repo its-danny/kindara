@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     items::components::{Inventory, Item},
     player::components::{Client, Online},
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -23,20 +24,25 @@ pub fn handle_inventory(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn inventory(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
     items: Query<&Depiction, With<Item>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Inventory = &command.command {
-            let (client, children) =
-                value_or_continue!(players.iter_mut().find(|(c, _)| c.id == command.from));
-            let inventory = value_or_continue!(children
+            let (client, children) = players
+                .iter_mut()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let inventory = children
                 .iter()
-                .find_map(|child| inventories.get(*child).ok()));
+                .find_map(|child| inventories.get(*child).ok())
+                .context("Inventory not found")?;
 
             let mut items = inventory
                 .iter()
@@ -61,6 +67,8 @@ pub fn inventory(
             outbox.send_text(client.id, format!("You are carrying: {names}"));
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

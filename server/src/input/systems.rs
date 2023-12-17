@@ -1,4 +1,6 @@
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 
 use crate::{
@@ -20,19 +22,19 @@ use crate::{
         movement::handle_movement, open::handle_open, scan::handle_scan, sit::handle_sit,
         stand::handle_stand, teleport::handle_teleport,
     },
-    value_or_continue,
     visual::paint,
     world::commands::time::handle_time,
 };
 
 use super::events::{Command, ParseError, ParsedCommand, ProxyCommand};
 
+#[sysfail(log)]
 pub fn parse_command(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     mut commands: EventWriter<ParsedCommand>,
-    players: Query<&Client, With<Online>>,
-) {
+    clients: Query<&Client, With<Online>>,
+) -> Result<(), anyhow::Error> {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
             Some((m, paint::strip_style(content)))
@@ -40,7 +42,10 @@ pub fn parse_command(
             None
         }
     }) {
-        let client = value_or_continue!(players.iter().find(|c| c.id == message.from));
+        let client = clients
+            .iter()
+            .find(|c| c.id == message.from)
+            .context("Client not found")?;
 
         let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
             Box::new(handle_announce),
@@ -90,6 +95,8 @@ pub fn parse_command(
             None => outbox.send_text(client.id, ParseError::UnknownCommand.to_string()),
         }
     }
+
+    Ok(())
 }
 
 pub fn handle_proxy_command(

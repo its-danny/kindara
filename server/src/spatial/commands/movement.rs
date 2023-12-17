@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -13,7 +15,6 @@ use crate::{
         components::{Door, Position, Seated, Tile, Zone},
         utils::offset_for_direction,
     },
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -29,6 +30,7 @@ pub fn handle_movement(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn movement(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -49,16 +51,16 @@ pub fn movement(
     tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
     zones: Query<&Children, With<Zone>>,
     doors: Query<&Door>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Movement(direction) = &command.command {
-            let (player, client, in_combat, queued_attack, tile, seated) =
-                value_or_continue!(players
-                    .iter_mut()
-                    .find(|(_, c, _, _, _, _)| c.id == command.from));
+            let (player, client, in_combat, queued_attack, tile, seated) = players
+                .iter_mut()
+                .find(|(_, c, _, _, _, _)| c.id == command.from)
+                .context("Player not found")?;
 
             if let Some(in_combat) = in_combat {
-                let attrs = value_or_continue!(npc_attrs.get(in_combat.target).ok());
+                let attrs = npc_attrs.get(in_combat.target)?;
 
                 if !in_combat.can_move(attrs, &queued_attack) {
                     outbox.send_text(client.id, "You failed to get away.");
@@ -67,8 +69,8 @@ pub fn movement(
                 }
             }
 
-            let (_, position, zone, siblings) = value_or_continue!(tiles.get(tile.get()).ok());
-            let zone_tiles = value_or_continue!(zones.get(zone.get()).ok());
+            let (_, position, zone, siblings) = tiles.get(tile.get())?;
+            let zone_tiles = zones.get(zone.get())?;
 
             let Some(offset) = offset_for_direction(direction) else {
                 continue;
@@ -107,6 +109,8 @@ pub fn movement(
             }));
         }
     }
+
+    Ok(())
 }
 
 /// Check if the target tile is blocked by a closed door.

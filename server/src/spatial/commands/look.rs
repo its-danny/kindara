@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{prelude::*, utils::HashMap};
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use inflector::cases::titlecase::to_title_case;
 use regex::Regex;
@@ -19,7 +21,7 @@ use crate::{
         components::{Action, Door, Position, Tile, Transition, Zone},
         utils::offset_for_direction,
     },
-    timed_paint, value_or_continue,
+    timed_paint,
     visual::{
         components::{Depiction, Sprite},
         paint::Color,
@@ -46,6 +48,7 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn look(
     items: Query<
         (
@@ -66,13 +69,15 @@ pub fn look(
     transitions: Query<(Entity, &Depiction), With<Transition>>,
     world_time: Res<WorldTime>,
     zones: Query<(&Zone, &Children)>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Look(target) = &command.command {
-            let (client, character, tile, _) =
-                value_or_continue!(players.iter().find(|(c, _, _, _)| c.id == command.from));
-            let (tile, sprite, position, siblings, zone) =
-                value_or_continue!(tiles.get(tile.get()).ok());
+            let (client, character, tile, _) = players
+                .iter()
+                .find(|(c, _, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let (tile, sprite, position, siblings, zone) = tiles.get(tile.get())?;
 
             let output: String;
 
@@ -147,7 +152,7 @@ pub fn look(
                     output = format!("You don't see a {target} here.");
                 }
             } else {
-                let (zone, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
+                let (zone, zone_tiles) = zones.get(zone.get())?;
 
                 let exits = get_exits(position, zone_tiles, &tiles);
                 let items_line = get_items_line(siblings, &items);
@@ -178,6 +183,8 @@ pub fn look(
             prompts.send(Prompt::new(client.id));
         }
     }
+
+    Ok(())
 }
 
 fn get_exits(

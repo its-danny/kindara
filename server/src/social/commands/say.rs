@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -30,17 +31,21 @@ pub fn handle_say(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn say(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Say(message) = &command.command {
-            let (_, character, tile) =
-                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
-            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
+            let (_, character, tile) = players
+                .iter()
+                .find(|(c, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let siblings = tiles.get(tile.get())?;
 
             for (other_client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
                 outbox.send_text(
@@ -50,6 +55,8 @@ pub fn say(
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

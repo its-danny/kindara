@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -9,7 +11,6 @@ use crate::{
     keycard::{Keycard, ANNOUNCE},
     paint,
     player::components::{Client, Online},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -31,15 +32,18 @@ pub fn handle_announce(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn announce(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Keycard), With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Announce(message) = &command.command {
-            let (_, keycard) =
-                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
+            let (_, keycard) = players
+                .iter()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
             if !keycard.can(ANNOUNCE) {
                 continue;
@@ -50,6 +54,8 @@ pub fn announce(
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

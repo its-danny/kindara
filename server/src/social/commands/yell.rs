@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
     spatial::components::{Tile, Zone},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -30,25 +31,31 @@ pub fn handle_yell(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn yell(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character, &Parent), With<Online>>,
     tiles: Query<&Parent, With<Tile>>,
     zones: Query<&Children, With<Zone>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Yell(message) = &command.command {
-            let (_, character, tile) =
-                value_or_continue!(players.iter().find(|(c, _, _)| c.id == command.from));
-            let zone = value_or_continue!(tiles.get(tile.get()).ok());
-            let zone_tiles = value_or_continue!(zones.get(zone.get()).ok());
+            let (_, character, tile) = players
+                .iter()
+                .find(|(c, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let zone = tiles.get(tile.get())?;
+            let zone_tiles = zones.get(zone.get())?;
 
             for (client, _, _) in players.iter().filter(|(_, _, t)| zone_tiles.contains(t)) {
                 outbox.send_text(client.id, format!("{} yells \"{message}\"", character.name));
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

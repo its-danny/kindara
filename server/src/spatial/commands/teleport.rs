@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -9,7 +11,6 @@ use crate::{
     keycard::{Keycard, TELEPORT},
     player::components::{Character, Client, Online},
     spatial::components::{Position, Tile, Zone},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -53,6 +54,7 @@ pub fn handle_teleport(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn teleport(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -61,18 +63,20 @@ pub fn teleport(
     players: Query<(Entity, &Client, &Keycard, &Character, &Parent), With<Online>>,
     tiles: Query<(Entity, &Position, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Teleport((zone, (x, y, z))) = &command.command {
-            let (player, client, keycard, character, tile) =
-                value_or_continue!(players.iter().find(|(_, c, _, _, _)| c.id == command.from));
+            let (player, client, keycard, character, tile) = players
+                .iter()
+                .find(|(_, c, _, _, _)| c.id == command.from)
+                .context("Player not found")?;
 
             if !keycard.can(TELEPORT) {
                 continue;
             }
 
-            let (_, _, here) = value_or_continue!(tiles.get(tile.get()).ok());
-            let (here, _) = value_or_continue!(zones.get(here.get()).ok());
+            let (_, _, here) = tiles.get(tile.get())?;
+            let (here, _) = zones.get(here.get())?;
 
             let position = IVec3::new(*x, *y, *z);
 
@@ -110,6 +114,8 @@ pub fn teleport(
             }));
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

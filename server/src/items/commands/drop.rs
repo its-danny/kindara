@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -9,7 +11,6 @@ use crate::{
     items::components::{Inventory, Item},
     player::components::{Client, Online},
     spatial::components::Tile,
-    value_or_continue,
     visual::{components::Depiction, utils::name_list},
 };
 
@@ -34,6 +35,7 @@ pub fn handle_drop(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn drop(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -42,15 +44,20 @@ pub fn drop(
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<Entity, With<Tile>>,
     items: Query<(Entity, &Depiction), With<Item>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Drop((target, all)) = &command.command {
-            let (client, tile, children) =
-                value_or_continue!(players.iter_mut().find(|(c, _, _)| c.id == command.from));
-            let tile = value_or_continue!(tiles.get(tile.get()).ok());
-            let items_in_inventory = value_or_continue!(children
+            let (client, tile, children) = players
+                .iter_mut()
+                .find(|(c, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let tile = tiles.get(tile.get())?;
+
+            let items_in_inventory = children
                 .iter()
-                .find_map(|child| inventories.get(*child).ok()));
+                .find_map(|child| inventories.get(*child).ok())
+                .context("Inventory not found")?;
 
             let mut items_found = items_in_inventory
                 .iter()
@@ -83,6 +90,8 @@ pub fn drop(
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

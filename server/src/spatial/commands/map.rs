@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Zone},
-    value_or_continue,
     visual::components::Sprite,
 };
 
@@ -23,19 +24,23 @@ pub fn handle_map(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn map(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Parent), With<Online>>,
     tiles: Query<(&Position, &Sprite, &Parent), With<Tile>>,
     zones: Query<(&Zone, &Children)>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Map = &command.command {
-            let (client, tile) =
-                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
-            let (position, _, zone) = value_or_continue!(tiles.get(tile.get()).ok());
-            let (zone, zone_tiles) = value_or_continue!(zones.get(zone.get()).ok());
+            let (client, tile) = players
+                .iter()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let (position, _, zone) = tiles.get(tile.get())?;
+            let (zone, zone_tiles) = zones.get(zone.get())?;
 
             let height = 24;
             let width = if client.width % 2 == 1 {
@@ -77,4 +82,6 @@ pub fn map(
             outbox.send_text(client.id, format!("{}\n{display}", zone.name));
         }
     }
+
+    Ok(())
 }

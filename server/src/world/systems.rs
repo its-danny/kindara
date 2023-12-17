@@ -1,7 +1,9 @@
+use anyhow::Context;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_proto::prelude::*;
 use futures_lite::future;
 use sqlx::{Pool, Postgres};
@@ -11,7 +13,6 @@ use crate::{
     items::components::{Inventory, Item},
     player::components::{Character, Online},
     spatial::components::Tile,
-    value_or_continue,
 };
 
 use super::resources::{SaveTimer, WorldState, WorldStateCharacter, WorldTime};
@@ -31,6 +32,7 @@ pub fn spawn_the_roaring_lion(mut commands: ProtoCommands) {
 #[derive(Component)]
 pub struct SaveWorldTask(Task<Result<WorldState, sqlx::Error>>);
 
+#[sysfail(log)]
 pub fn save_world_state(
     database: Res<DatabasePool>,
     inventories: Query<Option<&Children>, With<Inventory>>,
@@ -40,17 +42,21 @@ pub fn save_world_state(
     players: Query<(&Character, &Parent, &Children), With<Online>>,
     tiles: Query<&Name, With<Tile>>,
     time: Res<Time>,
-) {
+) -> Result<(), anyhow::Error> {
     if save_timer.0.tick(time.delta()).just_finished() {
         let mut characters: Vec<WorldStateCharacter> = Vec::new();
 
         for (character, parent, children) in players.iter() {
-            let tile_name =
-                value_or_continue!(tiles.get(parent.get()).ok().map(|name| name.to_string()));
+            let tile_name = tiles
+                .get(parent.get())
+                .ok()
+                .map(|name| name.to_string())
+                .context("Tile not found")?;
 
-            let inventory = value_or_continue!(children
+            let inventory = children
                 .iter()
-                .find_map(|child| inventories.get(*child).ok()));
+                .find_map(|child| inventories.get(*child).ok())
+                .context("Inventory not found")?;
 
             let items_names = inventory
                 .iter()
@@ -73,6 +79,8 @@ pub fn save_world_state(
             WorldState { characters },
         )));
     }
+
+    Ok(())
 }
 
 fn spawn_save_world_state_task(
