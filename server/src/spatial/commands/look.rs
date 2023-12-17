@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{ecs::query::WorldQuery, prelude::*, utils::HashMap};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use inflector::cases::titlecase::to_title_case;
@@ -48,129 +48,94 @@ pub fn handle_look(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    surface: Option<&'static Surface>,
+    door: Option<&'static Door>,
+    children: Option<&'static Children>,
+    with_item: With<Item>,
+}
+
+#[derive(WorldQuery)]
+pub struct NpcQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    interactions: Option<&'static Interactions>,
+    with_npc: With<Npc>,
+}
+
+#[derive(WorldQuery)]
+pub struct PlayerQuery {
+    entity: Entity,
+    client: &'static Client,
+    character: &'static Character,
+    parent: &'static Parent,
+    action: Option<&'static Action>,
+    with_online: With<Online>,
+}
+
+#[derive(WorldQuery)]
+pub struct TileQuery {
+    entity: Entity,
+    tile: &'static Tile,
+    sprite: &'static Sprite,
+    position: &'static Position,
+    children: Option<&'static Children>,
+    parent: &'static Parent,
+}
+
 #[sysfail(log)]
 pub fn look(
-    items: Query<
-        (
-            Entity,
-            &Depiction,
-            Option<&Surface>,
-            Option<&Door>,
-            Option<&Children>,
-        ),
-        With<Item>,
-    >,
+    items: Query<ItemQuery>,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut prompts: EventWriter<Prompt>,
-    npcs: Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
-    players: Query<(&Client, &Character, &Parent, Option<&Action>), With<Online>>,
-    tiles: Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
+    npcs: Query<NpcQuery>,
+    players: Query<PlayerQuery>,
+    tiles: Query<TileQuery>,
     transitions: Query<(Entity, &Depiction), With<Transition>>,
     world_time: Res<WorldTime>,
     zones: Query<(&Zone, &Children)>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Look(target) = &command.command {
-            let (client, character, tile, _) = players
+            let player = players
                 .iter()
-                .find(|(c, _, _, _)| c.id == command.from)
+                .find(|p| p.client.id == command.from)
                 .context("Player not found")?;
 
-            let (tile, sprite, position, siblings, zone) = tiles.get(tile.get())?;
+            let tile = tiles.get(player.parent.get())?;
 
             let output: String;
 
             if let Some(target) = target {
-                let matching_item = siblings
-                    .iter()
-                    .flat_map(|siblings| siblings.iter())
-                    .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(entity, depiction, _, _, _)| depiction.matches_query(entity, target));
-
-                let matching_transition = siblings
-                    .iter()
-                    .flat_map(|siblings| siblings.iter())
-                    .filter_map(|sibling| transitions.get(*sibling).ok())
-                    .find(|(entity, depiction)| depiction.matches_query(entity, target));
-
-                let matching_npc = siblings
-                    .iter()
-                    .flat_map(|siblings| siblings.iter())
-                    .filter_map(|sibling| npcs.get(*sibling).ok())
-                    .find(|(entity, depiction, _)| depiction.matches_query(entity, target));
-
-                let matching_player = siblings
-                    .iter()
-                    .flat_map(|siblings| siblings.iter())
-                    .filter_map(|sibling| players.get(*sibling).ok())
-                    .find(|(_, c, _, _)| &c.name.to_lowercase() == target);
-
-                if let Some((_, depiction, surface, door, children)) = matching_item {
-                    let surface_line = surface
-                        .and_then(|s| children.map(|c| (s, c)))
-                        .map(|(surface, children)| {
-                            let on_surface = items_on_surface(&items, children);
-
-                            if on_surface.is_empty() {
-                                "".into()
-                            } else {
-                                format!(
-                                    " {} the {} {} {}.",
-                                    to_title_case(&surface.kind.to_string()),
-                                    depiction.short_name,
-                                    if children.len() > 1 { "are" } else { "is" },
-                                    on_surface
-                                )
-                            }
-                        })
-                        .unwrap_or("".into());
-
-                    let mut description = depiction.description.clone();
-
-                    if let Some(door) = door {
-                        let door_line = if door.is_open {
-                            " It is open."
-                        } else {
-                            " It is closed."
-                        };
-
-                        description.push_str(door_line);
-                    }
-
-                    output = paint!("{}{}", description, surface_line);
-                } else if let Some((_, depiction)) = matching_transition {
-                    output = paint!("{}", depiction.description,);
-                } else if let Some((_, depiction, _)) = matching_npc {
-                    output = paint!("{}", depiction.description,);
-                } else if let Some((_, character, _, _)) = matching_player {
-                    output = character.description.clone().unwrap_or(format!(
-                        "You can't quite make out what {} looks like.",
-                        character.name
-                    ));
-                } else {
-                    output = format!("You don't see a {target} here.");
-                }
+                output = look_at_item(target, &items, &tile.children)
+                    .or_else(|| look_at_transition(target, &transitions, &tile.children))
+                    .or_else(|| look_at_npc(target, &npcs, &tile.children))
+                    .or_else(|| look_at_player(target, &players, &tile.children))
+                    .unwrap_or_else(|| format!("You don't see a {} here.", target));
             } else {
-                let (zone, zone_tiles) = zones.get(zone.get())?;
+                let (zone, zone_tiles) = zones.get(tile.parent.get())?;
 
-                let exits = get_exits(position, zone_tiles, &tiles);
-                let items_line = get_items_line(siblings, &items);
-                let npcs_line = get_npcs_line(siblings, &npcs);
-                let players_line = get_players_line(client, siblings, &players);
+                let exits = get_exits(tile.position, zone_tiles, &tiles);
+                let items_line = get_items_line(tile.children, &items);
+                let npcs_line = get_npcs_line(tile.children, &npcs);
+                let players_line = get_players_line(player.client, tile.children, &players);
 
-                output = if character.config.brief {
-                    format!("{} {}{}", sprite.character, tile.name, exits)
+                output = if player.character.config.brief {
+                    format!("{} {}{}", tile.sprite.character, tile.tile.name, exits)
                 } else {
                     timed_paint!(
                         &world_time,
                         "{} {}{} - {} ({})\n{}{}{}{}",
-                        sprite.character,
-                        tile.name,
+                        tile.sprite.character,
+                        tile.tile.name,
                         exits,
                         zone.name,
                         world_time.time_string(),
-                        tile.description,
+                        tile.tile.description,
                         items_line,
                         npcs_line,
                         players_line,
@@ -178,85 +143,189 @@ pub fn look(
                 };
             }
 
-            outbox.send_text(client.id, output);
+            outbox.send_text(player.client.id, output);
 
-            prompts.send(Prompt::new(client.id));
+            prompts.send(Prompt::new(player.client.id));
         }
     }
 
     Ok(())
 }
 
-fn get_exits(
-    position: &Position,
-    zone_tiles: &Children,
-    tiles: &Query<(&Tile, &Sprite, &Position, Option<&Children>, &Parent)>,
-) -> String {
-    let directions = ["n", "ne", "e", "se", "s", "sw", "w", "nw", "u", "d"];
-    let mut exits: Vec<String> = vec![];
+fn look_at_item(
+    target: &str,
+    items: &Query<ItemQuery>,
+    siblings: &Option<&Children>,
+) -> Option<String> {
+    siblings
+        .iter()
+        .flat_map(|siblings| siblings.iter())
+        .find_map(|&sibling| items.get(sibling).ok())
+        .filter(|item| item.depiction.matches_query(&item.entity, target))
+        .map(|item| {
+            let surface_line = item
+                .surface
+                .and_then(|s| item.children.map(|c| (s, c)))
+                .map(|(surface, children)| {
+                    let on_surface = children
+                        .iter()
+                        .filter_map(|child| {
+                            items.get(*child).ok().filter(|item| item.depiction.visible)
+                        })
+                        .map(|item| item.depiction.short_name.clone())
+                        .collect::<Vec<String>>();
 
-    for tile in zone_tiles.iter() {
-        if let Ok((_, _, p, _, _)) = tiles.get(*tile) {
-            directions.iter().for_each(|direction| {
-                if p.0 == position.0 + offset_for_direction(direction).unwrap() {
-                    exits.push(direction.to_uppercase());
-                }
-            });
-        }
-    }
+                    let on_surface = if on_surface.is_empty() {
+                        "".to_string()
+                    } else {
+                        name_list(&on_surface, None, true)
+                    };
+
+                    if on_surface.is_empty() {
+                        String::new()
+                    } else {
+                        format!(
+                            " {} the {} {} {}.",
+                            to_title_case(&surface.kind.to_string()),
+                            item.depiction.short_name,
+                            if children.len() > 1 { "are" } else { "is" },
+                            on_surface
+                        )
+                    }
+                })
+                .unwrap_or_default();
+
+            let door_line = item
+                .door
+                .map(|door| {
+                    if door.is_open {
+                        " It is open."
+                    } else {
+                        " It is closed."
+                    }
+                })
+                .unwrap_or_default();
+
+            paint!(
+                "{}{}{}",
+                item.depiction.description,
+                surface_line,
+                door_line
+            )
+        })
+}
+
+fn look_at_transition(
+    target: &str,
+    transitions: &Query<(Entity, &Depiction), With<Transition>>,
+    siblings: &Option<&Children>,
+) -> Option<String> {
+    siblings
+        .iter()
+        .flat_map(|siblings| siblings.iter())
+        .find_map(|&sibling| transitions.get(sibling).ok())
+        .filter(|(entity, depiction)| depiction.matches_query(entity, target))
+        .map(|(_, depiction)| paint!("{}", depiction.description))
+}
+
+fn look_at_npc(
+    target: &str,
+    npcs: &Query<NpcQuery>,
+    siblings: &Option<&Children>,
+) -> Option<String> {
+    siblings
+        .iter()
+        .flat_map(|siblings| siblings.iter())
+        .find_map(|&sibling| npcs.get(sibling).ok())
+        .filter(|npc| npc.depiction.matches_query(&npc.entity, target))
+        .map(|npc| paint!("{}", npc.depiction.description))
+}
+
+fn look_at_player(
+    target: &str,
+    players: &Query<PlayerQuery>,
+    siblings: &Option<&Children>,
+) -> Option<String> {
+    siblings
+        .iter()
+        .flat_map(|siblings| siblings.iter())
+        .find_map(|&sibling| players.get(sibling).ok())
+        .filter(|player| player.character.name.eq_ignore_ascii_case(target))
+        .map(|player| {
+            player.character.description.clone().unwrap_or_else(|| {
+                format!(
+                    "You can't quite make out what {} looks like.",
+                    player.character.name
+                )
+            })
+        })
+}
+
+fn get_exits(position: &Position, zone_tiles: &Children, tiles: &Query<TileQuery>) -> String {
+    let directions = ["n", "ne", "e", "se", "s", "sw", "w", "nw", "u", "d"];
+
+    let exits: Vec<String> = zone_tiles
+        .iter()
+        .filter_map(|&tile_entity| tiles.get(tile_entity).ok())
+        .flat_map(|tile| {
+            directions.iter().filter_map(move |&direction| {
+                offset_for_direction(direction)
+                    .filter(|&offset| tile.position.0 == position.0 + offset)
+                    .map(|_| direction.to_uppercase())
+            })
+        })
+        .collect();
 
     if exits.is_empty() {
-        return "".into();
+        "".into()
+    } else {
+        format!(" [{}]", exits.join(", "))
     }
-
-    format!(" [{}]", exits.join(", "))
 }
 
 fn get_players_line(
     client: &Client,
     siblings: Option<&Children>,
-    players: &Query<(&Client, &Character, &Parent, Option<&Action>), With<Online>>,
+    players: &Query<PlayerQuery>,
 ) -> String {
-    let mut map: HashMap<String, Vec<String>> = HashMap::new();
-
-    let players_found = siblings
-        .iter()
-        .flat_map(|children| children.iter())
-        .filter_map(|child| players.get(*child).ok())
-        .filter(|(c, _, _, _)| c.id != client.id)
-        .map(|(_, character, _, seated)| (character.name.clone(), seated))
-        .collect::<Vec<(String, Option<&Action>)>>();
-
-    for (name, seated) in &players_found {
-        let entry = map
-            .entry(seated.map_or("".into(), |s| s.0.clone()))
-            .or_insert(vec![]);
-
-        entry.push(name.clone())
+    if siblings.is_none() {
+        return "".into();
     }
+
+    let mut players_found: HashMap<String, Vec<String>> = HashMap::new();
+
+    siblings
+        .unwrap()
+        .iter()
+        .filter_map(|child| players.get(*child).ok())
+        .filter(|player| player.client.id != client.id)
+        .for_each(|player| {
+            let action_phrase = player
+                .action
+                .map_or_else(|| "".to_string(), |a| a.0.clone());
+
+            players_found
+                .entry(action_phrase)
+                .or_default()
+                .push(player.character.name.clone());
+        });
 
     if players_found.is_empty() {
         return "".into();
     }
 
-    let players_found = map
-        .iter()
+    let players_found = players_found
+        .into_iter()
         .map(|(phrase, names)| {
-            let player_names = name_list(names, Some(Color::Player), false);
+            let player_names = name_list(&names, Some(Color::Player), false);
+            let verb = if names.len() > 1 { "are" } else { "is" };
+            let action_description = if phrase.is_empty() {
+                format!("{} standing here", verb)
+            } else {
+                phrase
+            };
 
-            format!(
-                "{} {}",
-                player_names,
-                if phrase.is_empty() {
-                    if names.len() > 1 {
-                        "are standing here"
-                    } else {
-                        "is standing here"
-                    }
-                } else {
-                    phrase
-                }
-            )
+            format!("{} {}", player_names, action_description)
         })
         .collect::<Vec<String>>()
         .join(", ");
@@ -264,16 +333,13 @@ fn get_players_line(
     format!("\n\n{players_found}.")
 }
 
-fn get_npcs_line(
-    siblings: Option<&Children>,
-    npcs: &Query<(Entity, &Depiction, Option<&Interactions>), With<Npc>>,
-) -> String {
+fn get_npcs_line(siblings: Option<&Children>, npcs: &Query<NpcQuery>) -> String {
     let npcs_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| npcs.get(*sibling).ok())
-        .filter(|(_, depiction, _)| depiction.visible)
-        .map(|(_, depiction, _)| depiction.short_name.clone())
+        .filter(|npc| npc.depiction.visible)
+        .map(|npc| npc.depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if npcs_found.is_empty() {
@@ -291,25 +357,13 @@ fn get_npcs_line(
     format!("\n\n{} stand here.", formatted,)
 }
 
-fn get_items_line(
-    siblings: Option<&Children>,
-    items: &Query<
-        (
-            Entity,
-            &Depiction,
-            Option<&Surface>,
-            Option<&Door>,
-            Option<&Children>,
-        ),
-        With<Item>,
-    >,
-) -> String {
+fn get_items_line(siblings: Option<&Children>, items: &Query<ItemQuery>) -> String {
     let items_found = siblings
         .iter()
         .flat_map(|children| children.iter())
         .filter_map(|sibling| items.get(*sibling).ok())
-        .filter(|(_, depiction, _, _, _)| depiction.visible)
-        .map(|(_, depiction, _, _, _)| depiction.short_name.clone())
+        .filter(|item| item.depiction.visible)
+        .map(|item| item.depiction.short_name.clone())
         .collect::<Vec<String>>();
 
     if items_found.is_empty() {
@@ -333,33 +387,6 @@ fn get_items_line(
             "lie"
         }
     )
-}
-
-fn items_on_surface(
-    items: &Query<
-        (
-            Entity,
-            &Depiction,
-            Option<&Surface>,
-            Option<&Door>,
-            Option<&Children>,
-        ),
-        With<Item>,
-    >,
-    children: &Children,
-) -> String {
-    let on_surface = children
-        .iter()
-        .filter_map(|child| items.get(*child).ok())
-        .filter(|(_, depiction, _, _, _)| depiction.visible)
-        .map(|(_, depiction, _, _, _)| depiction.short_name.clone())
-        .collect::<Vec<String>>();
-
-    if on_surface.is_empty() {
-        return "".into();
-    }
-
-    name_list(&on_surface, None, true)
 }
 
 #[cfg(test)]
