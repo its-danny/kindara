@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -24,13 +25,20 @@ pub fn handle_inventory(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    with_item: With<Item>,
+}
+
 #[sysfail(log)]
 pub fn inventory(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
-    items: Query<&Depiction, With<Item>>,
+    items: Query<ItemQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Inventory = &command.command {
@@ -44,31 +52,56 @@ pub fn inventory(
                 .find_map(|child| inventories.get(*child).ok())
                 .context("Inventory not found")?;
 
-            let mut items = inventory
-                .iter()
-                .flat_map(|children| children.iter())
-                .filter_map(|child| items.get(*child).ok())
-                .collect::<Vec<_>>();
+            let in_inventory = match get_items(&inventory, &items) {
+                Ok(items) => items,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-            if items.is_empty() {
-                outbox.send_text(client.id, "You are not carrying anything.");
+                    continue;
+                }
+            };
 
-                continue;
-            }
-
-            items.sort_by(|a, b| a.name.cmp(&b.name));
-
-            let names = items
-                .iter()
-                .map(|item| item.name.clone())
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            outbox.send_text(client.id, format!("You are carrying: {names}"));
+            outbox.send_text(client.id, list_items(in_inventory, &items));
         }
     }
 
     Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum InventoryError {
+    #[error("You are not carrying anything.")]
+    NotCarryingAnything,
+}
+
+fn get_items(
+    inventory: &Option<&Children>,
+    items: &Query<ItemQuery>,
+) -> Result<Vec<Entity>, InventoryError> {
+    let mut in_inventory = inventory
+        .iter()
+        .flat_map(|children| children.iter())
+        .filter_map(|child| items.get(*child).ok())
+        .collect::<Vec<_>>();
+
+    if in_inventory.is_empty() {
+        return Err(InventoryError::NotCarryingAnything);
+    }
+
+    in_inventory.sort_by(|a, b| a.depiction.name.cmp(&b.depiction.name));
+
+    Ok(in_inventory.iter().map(|item| item.entity).collect())
+}
+
+fn list_items(in_inventory: Vec<Entity>, items: &Query<ItemQuery>) -> String {
+    let names = in_inventory
+        .iter()
+        .filter_map(|item| items.get(*item).ok())
+        .map(|item| item.depiction.name.clone())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!("You are carrying: {names}")
 }
 
 #[cfg(test)]
