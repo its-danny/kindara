@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -30,14 +31,28 @@ pub fn handle_close(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct DoorQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    with_door: With<Door>,
+}
+
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct DoorMutQuery {
+    entity: Entity,
+    door: &'static mut Door,
+}
+
 #[sysfail(log)]
 pub fn close(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Parent), With<Online>>,
     tiles: Query<Option<&Children>, With<Tile>>,
-    doors: Query<(Entity, &Depiction), With<Door>>,
-    mut doors_mut: Query<&mut Door>,
+    doors: Query<DoorQuery>,
+    mut doors_mut: Query<DoorMutQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Close(target) = &command.command {
@@ -48,27 +63,13 @@ pub fn close(
 
             let siblings = tiles.get(tile.get())?;
 
-            let Some(target) = target else {
-                outbox.send_text(client.id, "Close what?");
+            let mut door = match get_door(target, &siblings, &doors, &mut doors_mut) {
+                Ok(door) => door,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-                continue;
-            };
-
-            let Some((entity, _)) = siblings
-                .iter()
-                .flat_map(|siblings| siblings.iter())
-                .filter_map(|sibling| doors.get(*sibling).ok())
-                .find(|(entity, depiction)| depiction.matches_query(entity, target))
-            else {
-                outbox.send_text(client.id, "You can't close that.");
-
-                continue;
-            };
-
-            let Ok(mut door) = doors_mut.get_mut(entity) else {
-                outbox.send_text(client.id, "You can't close that.");
-
-                continue;
+                    continue;
+                }
             };
 
             door.is_open = false;
@@ -78,6 +79,39 @@ pub fn close(
     }
 
     Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum CloseError {
+    #[error("Close what?")]
+    NoTargetProvided,
+    #[error("You don't see a {0} here.")]
+    NotFound(String),
+    #[error("You can't close that.")]
+    NotClosable,
+}
+
+fn get_door<'a>(
+    target: &Option<String>,
+    siblings: &Option<&Children>,
+    doors: &Query<DoorQuery>,
+    doors_mut: &'a mut Query<DoorMutQuery>,
+) -> Result<Mut<'a, Door>, CloseError> {
+    let target = target.as_ref().ok_or(CloseError::NoTargetProvided)?;
+
+    let door = siblings
+        .iter()
+        .flat_map(|siblings| siblings.iter())
+        .filter_map(|sibling| doors.get(*sibling).ok())
+        .find(|door| door.depiction.matches_query(&door.entity, target))
+        .map(|door| door.entity)
+        .ok_or_else(|| CloseError::NotFound(target.to_string()))?;
+
+    let door = doors_mut
+        .get_mut(door)
+        .map_err(|_| CloseError::NotClosable)?;
+
+    Ok(door.door)
 }
 
 #[cfg(test)]
