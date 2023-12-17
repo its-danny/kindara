@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     combat::components::{Attributes, InCombat, QueuedAttack},
@@ -30,6 +31,21 @@ pub fn handle_movement(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct NpcQuery {
+    attributes: &'static Attributes,
+    with_npc: With<Npc>,
+}
+
+#[derive(WorldQuery)]
+pub struct TileQuery {
+    entity: Entity,
+    position: &'static Position,
+    parent: &'static Parent,
+    children: Option<&'static Children>,
+    with_tile: With<Tile>,
+}
+
 #[sysfail(log)]
 pub fn movement(
     mut bevy: Commands,
@@ -47,8 +63,8 @@ pub fn movement(
         ),
         With<Online>,
     >,
-    npc_attrs: Query<&Attributes, With<Npc>>,
-    tiles: Query<(Entity, &Position, &Parent, Option<&Children>), With<Tile>>,
+    npcs: Query<NpcQuery>,
+    tiles: Query<TileQuery>,
     zones: Query<&Children, With<Zone>>,
     doors: Query<&Door>,
 ) -> Result<(), anyhow::Error> {
@@ -59,37 +75,30 @@ pub fn movement(
                 .find(|(_, c, _, _, _, _)| c.id == command.from)
                 .context("Player not found")?;
 
-            if let Some(in_combat) = in_combat {
-                let attrs = npc_attrs.get(in_combat.target)?;
+            if let Err(err) = attempt_to_flee(&in_combat, &queued_attack, &npcs) {
+                outbox.send_text(client.id, err.to_string());
 
-                if !in_combat.can_move(attrs, &queued_attack) {
-                    outbox.send_text(client.id, "You failed to get away.");
-
-                    continue;
-                }
+                continue;
             }
 
-            let (_, position, zone, siblings) = tiles.get(tile.get())?;
-            let zone_tiles = zones.get(zone.get())?;
+            let player_tile = tiles.get(tile.get())?;
+            let zone_tiles = zones.get(player_tile.parent.get())?;
 
             let Some(offset) = offset_for_direction(direction) else {
                 continue;
             };
 
-            let Some(target) = zone_tiles.iter().find_map(|child| {
-                tiles
-                    .get(*child)
-                    .ok()
-                    .filter(|(_, p, _, _)| p.0 == position.0 + offset)
-                    .map(|(e, _, _, _)| e)
-            }) else {
-                outbox.send_text(client.id, "You can't go that way.");
+            let target = match get_target(&tiles, zone_tiles, &offset, player_tile.position) {
+                Ok(target) => target,
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
 
-                continue;
+                    continue;
+                }
             };
 
-            if blocked_by_door(&siblings, &doors, &offset) {
-                outbox.send_text(client.id, "Your way is blocked.");
+            if let Err(err) = check_for_doors(&player_tile.children, &doors, &offset) {
+                outbox.send_text(client.id, err.to_string());
 
                 continue;
             }
@@ -113,17 +122,75 @@ pub fn movement(
     Ok(())
 }
 
-/// Check if the target tile is blocked by a closed door.
-fn blocked_by_door(siblings: &Option<&Children>, doors: &Query<&Door>, offset: &IVec3) -> bool {
+#[derive(Error, Debug, PartialEq)]
+enum FleeError {
+    #[error("You failed to get away.")]
+    Failed,
+}
+
+fn attempt_to_flee(
+    in_combat: &Option<&InCombat>,
+    queued_attack: &Option<&QueuedAttack>,
+    npcs: &Query<NpcQuery>,
+) -> Result<(), anyhow::Error> {
+    if let Some(in_combat) = in_combat {
+        let npc = npcs.get(in_combat.target)?;
+
+        if !in_combat.can_move(npc.attributes, queued_attack) {
+            Err(FleeError::Failed)?
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum TargetError {
+    #[error("You can't go that way.")]
+    NotFound,
+}
+
+fn get_target(
+    tiles: &Query<TileQuery>,
+    zone_tiles: &Children,
+    offset: &IVec3,
+    position: &Position,
+) -> Result<Entity, TargetError> {
+    let Some(target) = zone_tiles.iter().find_map(|child| {
+        tiles
+            .get(*child)
+            .ok()
+            .filter(|tile| tile.position.0 == position.0 + *offset)
+            .map(|tile| tile.entity)
+    }) else {
+        Err(TargetError::NotFound)?
+    };
+
+    Ok(target)
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum DoorError {
+    #[error("Your way is blocked.")]
+    Blocked,
+}
+
+fn check_for_doors(
+    siblings: &Option<&Children>,
+    doors: &Query<&Door>,
+    offset: &IVec3,
+) -> Result<(), DoorError> {
     if let Some(siblings) = siblings {
         for child in siblings.iter() {
             if let Ok(door) = doors.get(*child) {
-                return door.blocks == *offset && !door.is_open;
+                if door.blocks == *offset && !door.is_open {
+                    Err(DoorError::Blocked)?
+                }
             }
         }
     }
 
-    false
+    Ok(())
 }
 
 #[cfg(test)]
