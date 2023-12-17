@@ -159,7 +159,7 @@ fn take_item(
 ) -> Result<String, anyhow::Error> {
     if items_found.is_empty() {
         let target = source.as_deref().unwrap_or(target);
-        return Err(TakeError::NotFound(target.into()).into());
+        Err(TakeError::NotFound(target.into()))?
     }
 
     validate_items(items_found, items)?;
