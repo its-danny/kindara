@@ -1,9 +1,11 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use futures_lite::future;
 use regex::Regex;
@@ -13,7 +15,6 @@ use crate::{
     db::pool::DatabasePool,
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Character, Client, Online},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -36,17 +37,20 @@ pub fn handle_describe(content: &str) -> Result<Command, ParseError> {
 #[derive(Component)]
 pub struct SaveDescriptionTask(Task<Result<ClientId, sqlx::Error>>);
 
+#[sysfail(log)]
 pub fn describe(
     database: Res<DatabasePool>,
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(&Client, &mut Character), With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Describe(content) = &command.command {
-            let (client, mut character) =
-                value_or_continue!(players.iter_mut().find(|(c, _)| c.id == command.from));
+            let (client, mut character) = players
+                .iter_mut()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
             if let Some(content) = content {
                 character.description = Some(content.clone());
@@ -64,6 +68,8 @@ pub fn describe(
             }
         }
     }
+
+    Ok(())
 }
 
 fn spawn_save_description_task(
@@ -83,21 +89,27 @@ fn spawn_save_description_task(
     })
 }
 
+#[sysfail(log)]
 pub fn handle_save_description_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut SaveDescriptionTask)>,
     mut outbox: EventWriter<Outbox>,
     players: Query<&Client, With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for (entity, mut task) in tasks.iter_mut() {
         if let Some(Ok(client_id)) = future::block_on(future::poll_once(&mut task.0)) {
-            let client = value_or_continue!(players.iter().find(|c| c.id == client_id));
+            let client = players
+                .iter()
+                .find(|c| c.id == client_id)
+                .context("Client not found")?;
 
             outbox.send_text(client.id, "Description saved.");
 
             bevy.entity(entity).remove::<SaveDescriptionTask>();
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

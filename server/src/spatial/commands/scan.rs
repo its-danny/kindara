@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -10,7 +12,6 @@ use crate::{
     npc::components::Npc,
     player::components::{Character, Client, Online},
     spatial::components::Tile,
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -35,6 +36,7 @@ pub fn handle_scan(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn scan(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
@@ -49,11 +51,13 @@ pub fn scan(
     npcs: Query<(Entity, &Depiction), With<Npc>>,
     players: Query<(Entity, &Client, &Character, &Parent, &Children), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Scan((inventory, target)) = &command.command {
-            let (_, client, _, tile, children) =
-                value_or_continue!(players.iter().find(|(_, c, _, _, _)| c.id == command.from));
+            let (_, client, _, tile, children) = players
+                .iter()
+                .find(|(_, c, _, _, _)| c.id == command.from)
+                .context("Player not found")?;
 
             let entities_to_scan = if *inventory {
                 children
@@ -99,6 +103,8 @@ pub fn scan(
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

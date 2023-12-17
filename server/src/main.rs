@@ -13,7 +13,6 @@ mod skills;
 mod social;
 mod spatial;
 mod test;
-mod utils;
 mod visual;
 mod world;
 

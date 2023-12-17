@@ -1,11 +1,13 @@
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 
 use crate::{
     combat::components::{Attributes, InCombat, State},
     net::telnet::NAWS,
     npc::components::Npc,
-    paint, value_or_continue,
+    paint,
     visual::components::Depiction,
 };
 
@@ -15,7 +17,11 @@ use super::{
     resources::PromptTimer,
 };
 
-pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mut Client>) {
+#[sysfail(log)]
+pub fn handle_client_width(
+    mut inbox: EventReader<Inbox>,
+    mut clients: Query<&mut Client>,
+) -> Result<(), anyhow::Error> {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Command(content) = &m.content {
             Some((m, content))
@@ -23,7 +29,10 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
             None
         }
     }) {
-        let mut client = value_or_continue!(clients.iter_mut().find(|c| c.id == message.from));
+        let mut client = clients
+            .iter_mut()
+            .find(|c| c.id == message.from)
+            .context("Client not found")?;
 
         if content[0..=2] == [IAC, SB, NAWS] {
             let width = content.get(4).map(|a| *a as u16).unwrap_or(80);
@@ -33,17 +42,22 @@ pub fn handle_client_width(mut inbox: EventReader<Inbox>, mut clients: Query<&mu
             }
         }
     }
+
+    Ok(())
 }
 
+#[sysfail(log)]
 pub fn send_prompt(
     mut events: EventReader<Prompt>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Attributes, &State, Option<&InCombat>)>,
     npcs: Query<&Depiction, With<Npc>>,
-) {
+) -> Result<(), anyhow::Error> {
     for prompt in events.iter() {
-        let (client, attributes, state, in_combat) =
-            value_or_continue!(players.iter().find(|(c, _, _, _)| c.id == prompt.client_id));
+        let (client, attributes, state, in_combat) = players
+            .iter()
+            .find(|(c, _, _, _)| c.id == prompt.client_id)
+            .context("Player not found")?;
 
         let mut parts: Vec<String> = vec![];
 
@@ -72,6 +86,8 @@ pub fn send_prompt(
 
         outbox.send_text(client.id, parts.join(" "));
     }
+
+    Ok(())
 }
 
 pub fn send_prompt_on_timer(

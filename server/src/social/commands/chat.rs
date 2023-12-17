@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{ChatChannel, Command, ParseError, ParsedCommand},
     paint,
     player::components::{Character, Client, Online},
-    value_or_continue,
 };
 
 static REGEX: OnceLock<Regex> = OnceLock::new();
@@ -42,15 +43,18 @@ pub fn handle_chat(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn chat(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
     players: Query<(&Client, &Character), With<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Chat((channel, message)) = &command.command {
-            let (_, character) =
-                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
+            let (_, character) = players
+                .iter()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
             for (client, other_character) in players.iter() {
                 let mentioned = message
@@ -75,6 +79,8 @@ pub fn chat(
             }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

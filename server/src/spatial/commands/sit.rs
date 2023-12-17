@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -11,7 +13,6 @@ use crate::{
     paint,
     player::components::{Client, Online},
     spatial::components::{Action, Seated, Tile},
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -32,6 +33,7 @@ pub fn handle_sit(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn sit(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -39,13 +41,15 @@ pub fn sit(
     mut players: Query<(Entity, &Client, &Parent), With<Online>>,
     tiles: Query<Option<&Children>, With<Tile>>,
     seats: Query<(Entity, &Interactions, &Seat, &Depiction)>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Sit(target) = &command.command {
-            let (player, client, tile) =
-                value_or_continue!(players.iter_mut().find(|(_, c, _)| c.id == command.from));
+            let (player, client, tile) = players
+                .iter_mut()
+                .find(|(_, c, _)| c.id == command.from)
+                .context("Player not found")?;
 
-            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
+            let siblings = tiles.get(tile.get())?;
 
             let Some(target) = target else {
                 bevy.entity(player).insert(Action("on the floor".into()));
@@ -72,6 +76,8 @@ pub fn sit(
             outbox.send_text(client.id, paint!("You sit {}.", seat.phrase));
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

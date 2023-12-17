@@ -1,4 +1,6 @@
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
 use rand::{thread_rng, Rng};
@@ -11,12 +13,12 @@ use crate::{
     },
     skills::resources::Skills,
     spatial::components::Tile,
-    value_or_continue,
     visual::components::Depiction,
 };
 
 use super::components::{EnemySpawner, Npc, SpawnTimer};
 
+#[sysfail(log)]
 pub fn on_enter_combat(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
@@ -24,13 +26,16 @@ pub fn on_enter_combat(
     mut prompts: EventWriter<Prompt>,
     npcs: Query<(Entity, &Npc, &Depiction, &Attributes, &InCombat), Added<InCombat>>,
     skills: Res<Skills>,
-) {
+) -> Result<(), anyhow::Error> {
     for (entity, npc, depiction, attributes, in_combat) in npcs.iter() {
-        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.target).ok());
+        let (client, mut state) = players.get_mut(in_combat.target)?;
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
-        let skill = value_or_continue!(skills.0.get(&npc.skills[index]));
+        let skill = skills
+            .0
+            .get(&npc.skills[index])
+            .context("Skill not found")?;
 
         match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
             Ok(_) => {
@@ -52,8 +57,11 @@ pub fn on_enter_combat(
 
         prompts.send(Prompt::new(client.id));
     }
+
+    Ok(())
 }
 
+#[sysfail(log)]
 pub fn attack_when_able(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
@@ -62,15 +70,17 @@ pub fn attack_when_able(
     mut ready: RemovedComponents<HasAttacked>,
     npcs: Query<(Entity, &Npc, &Depiction, &Attributes, &InCombat)>,
     skills: Res<Skills>,
-) {
+) -> Result<(), anyhow::Error> {
     for entity in ready.iter() {
-        let (entity, npc, depiction, attributes, in_combat) =
-            value_or_continue!(npcs.get(entity).ok());
-        let (client, mut state) = value_or_continue!(players.get_mut(in_combat.target).ok());
+        let (entity, npc, depiction, attributes, in_combat) = npcs.get(entity)?;
+        let (client, mut state) = players.get_mut(in_combat.target)?;
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
-        let skill = value_or_continue!(skills.0.get(&npc.skills[index]));
+        let skill = skills
+            .0
+            .get(&npc.skills[index])
+            .context("Skill not found")?;
 
         match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
             Ok(_) => {
@@ -92,8 +102,11 @@ pub fn attack_when_able(
 
         prompts.send(Prompt::new(client.id));
     }
+
+    Ok(())
 }
 
+#[sysfail(log)]
 pub fn handle_enemy_spawner(
     mut bevy: Commands,
     mut proto: ProtoCommands,
@@ -101,13 +114,13 @@ pub fn handle_enemy_spawner(
     prototypes: Prototypes,
     tiles: Query<Entity, With<Tile>>,
     time: Res<Time>,
-) {
+) -> Result<(), anyhow::Error> {
     for (entity, tile, mut spawner, timer) in spawners.iter_mut() {
         if !prototypes.is_ready(&spawner.enemies.0) {
             continue;
         }
 
-        let tile = value_or_continue!(tiles.get(tile.get()).ok());
+        let tile = tiles.get(tile.get())?;
 
         if let Some(mut timer) = timer {
             if timer.0.tick(time.delta()).just_finished() {
@@ -131,4 +144,6 @@ pub fn handle_enemy_spawner(
             )));
         }
     }
+
+    Ok(())
 }

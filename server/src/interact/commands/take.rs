@@ -1,9 +1,11 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{
     ecs::query::{QueryEntityError, WorldQuery},
     prelude::*,
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 use thiserror::Error;
@@ -14,7 +16,6 @@ use crate::{
     items::components::{Inventory, Item, Surface},
     player::components::{Client, Online},
     spatial::components::Tile,
-    value_or_continue,
     visual::{components::Depiction, utils::name_list},
 };
 
@@ -60,6 +61,7 @@ pub struct SurfaceQuery {
     surface: &'static Surface,
 }
 
+#[sysfail(log)]
 pub fn take(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -69,15 +71,20 @@ pub fn take(
     tiles: Query<&Children, With<Tile>>,
     items: Query<ItemQuery>,
     surfaces: Query<SurfaceQuery>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Take((target, all, source)) = &command.command {
-            let (client, tile, children) =
-                value_or_continue!(players.iter_mut().find(|(c, _, _)| c.id == command.from));
-            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
-            let inventory = value_or_continue!(children
+            let (client, tile, children) = players
+                .iter_mut()
+                .find(|(c, _, _)| c.id == command.from)
+                .context("Player not found")?;
+
+            let siblings = tiles.get(tile.get())?;
+
+            let inventory = children
                 .iter()
-                .find_map(|child| inventories.get(*child).ok()));
+                .find_map(|child| inventories.get(*child).ok())
+                .context("Inventory not found")?;
 
             let to_search = get_searchable_items(siblings, source, &surfaces, &items);
             let mut items_found = search_items(target, &to_search, &items);
@@ -96,6 +103,8 @@ pub fn take(
             }
         }
     }
+
+    Ok(())
 }
 
 fn get_searchable_items(

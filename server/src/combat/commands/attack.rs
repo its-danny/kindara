@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{ecs::query::WorldQuery, prelude::*};
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 use thiserror::Error;
@@ -17,7 +19,6 @@ use crate::{
     },
     skills::resources::{Skill, Skills},
     spatial::components::Tile,
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -74,6 +75,7 @@ pub struct TileQuery {
     with_tile: With<Tile>,
 }
 
+#[sysfail(log)]
 pub fn attack(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -84,10 +86,13 @@ pub fn attack(
     skills: Res<Skills>,
     masteries: Res<Masteries>,
     tiles: Query<TileQuery>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Attack((skill, target)) = &command.command {
-            let player = value_or_continue!(players.iter().find(|p| p.client.id == command.from));
+            let player = players
+                .iter()
+                .find(|p| p.client.id == command.from)
+                .context("Player not found")?;
 
             let mut in_combat: Option<InCombat> = player.in_combat.cloned();
 
@@ -137,6 +142,8 @@ pub fn attack(
             prompts.send(Prompt::new(id));
         }
     }
+
+    Ok(())
 }
 
 #[derive(Error, Debug, PartialEq)]

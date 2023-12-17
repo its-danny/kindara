@@ -1,7 +1,9 @@
+use anyhow::Context;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use sqlx::{Pool, Postgres};
 
@@ -11,7 +13,6 @@ use crate::{
     items::components::{Inventory, Item},
     player::components::{Character, Client, Online},
     spatial::components::Tile,
-    value_or_continue,
     world::resources::{WorldState, WorldStateCharacter},
 };
 
@@ -20,6 +21,7 @@ use super::telnet::NAWS;
 #[derive(Component)]
 struct SaveCharacterTask(Task<Result<WorldState, sqlx::Error>>);
 
+#[sysfail(log)]
 pub fn on_network_event(
     mut bevy: Commands,
     mut events: EventReader<NetworkEvent>,
@@ -30,7 +32,7 @@ pub fn on_network_event(
     inventories: Query<Option<&Children>, With<Inventory>>,
     items: Query<(Entity, &Name), With<Item>>,
     tiles: Query<&Name, With<Tile>>,
-) {
+) -> Result<(), anyhow::Error> {
     for event in events.iter() {
         if let NetworkEvent::Connected(id) = event {
             bevy.spawn((Client { id: *id, width: 80 }, Authenticating::default()));
@@ -48,16 +50,21 @@ pub fn on_network_event(
             if let Some((entity, _, character, parent, children)) =
                 players.iter().find(|(_, c, _, _, _)| c.id == *id)
             {
-                let tile = value_or_continue!(tiles.get(parent.get()).ok().map(|n| n.to_string()));
+                let tile = tiles
+                    .get(parent.get())
+                    .ok()
+                    .map(|n| n.to_string())
+                    .context("Tile not found")?;
 
-                let inventory = value_or_continue!(children
+                let inventory = children
                     .iter()
-                    .find_map(|child| inventories.get(*child).ok()))
-                .iter()
-                .flat_map(|children| children.iter())
-                .filter_map(|child| items.get(*child).ok())
-                .map(|(_, name)| name.to_string())
-                .collect::<Vec<_>>();
+                    .find_map(|child| inventories.get(*child).ok())
+                    .context("Inventory not found")?
+                    .iter()
+                    .flat_map(|children| children.iter())
+                    .filter_map(|child| items.get(*child).ok())
+                    .map(|(_, name)| name.to_string())
+                    .collect::<Vec<_>>();
 
                 let state = WorldStateCharacter {
                     id: character.id,
@@ -84,6 +91,8 @@ pub fn on_network_event(
             }
         }
     }
+
+    Ok(())
 }
 
 fn spawn_save_character_task(

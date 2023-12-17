@@ -5,11 +5,13 @@ edition = "2021"
 
 [dependencies]
 Inflector = "0.11"
+anyhow = "1.0"
 ascii_table = "4.0"
 async-std = { version = "1.12", features = ["attributes"] }
 bcrypt = "0.15"
 bevy = { version = "0.11", default-features = false }
 bevy-nest = "0.2"
+bevy_mod_sysfail = "4.3"
 bevy_proto = { version = "0.11", default-features = false, features = [
   "auto_name",
   "ron",

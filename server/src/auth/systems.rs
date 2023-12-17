@@ -1,9 +1,11 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::ProtoCommands;
 use censor::Censor;
@@ -30,7 +32,6 @@ use crate::{
         config::CharacterConfig,
     },
     spatial::components::{LifeSpawn, Tile},
-    value_or_continue,
     world::resources::WorldState,
 };
 
@@ -42,13 +43,14 @@ pub struct UserExistsTask(Task<Result<(bool, ClientId), sqlx::Error>>);
 #[derive(Component)]
 pub struct AuthenticateTask(Task<Result<(Option<CharacterModel>, ClientId), sqlx::Error>>);
 
+#[sysfail(log)]
 pub fn authenticate(
     database: Res<DatabasePool>,
     mut bevy: Commands,
     mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
-) {
+) -> Result<(), anyhow::Error> {
     for (message, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
             Some((m, content))
@@ -56,8 +58,10 @@ pub fn authenticate(
             None
         }
     }) {
-        let (client, mut auth) =
-            value_or_continue!(clients.iter_mut().find(|(c, _)| c.id == message.from));
+        let (client, mut auth) = clients
+            .iter_mut()
+            .find(|(c, _)| c.id == message.from)
+            .context("Client not found")?;
 
         match &mut auth.state {
             AuthState::Name => {
@@ -95,6 +99,8 @@ pub fn authenticate(
             AuthState::AwaitingTaskCompletion => {}
         }
     }
+
+    Ok(())
 }
 
 fn spawn_user_exists_task(
@@ -113,16 +119,19 @@ fn spawn_user_exists_task(
     })
 }
 
+#[sysfail(log)]
 pub fn handle_user_exists_task(
     mut bevy: Commands,
     mut tasks: Query<(Entity, &mut UserExistsTask)>,
     mut outbox: EventWriter<Outbox>,
     mut clients: Query<(&Client, &mut Authenticating), Without<Online>>,
-) {
+) -> Result<(), anyhow::Error> {
     for (entity, mut task) in &mut tasks {
         if let Some(Ok((exists, client_id))) = future::block_on(future::poll_once(&mut task.0)) {
-            let (client, mut auth) =
-                value_or_continue!(clients.iter_mut().find(|(c, _)| c.id == client_id));
+            let (client, mut auth) = clients
+                .iter_mut()
+                .find(|(c, _)| c.id == client_id)
+                .context("Client not found")?;
 
             auth.state = AuthState::Password;
 
@@ -139,6 +148,8 @@ pub fn handle_user_exists_task(
             bevy.entity(entity).remove::<UserExistsTask>();
         }
     }
+
+    Ok(())
 }
 
 fn spawn_authenticate_task(
@@ -179,6 +190,7 @@ fn spawn_authenticate_task(
     })
 }
 
+#[sysfail(log)]
 pub fn handle_authenticate_task(
     mut bevy: Commands,
     mut clients: Query<(Entity, &Client, &mut Authenticating), Without<Online>>,
@@ -191,13 +203,15 @@ pub fn handle_authenticate_task(
     spawn_tiles: Query<Entity, (With<Tile>, With<LifeSpawn>)>,
     tiles: Query<(Entity, &Name), With<Tile>>,
     world_state: Res<WorldState>,
-) {
+) -> Result<(), anyhow::Error> {
     for (task_entity, mut task) in &mut tasks {
         if let Some(Ok((character_model, client_id))) =
             future::block_on(future::poll_once(&mut task.0))
         {
-            let (player_entity, client, mut auth) =
-                value_or_continue!(clients.iter_mut().find(|(_, c, _)| c.id == client_id));
+            let (player_entity, client, mut auth) = clients
+                .iter_mut()
+                .find(|(_, c, _)| c.id == client_id)
+                .context("Client not found")?;
 
             if let Some(character) = character_model {
                 if let Some((online, _)) =
@@ -239,7 +253,7 @@ pub fn handle_authenticate_task(
                         },
                     ));
 
-                let spawn = value_or_continue!(spawn_tiles.iter().next());
+                let spawn = spawn_tiles.iter().next().context("Spawn tile not found")?;
 
                 let character_in_state =
                     world_state.characters.iter().find(|c| c.id == character.id);
@@ -292,6 +306,8 @@ pub fn handle_authenticate_task(
             bevy.entity(task_entity).remove::<AuthenticateTask>();
         }
     }
+
+    Ok(())
 }
 
 static NAME_REGEX: OnceLock<Regex> = OnceLock::new();

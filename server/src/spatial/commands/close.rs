@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Context;
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
 
@@ -8,7 +10,6 @@ use crate::{
     input::events::{Command, ParseError, ParsedCommand},
     player::components::{Client, Online},
     spatial::components::{Door, Tile},
-    value_or_continue,
     visual::components::Depiction,
 };
 
@@ -29,6 +30,7 @@ pub fn handle_close(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[sysfail(log)]
 pub fn close(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
@@ -36,13 +38,15 @@ pub fn close(
     tiles: Query<Option<&Children>, With<Tile>>,
     doors: Query<(Entity, &Depiction), With<Door>>,
     mut doors_mut: Query<&mut Door>,
-) {
+) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Close(target) = &command.command {
-            let (client, tile) =
-                value_or_continue!(players.iter().find(|(c, _)| c.id == command.from));
+            let (client, tile) = players
+                .iter()
+                .find(|(c, _)| c.id == command.from)
+                .context("Player not found")?;
 
-            let siblings = value_or_continue!(tiles.get(tile.get()).ok());
+            let siblings = tiles.get(tile.get())?;
 
             let Some(target) = target else {
                 outbox.send_text(client.id, "Close what?");
@@ -72,6 +76,8 @@ pub fn close(
             outbox.send_text(client.id, "You close the door.");
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
