@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -35,6 +36,13 @@ pub fn handle_drop(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    with_item: With<Item>,
+}
+
 #[sysfail(log)]
 pub fn drop(
     mut bevy: Commands,
@@ -43,7 +51,7 @@ pub fn drop(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Option<&Children>, With<Inventory>>,
     tiles: Query<Entity, With<Tile>>,
-    items: Query<(Entity, &Depiction), With<Item>>,
+    items: Query<ItemQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Drop((target, all)) = &command.command {
@@ -59,39 +67,69 @@ pub fn drop(
                 .find_map(|child| inventories.get(*child).ok())
                 .context("Inventory not found")?;
 
-            let mut items_found = items_in_inventory
-                .iter()
-                .flat_map(|children| children.iter())
-                .filter_map(|sibling| items.get(*sibling).ok())
-                .filter(|(e, d)| d.matches_query(e, target))
-                .collect::<Vec<(Entity, &Depiction)>>();
+            let mut items_found = search_items(target, &items, &items_in_inventory);
 
-            if !*all {
-                items_found.truncate(1);
-            }
-
-            items_found.iter().for_each(|(entity, _)| {
-                bevy.entity(*entity).set_parent(tile);
-            });
-
-            let item_names = name_list(
-                &items_found
-                    .iter()
-                    .map(|(_, item)| item.name.clone())
-                    .collect::<Vec<String>>(),
-                None,
-                true,
-            );
-
-            if item_names.is_empty() {
-                outbox.send_text(client.id, format!("You don't have a {target}."));
-            } else {
-                outbox.send_text(client.id, format!("You drop {item_names}."));
+            match drop_item(&mut bevy, target, all, &mut items_found, &items, &tile) {
+                Ok(msg) => outbox.send_text(client.id, msg),
+                Err(err) => outbox.send_text(client.id, err.to_string()),
             }
         }
     }
 
     Ok(())
+}
+
+fn search_items(
+    target: &str,
+    items: &Query<ItemQuery>,
+    items_in_inventory: &Option<&Children>,
+) -> Vec<Entity> {
+    items_in_inventory
+        .iter()
+        .flat_map(|children| children.iter())
+        .filter_map(|sibling| items.get(*sibling).ok())
+        .filter(|item| item.depiction.matches_query(&item.entity, target))
+        .map(|item| item.entity)
+        .collect()
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum DropError {
+    #[error("You don't have a {0}.")]
+    NotFound(String),
+}
+
+fn drop_item(
+    bevy: &mut Commands,
+    target: &str,
+    all: &bool,
+    items_found: &mut Vec<Entity>,
+    items: &Query<ItemQuery>,
+    tile: &Entity,
+) -> Result<String, DropError> {
+    if items_found.is_empty() {
+        return Err(DropError::NotFound(target.to_string()));
+    }
+
+    if !*all {
+        items_found.truncate(1);
+    }
+
+    items_found.iter().for_each(|entity| {
+        bevy.entity(*entity).set_parent(*tile);
+    });
+
+    let item_names = name_list(
+        &items_found
+            .iter()
+            .filter_map(|entity| items.get(*entity).ok())
+            .map(|item| item.depiction.name.clone())
+            .collect::<Vec<String>>(),
+        None,
+        true,
+    );
+
+    Ok(format!("You drop {item_names}."))
 }
 
 #[cfg(test)]
