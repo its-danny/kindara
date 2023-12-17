@@ -1,10 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::{
-    ecs::query::{QueryEntityError, WorldQuery},
-    prelude::*,
-};
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
@@ -109,8 +106,6 @@ pub fn examine(
 enum ExamineError {
     #[error("You don't see a {0} here")]
     NotFound(#[from] TargetError),
-    #[error("Something broke!")]
-    QueryEntityError(#[from] QueryEntityError),
 }
 
 fn execute_examine(
@@ -119,7 +114,7 @@ fn execute_examine(
     target: &str,
     siblings: &Children,
     interactables: &Query<InteractableQuery>,
-) -> Result<String, ExamineError> {
+) -> Result<String, anyhow::Error> {
     let interactable = get_target(target, siblings, interactables)?;
     let interactable = interactables.get(interactable)?;
 
@@ -177,8 +172,6 @@ enum InteractionError {
     NoInteractions(String),
     #[error("Incorrect option.")]
     IncorrectOption,
-    #[error("Something broke!")]
-    QueryEntityError(#[from] QueryEntityError),
 }
 
 fn execute_interaction(
@@ -189,7 +182,7 @@ fn execute_interaction(
     in_menu: &Option<&InMenu>,
     option: &usize,
     interactables: &Query<InteractableQuery>,
-) -> Result<(), InteractionError> {
+) -> Result<(), anyhow::Error> {
     let menu = in_menu.ok_or(InteractionError::NotInMenu)?;
 
     #[allow(irrefutable_let_patterns)]
@@ -218,9 +211,9 @@ fn execute_interaction(
 
             bevy.entity(player).remove::<InMenu>();
         } else {
-            return Err(InteractionError::NoInteractions(
+            Err(InteractionError::NoInteractions(
                 interactable.depiction.name.clone(),
-            ));
+            ))?
         }
     }
 

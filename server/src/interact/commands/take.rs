@@ -1,10 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::{
-    ecs::query::{QueryEntityError, WorldQuery},
-    prelude::*,
-};
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
@@ -149,8 +146,6 @@ enum TakeError {
     NotFound(String),
     #[error("You can't take that.")]
     NotTakeable(#[from] ValidateError),
-    #[error("Something broke!")]
-    QueryEntityError(#[from] QueryEntityError),
 }
 
 fn take_item(
@@ -161,10 +156,10 @@ fn take_item(
     items_found: &mut Vec<Entity>,
     items: &Query<ItemQuery>,
     inventory: Entity,
-) -> Result<String, TakeError> {
+) -> Result<String, anyhow::Error> {
     if items_found.is_empty() {
         let target = source.as_deref().unwrap_or(target);
-        return Err(TakeError::NotFound(target.into()));
+        return Err(TakeError::NotFound(target.into()).into());
     }
 
     validate_items(items_found, items)?;
@@ -191,11 +186,9 @@ fn take_item(
 enum ValidateError {
     #[error("You can't take that.")]
     NotTakeable,
-    #[error("Something broke!")]
-    QueryEntityError(#[from] QueryEntityError),
 }
 
-fn validate_items(items_found: &[Entity], items: &Query<ItemQuery>) -> Result<(), ValidateError> {
+fn validate_items(items_found: &[Entity], items: &Query<ItemQuery>) -> Result<(), anyhow::Error> {
     items_found.iter().try_for_each(|&item| {
         let item = items.get(item)?;
 
@@ -205,7 +198,7 @@ fn validate_items(items_found: &[Entity], items: &Query<ItemQuery>) -> Result<()
         {
             Ok(())
         } else {
-            Err(ValidateError::NotTakeable)
+            Err(ValidateError::NotTakeable)?
         }
     })
 }
