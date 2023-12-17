@@ -43,11 +43,7 @@ pub fn map(
             let (zone, zone_tiles) = zones.get(zone.get())?;
 
             let height = 24;
-            let width = if client.width % 2 == 1 {
-                client.width - 1
-            } else {
-                client.width
-            } as usize;
+            let width = (client.width - (client.width % 2)) as usize;
 
             let mut map = vec![vec![' '; width]; height];
 
