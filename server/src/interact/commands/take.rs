@@ -1,9 +1,12 @@
 use std::sync::OnceLock;
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::query::{QueryEntityError, WorldQuery},
+    prelude::*,
+};
 use bevy_nest::prelude::*;
-use indefinite::indefinite;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -42,6 +45,21 @@ pub fn handle_take(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    interactions: Option<&'static Interactions>,
+    children: Option<&'static Children>,
+    with_item: With<Item>,
+}
+
+#[derive(WorldQuery)]
+pub struct SurfaceQuery {
+    entity: Entity,
+    surface: &'static Surface,
+}
+
 pub fn take(
     mut bevy: Commands,
     mut commands: EventReader<ParsedCommand>,
@@ -49,8 +67,8 @@ pub fn take(
     mut players: Query<(&Client, &Parent, &Children), With<Online>>,
     inventories: Query<Entity, With<Inventory>>,
     tiles: Query<&Children, With<Tile>>,
-    items: Query<(Entity, &Depiction, Option<&Interactions>, Option<&Children>), With<Item>>,
-    surfaces: Query<&Surface>,
+    items: Query<ItemQuery>,
+    surfaces: Query<SurfaceQuery>,
 ) {
     for command in commands.iter() {
         if let Command::Take((target, all, source)) = &command.command {
@@ -61,76 +79,126 @@ pub fn take(
                 .iter()
                 .find_map(|child| inventories.get(*child).ok()));
 
-            let to_search = if let Some(source) = source {
-                siblings
-                    .iter()
-                    .filter_map(|sibling| items.get(*sibling).ok())
-                    .find(|(sibling, depiction, _, _)| {
-                        surfaces.get(*sibling).is_ok() && depiction.matches_query(sibling, source)
-                    })
-                    .and_then(|(_, _, _, children)| children)
-                    .map(|children| {
-                        children
-                            .iter()
-                            .filter_map(|child| items.get(*child).ok())
-                            .collect()
-                    })
-                    .unwrap_or_else(Vec::new)
-            } else {
-                siblings
-                    .iter()
-                    .filter_map(|sibling| items.get(*sibling).ok())
-                    .collect()
-            };
+            let to_search = get_searchable_items(siblings, source, &surfaces, &items);
+            let mut items_found = search_items(target, &to_search, &items);
 
-            let mut items_found = to_search
-                .iter()
-                .filter(|(entity, depiction, _, _)| depiction.matches_query(entity, target))
-                .collect::<Vec<_>>();
-
-            if items_found.is_empty() {
-                let target = if let Some(source) = source {
-                    source
-                } else {
-                    target
-                };
-
-                outbox.send_text(
-                    client.id,
-                    format!("You don't see {} here.", indefinite(target)),
-                );
-
-                continue;
+            match take_item(
+                &mut bevy,
+                target,
+                all,
+                source,
+                &mut items_found,
+                &items,
+                inventory,
+            ) {
+                Ok(msg) => outbox.send_text(client.id, msg),
+                Err(err) => outbox.send_text(client.id, err.to_string()),
             }
-
-            if items_found.iter().any(|(_, _, interactable, _)| {
-                !interactable.map_or(false, |i| i.0.contains(&Interaction::Take))
-            }) {
-                outbox.send_text(client.id, "You can't take that.");
-
-                continue;
-            }
-
-            if !*all {
-                items_found.truncate(1);
-            }
-
-            items_found.iter().for_each(|(entity, _, _, _)| {
-                bevy.entity(*entity).set_parent(inventory);
-            });
-
-            let item_names = name_list(
-                &items_found
-                    .iter()
-                    .map(|(_, item, _, _)| item.name.clone())
-                    .collect::<Vec<String>>(),
-                None,
-                true,
-            );
-
-            outbox.send_text(client.id, format!("You take {item_names}."));
         }
     }
+}
+
+fn get_searchable_items(
+    siblings: &Children,
+    source: &Option<String>,
+    surfaces: &Query<SurfaceQuery>,
+    items: &Query<ItemQuery>,
+) -> Vec<Entity> {
+    if let Some(source) = source {
+        // Find the specific surface item by source and return its children.
+        siblings
+            .iter()
+            .filter_map(|sibling| items.get(*sibling).ok())
+            .find(|item| {
+                surfaces.get(item.entity).is_ok()
+                    && item.depiction.matches_query(&item.entity, source)
+            })
+            .and_then(|item| item.children)
+            .map_or_else(Vec::new, |children| children.iter().copied().collect())
+    } else {
+        // Return all entities in siblings.j
+        siblings
+            .iter()
+            .filter_map(|sibling| items.get(*sibling).ok())
+            .map(|item| item.entity)
+            .collect()
+    }
+}
+
+fn search_items(target: &str, to_search: &[Entity], items: &Query<ItemQuery>) -> Vec<Entity> {
+    to_search
+        .iter()
+        .filter_map(|entity| items.get(*entity).ok())
+        .filter(|item| item.depiction.matches_query(&item.entity, target))
+        .map(|item| item.entity)
+        .collect()
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum TakeError {
+    #[error("You don't see a {0} here.")]
+    NotFound(String),
+    #[error("You can't take that.")]
+    NotTakeable(#[from] ValidateError),
+    #[error("Something broke!")]
+    QueryEntityError(#[from] QueryEntityError),
+}
+
+fn take_item(
+    bevy: &mut Commands,
+    target: &str,
+    all: &bool,
+    source: &Option<String>,
+    items_found: &mut Vec<Entity>,
+    items: &Query<ItemQuery>,
+    inventory: Entity,
+) -> Result<String, TakeError> {
+    if items_found.is_empty() {
+        let target = source.as_deref().unwrap_or(target);
+        return Err(TakeError::NotFound(target.into()));
+    }
+
+    validate_items(items_found, items)?;
+
+    if !*all {
+        items_found.truncate(1);
+    }
+
+    for &item in items_found.iter() {
+        bevy.entity(item).set_parent(inventory);
+    }
+
+    let item_names = items_found
+        .iter()
+        .filter_map(|&item| items.get(item).ok().map(|item| item.depiction.name.clone()))
+        .collect::<Vec<_>>();
+
+    let item_names = name_list(&item_names, None, true);
+
+    Ok(format!("You take {item_names}."))
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum ValidateError {
+    #[error("You can't take that.")]
+    NotTakeable,
+    #[error("Something broke!")]
+    QueryEntityError(#[from] QueryEntityError),
+}
+
+fn validate_items(items_found: &[Entity], items: &Query<ItemQuery>) -> Result<(), ValidateError> {
+    items_found.iter().try_for_each(|&item| {
+        let item = items.get(item)?;
+
+        if item
+            .interactions
+            .map_or(false, |i| i.0.contains(&Interaction::Take))
+        {
+            Ok(())
+        } else {
+            Err(ValidateError::NotTakeable)
+        }
+    })
 }
 
 #[cfg(test)]
