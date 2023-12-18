@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
+use thiserror::Error;
 
 use crate::{
     input::events::{Command, ParseError, ParsedCommand},
@@ -33,6 +34,14 @@ pub fn handle_sit(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct SeatQuery {
+    entity: Entity,
+    interactions: &'static Interactions,
+    seat: &'static Seat,
+    depiction: &'static Depiction,
+}
+
 #[sysfail(log)]
 pub fn sit(
     mut bevy: Commands,
@@ -40,7 +49,7 @@ pub fn sit(
     mut outbox: EventWriter<Outbox>,
     mut players: Query<(Entity, &Client, &Parent), With<Online>>,
     tiles: Query<Option<&Children>, With<Tile>>,
-    seats: Query<(Entity, &Interactions, &Seat, &Depiction)>,
+    seats: Query<SeatQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Sit(target) = &command.command {
@@ -49,35 +58,61 @@ pub fn sit(
                 .find(|(_, c, _)| c.id == command.from)
                 .context("Player not found")?;
 
-            let siblings = tiles.get(tile.get())?;
-
-            let Some(target) = target else {
-                bevy.entity(player).insert(Action("on the floor".into()));
-
+            if target.is_none() {
+                sit_on_floor(&mut bevy, player);
                 outbox.send_text(client.id, "You sit on the floor.");
-
                 continue;
-            };
+            }
 
-            let Some((_, _, seat, _)) = siblings
-                .iter()
-                .flat_map(|siblings| siblings.iter())
-                .filter_map(|sibling| seats.get(*sibling).ok())
-                .find(|(entity, _, _, depiction)| depiction.matches_query(entity, target))
-            else {
-                outbox.send_text(client.id, "You can't sit there.");
+            let siblings = tiles.get(tile.get()).ok().flatten();
 
-                continue;
-            };
-
-            bevy.entity(player).insert(Action(seat.phrase.clone()));
-            bevy.entity(player).insert(Seated);
-
-            outbox.send_text(client.id, paint!("You sit {}.", seat.phrase));
+            match find_seat(&siblings, target, &seats) {
+                Ok(seat) => {
+                    sit_on_seat(&mut bevy, player, seat);
+                    outbox.send_text(client.id, paint!("You sit {}.", seat.phrase));
+                }
+                Err(err) => {
+                    outbox.send_text(client.id, err.to_string());
+                }
+            }
         }
     }
 
     Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum SitError {
+    #[error("You can't sit there.")]
+    NoSeat,
+}
+
+fn find_seat<'a>(
+    siblings: &Option<&Children>,
+    target: &Option<String>,
+    seats: &'a Query<SeatQuery>,
+) -> Result<&'a Seat, SitError> {
+    target
+        .as_ref()
+        .and_then(|target| {
+            siblings
+                .iter()
+                .flat_map(|siblings| siblings.iter())
+                .filter_map(|sibling| seats.get(*sibling).ok())
+                .find(|child| child.depiction.matches_query(&child.entity, target))
+                .map(|child| child.seat)
+        })
+        .ok_or(SitError::NoSeat)
+}
+
+fn sit_on_floor(bevy: &mut Commands, player: Entity) {
+    bevy.entity(player).insert(Action("on the floor".into()));
+    bevy.entity(player).insert(Seated);
+}
+
+fn sit_on_seat(bevy: &mut Commands, player: Entity, seat: &Seat) {
+    bevy.entity(player).insert(Action(seat.phrase.clone()));
+    bevy.entity(player).insert(Seated);
 }
 
 #[cfg(test)]
