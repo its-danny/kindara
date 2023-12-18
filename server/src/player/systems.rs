@@ -67,19 +67,10 @@ pub fn send_prompt(
             attributes.max_health()
         ));
 
-        let target = match in_combat {
-            None => None,
-            Some(InCombat { target, .. }) => {
-                if let Ok(depiction) = npcs.get(*target) {
-                    Some(depiction.name.clone())
-                } else {
-                    None
-                }
-            }
-        };
+        if let Some(combat) = in_combat {
+            let depiction = npcs.get(combat.target)?;
 
-        if let Some(target) = target {
-            parts.push(format!("({target})"));
+            parts.push(format!("{} ({})", depiction.name, combat.distance));
         }
 
         parts.push("->".into());

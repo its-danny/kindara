@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use bevy::prelude::*;
 use caith::Roller;
 use serde::Deserialize;
@@ -63,6 +65,15 @@ impl State {
 pub enum Distance {
     Near,
     Far,
+}
+
+impl Display for Distance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Distance::Near => write!(f, "near"),
+            Distance::Far => write!(f, "far"),
+        }
+    }
 }
 
 #[derive(Component, Clone, Copy)]
