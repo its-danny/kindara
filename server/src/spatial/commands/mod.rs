@@ -7,4 +7,3 @@ pub mod open;
 pub mod scan;
 pub mod sit;
 pub mod stand;
-pub mod teleport;

@@ -4,7 +4,6 @@ use super::{
     bundles::{TileBundle, TransitionBundle},
     commands::{
         close::*, enter::*, look::*, map::*, movement::*, open::*, scan::*, sit::*, stand::*,
-        teleport::*,
     },
     components::*,
 };
@@ -26,9 +25,7 @@ impl Plugin for SpatialPlugin {
 
         app.add_systems(
             Update,
-            (
-                look, scan, map, movement, enter, teleport, sit, stand, open, close,
-            ),
+            (look, scan, map, movement, enter, sit, stand, open, close),
         );
     }
 }

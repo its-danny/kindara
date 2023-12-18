@@ -20,7 +20,7 @@ use crate::{
     spatial::commands::{
         close::handle_close, enter::handle_enter, look::handle_look, map::handle_map,
         movement::handle_movement, open::handle_open, scan::handle_scan, sit::handle_sit,
-        stand::handle_stand, teleport::handle_teleport,
+        stand::handle_stand,
     },
     visual::paint,
     world::commands::time::handle_time,
@@ -69,7 +69,6 @@ pub fn parse_command(
             Box::new(handle_sit),
             Box::new(handle_stand),
             Box::new(handle_take),
-            Box::new(handle_teleport),
             Box::new(handle_time),
             Box::new(handle_who),
             Box::new(handle_yell),
