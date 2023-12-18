@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
 use crate::{
-    combat::{
-        bundles::CombatBundle,
-        components::{Attributes, State},
-    },
+    combat::{bundles::CombatBundle, components::Stats},
     interact::components::{Interaction, Interactions},
     npc::{bundles::NpcBundle, components::Npc},
     visual::components::Depiction,
@@ -96,14 +93,9 @@ impl NpcBuilder {
         }
 
         if self.combat {
-            entity.insert((
-                CombatBundle {
-                    attributes: Attributes::default(),
-                },
-                State {
-                    health: Attributes::default().max_health(),
-                },
-            ));
+            entity.insert((CombatBundle {
+                stats: Stats::default(),
+            },));
 
             let interactions = entity.get_mut::<Interactions>();
 

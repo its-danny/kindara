@@ -6,7 +6,7 @@ pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Attributes>();
+        app.register_type::<Stats>();
         app.register_type::<CombatBundle>();
 
         app.add_systems(

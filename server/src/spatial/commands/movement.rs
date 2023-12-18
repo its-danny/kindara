@@ -8,7 +8,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::{
-    combat::components::{Attributes, InCombat, QueuedAttack},
+    combat::components::{InCombat, QueuedAttack, Stats},
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     npc::components::Npc,
     player::components::{Client, Online},
@@ -33,7 +33,7 @@ pub fn handle_movement(content: &str) -> Result<Command, ParseError> {
 
 #[derive(WorldQuery)]
 pub struct NpcQuery {
-    attributes: &'static Attributes,
+    stats: &'static Stats,
     with_npc: With<Npc>,
 }
 
@@ -136,7 +136,7 @@ fn attempt_to_flee(
     if let Some(in_combat) = in_combat {
         let npc = npcs.get(in_combat.target)?;
 
-        if !in_combat.can_move(npc.attributes, queued_attack) {
+        if !in_combat.can_move(npc.stats, queued_attack) {
             Err(FleeError::Failed)?
         }
     }

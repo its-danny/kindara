@@ -5,10 +5,7 @@ use sqlx::{types::Json, PgPool};
 
 use crate::{
     auth::components::Authenticating,
-    combat::{
-        bundles::CombatBundle,
-        components::{Attributes, State},
-    },
+    combat::{bundles::CombatBundle, components::Stats},
     items::components::Inventory,
     keycard::Keycard,
     player::{
@@ -135,10 +132,7 @@ impl PlayerBuilder {
                     },
                 },
                 CombatBundle {
-                    attributes: Attributes::default(),
-                },
-                State {
-                    health: Attributes::default().max_health(),
+                    stats: Stats::default(),
                 },
             ));
         }

@@ -6,7 +6,7 @@ use bevy_proto::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::components::{Attributes, HasAttacked, HitError, InCombat, State},
+    combat::components::{HasAttacked, HitError, InCombat, Stats},
     player::{
         components::{Client, Online},
         events::Prompt,
@@ -22,13 +22,13 @@ use super::components::{EnemySpawner, Npc, SpawnTimer};
 pub fn on_enter_combat(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut State), With<Online>>,
+    mut players: Query<(&Client, &mut Stats), (With<Online>, Without<Npc>)>,
     mut prompts: EventWriter<Prompt>,
-    npcs: Query<(Entity, &Npc, &Depiction, &Attributes, &InCombat), Added<InCombat>>,
+    npcs: Query<(Entity, &Npc, &Depiction, &Stats, &InCombat), Added<InCombat>>,
     skills: Res<Skills>,
 ) -> Result<(), anyhow::Error> {
-    for (entity, npc, depiction, attributes, in_combat) in npcs.iter() {
-        let (client, mut state) = players.get_mut(in_combat.target)?;
+    for (entity, npc, depiction, npc_stats, in_combat) in npcs.iter() {
+        let (client, mut player_stats) = players.get_mut(in_combat.target)?;
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
@@ -37,13 +37,13 @@ pub fn on_enter_combat(
             .get(&npc.skills[index])
             .context("Skill not found")?;
 
-        match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
+        match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
             Ok(_) => {
                 outbox.send_text(
                     client.id,
                     format!(
                         "{} attacks you. Your health is now {}.",
-                        depiction.name, state.health
+                        depiction.name, player_stats.health
                     ),
                 );
             }
@@ -65,15 +65,15 @@ pub fn on_enter_combat(
 pub fn attack_when_able(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut State), With<Online>>,
+    mut players: Query<(&Client, &mut Stats), (With<Online>, Without<Npc>)>,
     mut prompts: EventWriter<Prompt>,
     mut ready: RemovedComponents<HasAttacked>,
-    npcs: Query<(Entity, &Npc, &Depiction, &Attributes, &InCombat)>,
+    npcs: Query<(Entity, &Npc, &Depiction, &Stats, &InCombat)>,
     skills: Res<Skills>,
 ) -> Result<(), anyhow::Error> {
     for entity in ready.iter() {
-        let (entity, npc, depiction, attributes, in_combat) = npcs.get(entity)?;
-        let (client, mut state) = players.get_mut(in_combat.target)?;
+        let (entity, npc, depiction, npc_stats, in_combat) = npcs.get(entity)?;
+        let (client, mut player_stats) = players.get_mut(in_combat.target)?;
 
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
@@ -82,13 +82,13 @@ pub fn attack_when_able(
             .get(&npc.skills[index])
             .context("Skill not found")?;
 
-        match in_combat.attack(&mut bevy, entity, skill, attributes, &mut state) {
+        match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
             Ok(_) => {
                 outbox.send_text(
                     client.id,
                     format!(
                         "{} attacks you. Your health is now {}.",
-                        depiction.name, state.health
+                        depiction.name, player_stats.health
                     ),
                 );
             }

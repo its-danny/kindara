@@ -14,10 +14,7 @@ use regex::Regex;
 use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
-    combat::{
-        bundles::CombatBundle,
-        components::{Attributes, State},
-    },
+    combat::{bundles::CombatBundle, components::Stats},
     db::{
         models::{CharacterModel, Role},
         pool::DatabasePool,
@@ -246,10 +243,7 @@ pub fn handle_authenticate_task(
                             },
                         },
                         CombatBundle {
-                            attributes: Attributes::default(),
-                        },
-                        State {
-                            health: Attributes::default().max_health(),
+                            stats: Stats::default(),
                         },
                     ));
 
