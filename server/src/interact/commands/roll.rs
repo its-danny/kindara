@@ -41,33 +41,37 @@ pub fn roll(
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Roll(roll) = &command.command {
-            let (_, character, tile) = players
+            let (client, character, tile) = players
                 .iter()
                 .find(|(c, _, _)| c.id == command.from)
                 .context("Player not found")?;
 
             let siblings = tiles.get(tile.get())?;
 
-            let roller = Roller::new(roll);
-
-            if let Ok(roller) = roller {
-                let result = roller.roll();
-
-                if let Ok(result) = result {
-                    for (client, _, _) in siblings.iter().filter_map(|c| players.get(*c).ok()) {
-                        outbox.send_text(
-                            client.id,
-                            format!(
-                                "{} rolled {} with a result of {}.",
-                                character.name, roll, result
-                            ),
-                        );
-                    }
-                } else {
-                    outbox.send_text(command.from, "Invalid roll.");
+            let roller = match Roller::new(roll) {
+                Ok(roller) => roller,
+                Err(_) => {
+                    outbox.send_text(client.id, "Invalid roll syntax.");
+                    continue;
                 }
-            } else {
-                outbox.send_text(command.from, "Invalid roll.");
+            };
+
+            match roller.roll() {
+                Ok(result) => {
+                    siblings
+                        .iter()
+                        .filter_map(|c| players.get(*c).ok())
+                        .for_each(|(client, _, _)| {
+                            outbox.send_text(
+                                client.id,
+                                format!(
+                                    "{} rolled {} with a result of {}.",
+                                    character.name, roll, result
+                                ),
+                            );
+                        });
+                }
+                Err(_) => outbox.send_text(client.id, "Roll failed."),
             }
         }
     }
