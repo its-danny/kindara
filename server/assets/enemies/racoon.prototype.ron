@@ -14,7 +14,7 @@
             ),
         ),
         "server::combat::bundles::CombatBundle": (
-            attributes: (
+            stats: (
                 vitality: 50,
                 proficiency: 3,
                 speed: 5,
@@ -22,6 +22,7 @@
                 dexterity: 0,
                 intelligence: 0,
                 dominance: 3,
+                health: 0,
             ),
         ),
         "server::interact::components::Interactions": ([Attack]),

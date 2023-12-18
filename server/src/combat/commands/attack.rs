@@ -8,7 +8,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::{
-    combat::components::{Attributes, HasAttacked, HitError, InCombat, QueuedAttack, State},
+    combat::components::{HasAttacked, HitError, InCombat, QueuedAttack, Stats},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
@@ -50,7 +50,7 @@ pub struct NpcQuery {
     entity: Entity,
     depiction: &'static Depiction,
     interactions: Option<&'static Interactions>,
-    state: Option<&'static mut State>,
+    stats: Option<&'static mut Stats>,
     with_npc: With<Npc>,
 }
 
@@ -60,12 +60,13 @@ pub struct PlayerQuery {
     entity: Entity,
     client: &'static Client,
     character: &'static mut Character,
-    attributes: &'static Attributes,
+    stats: &'static Stats,
     tile: &'static Parent,
     in_combat: Option<&'static InCombat>,
     has_attacked: Option<&'static HasAttacked>,
     queued_attack: Option<&'static mut QueuedAttack>,
     with_online: With<Online>,
+    without_npc: Without<Npc>,
 }
 
 #[derive(WorldQuery)]
@@ -198,7 +199,7 @@ fn get_target(
         return Err(TargetError::Invalid(target.into()));
     }
 
-    if npc.state.is_none() {
+    if npc.stats.is_none() {
         debug!("Target has Attack interaction but no state: {:?}", target);
 
         return Err(TargetError::Invalid(target.into()));
@@ -257,7 +258,7 @@ fn execute_attack(
         Err(_) => return Err(AttackError::TargetNotFound),
     };
 
-    let Some(mut state) = npc.state else {
+    let Some(mut state) = npc.stats else {
         debug!(
             "Target has Attack interaction but no state: {:?}",
             npc.depiction.name
@@ -282,7 +283,7 @@ fn execute_attack(
         };
     }
 
-    match in_combat.attack(bevy, player.entity, skill, player.attributes, &mut state) {
+    match in_combat.attack(bevy, player.entity, skill, player.stats, &mut state) {
         Ok(_) => Ok(format!(
             "You attack the {}. It's health is now {}.",
             npc.depiction.short_name, state.health

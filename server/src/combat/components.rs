@@ -9,9 +9,9 @@ use crate::{
     skills::resources::{Action, RelevantStat, Skill},
 };
 
-/// The base attributes of an entity that can do combat.
-#[derive(Component, Reflect, Clone)]
-pub struct Attributes {
+#[derive(Component, Default, Reflect, Clone)]
+pub struct Stats {
+    // --- Attributes
     /// Determines base health, max health, and health regeneration amount.
     pub vitality: u32,
     /// Determines base damage, max potential, and potential regeneration amount.
@@ -26,35 +26,15 @@ pub struct Attributes {
     pub intelligence: u32,
     /// How likely an entity is to flee from you.
     pub dominance: u32,
-}
-
-impl Default for Attributes {
-    fn default() -> Self {
-        Self {
-            vitality: 10,
-            proficiency: 5,
-            speed: 3,
-            strength: 0,
-            dexterity: 0,
-            intelligence: 0,
-            dominance: 0,
-        }
-    }
-}
-
-impl Attributes {
-    pub fn max_health(&self) -> u32 {
-        self.vitality * 10
-    }
-}
-
-/// The current state of an entity that can do combat.
-#[derive(Component)]
-pub struct State {
+    // --- State
     pub health: u32,
 }
 
-impl State {
+impl Stats {
+    pub fn max_health(&self) -> u32 {
+        self.vitality * 10
+    }
+
     /// Applies damage to the entity's health, saturating at 0.
     pub fn apply_damage(&mut self, damage: u32) {
         self.health = self.health.saturating_sub(damage);
@@ -93,16 +73,16 @@ impl InCombat {
         bevy: &mut Commands,
         attacker: Entity,
         skill: &Skill,
-        attacker_attributes: &Attributes,
-        target_state: &mut State,
+        attacker_stats: &Stats,
+        target_stats: &mut Stats,
     ) -> Result<(), HitError> {
         bevy.entity(attacker).insert(HasAttacked {
-            timer: Timer::from_seconds(attacker_attributes.speed as f32, TimerMode::Once),
+            timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
         });
 
         match self.roll_hit() {
             Ok(_) => {
-                self.apply_actions(skill, attacker_attributes, target_state);
+                self.apply_actions(skill, attacker_stats, target_stats);
 
                 Ok(())
             }
@@ -126,12 +106,7 @@ impl InCombat {
         }
     }
 
-    fn apply_actions(
-        &self,
-        skill: &Skill,
-        attacker_attributes: &Attributes,
-        target_state: &mut State,
-    ) {
+    fn apply_actions(&self, skill: &Skill, attacker_stats: &Stats, target_stats: &mut Stats) {
         for action in &skill.actions {
             match action {
                 Action::ApplyDamage(roll) => {
@@ -140,12 +115,12 @@ impl InCombat {
                     let mut damage = roll.as_single().unwrap().get_total() as u32;
 
                     damage += match &skill.stat {
-                        RelevantStat::Strength => attacker_attributes.strength,
-                        RelevantStat::Dexterity => attacker_attributes.dexterity,
-                        RelevantStat::Intelligence => attacker_attributes.intelligence,
+                        RelevantStat::Strength => attacker_stats.strength,
+                        RelevantStat::Dexterity => attacker_stats.dexterity,
+                        RelevantStat::Intelligence => attacker_stats.intelligence,
                     };
 
-                    target_state.apply_damage(damage);
+                    target_stats.apply_damage(damage);
                 }
             }
         }
@@ -153,11 +128,7 @@ impl InCombat {
 
     // You can move if you have no attack queued and if you roll a 1d10 greater than
     // the enemy's 1d10 + their dominance.
-    pub fn can_move(
-        &self,
-        target_attributes: &Attributes,
-        queued_attack: &Option<&QueuedAttack>,
-    ) -> bool {
+    pub fn can_move(&self, target_stats: &Stats, queued_attack: &Option<&QueuedAttack>) -> bool {
         if queued_attack.is_some() {
             return false;
         }
@@ -170,7 +141,7 @@ impl InCombat {
         let target_roll = target_roller.roll().unwrap();
         let target_roll = target_roll.as_single().unwrap().get_total();
 
-        attacker_roll > target_roll + target_attributes.dominance as i64
+        attacker_roll > target_roll + target_stats.dominance as i64
     }
 }
 

@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_nest::prelude::*;
 
 use crate::{
-    combat::components::State,
     input::events::{Command, ParsedCommand, ProxyCommand},
     npc::components::Npc,
     player::components::{Client, Online},
@@ -10,7 +9,7 @@ use crate::{
     visual::components::Depiction,
 };
 
-use super::components::{Attributes, HasAttacked, InCombat, QueuedAttack};
+use super::components::{HasAttacked, InCombat, QueuedAttack, Stats};
 
 pub fn update_attack_timer(
     mut bevy: Commands,
@@ -48,14 +47,14 @@ pub fn update_attack_timer(
 pub fn on_npc_death(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
-    npcs: Query<(Entity, &Depiction, &State, &Parent), With<Npc>>,
+    npcs: Query<(Entity, &Depiction, &Stats, &Parent), With<Npc>>,
     mut players: Query<(Entity, &Client, &InCombat), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
-    for (entity, depiction, state, parent) in npcs.iter() {
+    for (entity, depiction, stats, parent) in npcs.iter() {
         let siblings = tiles.get(parent.get()).ok();
 
-        if state.health == 0 {
+        if stats.health == 0 {
             let players_in_combat = players
                 .iter_mut()
                 .filter(|(_, _, in_combat)| in_combat.target == entity);
@@ -87,17 +86,17 @@ pub fn on_player_death(
     mut npcs: Query<(Entity, &InCombat), With<Npc>>,
     mut outbox: EventWriter<Outbox>,
     mut proxy: EventWriter<ProxyCommand>,
-    mut players: Query<(Entity, &Client, &mut State, &Attributes), (With<Online>, With<InCombat>)>,
+    mut players: Query<(Entity, &Client, &mut Stats), (With<Online>, With<InCombat>)>,
     spawn_tiles: Query<Entity, With<DeathSpawn>>,
 ) {
-    for (player, client, mut state, attributes) in players.iter_mut() {
-        if state.health == 0 {
+    for (player, client, mut stats) in players.iter_mut() {
+        if stats.health == 0 {
             outbox.send_text(client.id, "You have died.");
 
             bevy.entity(player).remove::<InCombat>();
             bevy.entity(player).remove::<QueuedAttack>();
 
-            state.health = attributes.max_health();
+            stats.health = stats.max_health();
 
             let npcs_in_combat = npcs
                 .iter_mut()
@@ -130,7 +129,7 @@ mod tests {
         app_builder::AppBuilder, npc_builder::NpcBuilder, player_builder::PlayerBuilder,
     };
 
-    use crate::combat::components::{Distance, State};
+    use crate::combat::components::Distance;
 
     use super::*;
 
@@ -176,7 +175,7 @@ mod tests {
         let (mut app, _, _, npc) = setup;
         app.add_systems(Update, on_npc_death);
 
-        app.world.entity_mut(npc).insert(State { health: 0 });
+        app.world.entity_mut(npc).insert(Stats::default());
         app.update();
 
         assert!(app.world.get_entity(npc).is_none());
@@ -187,7 +186,7 @@ mod tests {
         let (mut app, _, client_id, npc) = setup;
         app.add_systems(Update, on_npc_death);
 
-        app.world.entity_mut(npc).insert(State { health: 0 });
+        app.world.entity_mut(npc).insert(Stats::default());
 
         app.update();
 
@@ -201,14 +200,14 @@ mod tests {
         let (mut app, player, _, _) = setup;
         app.add_systems(Update, on_player_death);
 
-        app.world.entity_mut(player).insert(State { health: 0 });
+        app.world.entity_mut(player).insert(Stats::default());
         app.update();
 
         assert!(app.world.get::<InCombat>(player).is_none());
 
         assert_eq!(
-            app.world.get::<State>(player).unwrap().health,
-            app.world.get::<Attributes>(player).unwrap().max_health()
+            app.world.get::<Stats>(player).unwrap().health,
+            app.world.get::<Stats>(player).unwrap().max_health()
         );
     }
 
@@ -222,7 +221,7 @@ mod tests {
 
         app.world.entity_mut(tile).insert(DeathSpawn);
 
-        app.world.entity_mut(player).insert(State { health: 0 });
+        app.world.entity_mut(player).insert(Stats::default());
         app.update();
 
         assert_eq!(app.world.get::<Parent>(player).unwrap().get(), tile);

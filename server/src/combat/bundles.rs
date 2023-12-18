@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-use super::components::{Attributes, State};
+use super::components::Stats;
 
 #[derive(Bundle, Reflect)]
 #[reflect(Schematic)]
 pub struct CombatBundle {
-    pub attributes: Attributes,
+    pub stats: Stats,
 }
 
 impl Schematic for CombatBundle {
@@ -14,18 +14,18 @@ impl Schematic for CombatBundle {
 
     fn apply(input: &Self::Input, context: &mut SchematicContext) {
         if let Some(mut entity) = context.entity_mut() {
-            entity.insert(input.attributes.clone());
+            let stats = Stats {
+                health: input.stats.max_health(),
+                ..input.stats.clone()
+            };
 
-            entity.insert(State {
-                health: input.attributes.max_health(),
-            });
+            entity.insert(stats);
         }
     }
 
     fn remove(_input: &Self::Input, context: &mut SchematicContext) {
         if let Some(mut entity) = context.entity_mut() {
-            entity.remove::<Attributes>();
-            entity.remove::<State>();
+            entity.remove::<Stats>();
         }
     }
 }
