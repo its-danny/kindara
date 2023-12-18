@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use regex::Regex;
@@ -36,75 +36,158 @@ pub fn handle_scan(content: &str) -> Result<Command, ParseError> {
     }
 }
 
+#[derive(WorldQuery)]
+pub struct InventoryQuery {
+    entity: Entity,
+    children: &'static Children,
+    with_inventory: With<Inventory>,
+}
+
+#[derive(WorldQuery)]
+pub struct ItemQuery {
+    entity: Entity,
+    item: &'static Item,
+    depiction: &'static Depiction,
+    surface: Option<&'static Surface>,
+    children: Option<&'static Children>,
+}
+
+#[derive(WorldQuery)]
+pub struct NpcQuery {
+    entity: Entity,
+    depiction: &'static Depiction,
+    with_npc: With<Npc>,
+}
+
+#[derive(WorldQuery)]
+pub struct PlayerQuery {
+    entity: Entity,
+    client: &'static Client,
+    character: &'static Character,
+    parent: &'static Parent,
+    children: &'static Children,
+    with_online: With<Online>,
+}
+
+#[derive(WorldQuery)]
+pub struct TileQuery {
+    children: &'static Children,
+    with_tile: With<Tile>,
+}
+
 #[sysfail(log)]
 pub fn scan(
     mut commands: EventReader<ParsedCommand>,
     mut outbox: EventWriter<Outbox>,
-    inventories: Query<(Entity, &Children), With<Inventory>>,
-    items: Query<(
-        Entity,
-        &Item,
-        &Depiction,
-        Option<&Surface>,
-        Option<&Children>,
-    )>,
-    npcs: Query<(Entity, &Depiction), With<Npc>>,
-    players: Query<(Entity, &Client, &Character, &Parent, &Children), With<Online>>,
-    tiles: Query<&Children, With<Tile>>,
+    inventories: Query<InventoryQuery>,
+    items: Query<ItemQuery>,
+    npcs: Query<NpcQuery>,
+    players: Query<PlayerQuery>,
+    tiles: Query<TileQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Scan((inventory, target)) = &command.command {
-            let (_, client, _, tile, children) = players
+            let player = players
                 .iter()
-                .find(|(_, c, _, _, _)| c.id == command.from)
+                .find(|player| player.client.id == command.from)
                 .context("Player not found")?;
 
-            let entities_to_scan = if *inventory {
-                children
-                    .iter()
-                    .find_map(|child| inventories.get(*child).ok())
-                    .map(|(_, inventory)| inventory.iter().collect())
-                    .unwrap_or_default()
-            } else if let Some(target) = target {
-                items
-                    .iter()
-                    .filter(|(_, _, _, surface, _)| surface.is_some())
-                    .find(|(entity, _, depiction, _, _)| depiction.matches_query(entity, target))
-                    .and_then(|(_, _, _, _, children)| children)
-                    .map(|children| children.iter().collect())
-                    .unwrap_or_else(Vec::new)
+            let entities_to_scan = collect_entities_to_scan(
+                target,
+                inventory,
+                player.parent,
+                player.children,
+                &inventories,
+                &items,
+                &tiles,
+            );
+
+            let output: Vec<String> = if entities_to_scan.is_empty() {
+                vec!["Try as you might, you find nothing.".to_string()]
             } else {
-                tiles
-                    .get(tile.get())
-                    .ok()
-                    .map(|siblings| siblings.iter().collect())
-                    .unwrap_or_default()
+                entities_to_scan
+                    .iter()
+                    .filter_map(|&entity| {
+                        format_entity_description(entity, &items, &npcs, &players)
+                    })
+                    .collect()
             };
 
-            let output: Vec<String> = entities_to_scan
-                .iter()
-                .filter_map(|entity| {
-                    if let Ok((entity, _, depiction, _, _)) = items.get(**entity) {
-                        Some(format!("#{}: {}", entity.index(), depiction.short_name))
-                    } else if let Ok((entity, depiction)) = npcs.get(**entity) {
-                        Some(format!("#{}: {}", entity.index(), depiction.short_name))
-                    } else if let Ok((entity, _, character, _, _)) = players.get(**entity) {
-                        Some(format!("#{}: {}", entity.index(), character.name))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            if output.is_empty() {
-                outbox.send_text(client.id, "Try as you might, you find nothing.");
-            } else {
-                outbox.send_text(client.id, output.join("\n"));
-            }
+            outbox.send_text(player.client.id, output.join("\n"));
         }
     }
 
     Ok(())
+}
+
+fn collect_entities_to_scan(
+    target: &Option<String>,
+    in_inventory: &bool,
+    tile: &Parent,
+    children: &Children,
+    inventories: &Query<InventoryQuery>,
+    items: &Query<ItemQuery>,
+    tiles: &Query<TileQuery>,
+) -> Vec<Entity> {
+    // Scan player's inventory
+    if *in_inventory {
+        return children
+            .iter()
+            .find_map(|child| inventories.get(*child).ok())
+            .map(|inventory| inventory.children.iter().copied().collect())
+            .unwrap_or_default();
+    }
+
+    // Scan for a specific target
+    if let Some(target_name) = target {
+        return items
+            .iter()
+            .filter(|item| item.surface.is_some())
+            .find(|item| item.depiction.matches_query(&item.entity, target_name))
+            .and_then(|item| item.children)
+            .map(|children| children.iter().copied().collect())
+            .unwrap_or_else(Vec::new);
+    }
+
+    // Scan the current tile
+    tiles
+        .get(tile.get())
+        .ok()
+        .map(|tile| tile.children.iter().copied().collect())
+        .unwrap_or_default()
+}
+
+fn format_entity_description(
+    entity: Entity,
+    items: &Query<ItemQuery>,
+    npcs: &Query<NpcQuery>,
+    players: &Query<PlayerQuery>,
+) -> Option<String> {
+    if let Ok(item) = items.get(entity) {
+        return Some(format!(
+            "#{}: {}",
+            item.entity.index(),
+            item.depiction.short_name
+        ));
+    }
+
+    if let Ok(npc) = npcs.get(entity) {
+        return Some(format!(
+            "#{}: {}",
+            npc.entity.index(),
+            npc.depiction.short_name
+        ));
+    }
+
+    if let Ok(player) = players.get(entity) {
+        return Some(format!(
+            "#{}: {}",
+            player.entity.index(),
+            player.character.name
+        ));
+    }
+
+    None
 }
 
 #[cfg(test)]
