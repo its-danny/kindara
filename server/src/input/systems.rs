@@ -5,10 +5,15 @@ use bevy_nest::prelude::*;
 
 use crate::{
     combat::commands::attack::handle_attack,
-    interact::commands::{
-        examine::handle_examine, place::handle_place, roll::handle_roll, take::handle_take,
+    interact::{
+        commands::{
+            examine::handle_examine, place::handle_place, quit::handle_quit, roll::handle_roll,
+            take::handle_take,
+        },
+        components::InMenu,
     },
     items::commands::{drop::handle_drop, inventory::handle_inventory},
+    menu::commands::menu::handle_menu,
     player::{
         commands::{config::handle_config, describe::handle_describe},
         components::{Client, Online},
@@ -33,49 +38,58 @@ pub fn parse_command(
     mut inbox: EventReader<Inbox>,
     mut outbox: EventWriter<Outbox>,
     mut commands: EventWriter<ParsedCommand>,
-    clients: Query<&Client, With<Online>>,
+    clients: Query<(&Client, Option<&InMenu>), With<Online>>,
 ) -> Result<(), anyhow::Error> {
-    for (message, content) in inbox.iter().filter_map(|m| {
+    for (input, content) in inbox.iter().filter_map(|m| {
         if let Message::Text(content) = &m.content {
             Some((m, paint::strip_style(content)))
         } else {
             None
         }
     }) {
-        let client = clients
+        let (client, in_menu) = clients
             .iter()
-            .find(|c| c.id == message.from)
+            .find(|(c, _)| c.id == input.from)
             .context("Client not found")?;
 
-        let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = vec![
-            Box::new(handle_announce),
-            Box::new(handle_chat),
-            Box::new(handle_close),
-            Box::new(handle_config),
-            Box::new(handle_describe),
-            Box::new(handle_drop),
-            Box::new(handle_emote),
-            Box::new(handle_enter),
-            Box::new(handle_examine),
-            Box::new(handle_inventory),
-            Box::new(handle_look),
-            Box::new(handle_map),
-            Box::new(handle_movement),
-            Box::new(handle_open),
-            Box::new(handle_place),
-            Box::new(handle_roll),
-            Box::new(handle_say),
-            Box::new(handle_scan),
-            Box::new(handle_sit),
-            Box::new(handle_stand),
-            Box::new(handle_take),
-            Box::new(handle_time),
-            Box::new(handle_who),
-            Box::new(handle_yell),
-            // Attack is last because the commands are a catch-all and
-            // defined via ron files.
-            Box::new(handle_attack),
-        ];
+        let handlers: Vec<Box<dyn Fn(&str) -> Result<Command, ParseError>>> = if in_menu.is_some() {
+            vec![
+                Box::new(handle_quit),
+                // Menu is last because it captures any text.
+                Box::new(handle_menu),
+            ]
+        } else {
+            vec![
+                Box::new(handle_announce),
+                Box::new(handle_chat),
+                Box::new(handle_close),
+                Box::new(handle_config),
+                Box::new(handle_describe),
+                Box::new(handle_drop),
+                Box::new(handle_emote),
+                Box::new(handle_enter),
+                Box::new(handle_examine),
+                Box::new(handle_inventory),
+                Box::new(handle_look),
+                Box::new(handle_map),
+                Box::new(handle_movement),
+                Box::new(handle_open),
+                Box::new(handle_place),
+                Box::new(handle_quit),
+                Box::new(handle_roll),
+                Box::new(handle_say),
+                Box::new(handle_scan),
+                Box::new(handle_sit),
+                Box::new(handle_stand),
+                Box::new(handle_take),
+                Box::new(handle_time),
+                Box::new(handle_who),
+                Box::new(handle_yell),
+                // Attack is last because the commands are a catch-all and
+                // defined via ron files.
+                Box::new(handle_attack),
+            ]
+        };
 
         match handlers.iter().find_map(|handler| match handler(&content) {
             Err(ParseError::WrongCommand) => None,

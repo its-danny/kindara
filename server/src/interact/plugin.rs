@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{
-    commands::{examine::*, place::*, roll::*, take::*},
+    commands::{examine::*, place::*, quit::*, roll::*, take::*},
     components::*,
     systems::*,
 };
@@ -16,7 +16,14 @@ impl Plugin for InteractPlugin {
 
         app.add_systems(
             Update,
-            (examine, take, place, remove_menu_if_changed_tiles, roll),
+            (
+                examine,
+                place,
+                quit,
+                remove_menu_if_changed_tiles,
+                roll,
+                take,
+            ),
         );
     }
 }
