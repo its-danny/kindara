@@ -51,7 +51,6 @@ pub enum Command {
     Sit(Option<String>),
     Stand,
     Take((String, bool, Option<String>)),
-    Teleport((String, (i32, i32, i32))),
     Time,
     Who,
     Yell(String),
