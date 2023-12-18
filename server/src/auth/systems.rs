@@ -22,6 +22,7 @@ use crate::{
     input::events::{Command, ParsedCommand, ProxyCommand},
     items::components::Inventory,
     keycard::Keycard,
+    mastery::resources::Masteries,
     paint,
     player::{
         bundles::PlayerBundle,
@@ -200,6 +201,7 @@ pub fn handle_authenticate_task(
     spawn_tiles: Query<Entity, (With<Tile>, With<LifeSpawn>)>,
     tiles: Query<(Entity, &Name), With<Tile>>,
     world_state: Res<WorldState>,
+    masteries: Res<Masteries>,
 ) -> Result<(), anyhow::Error> {
     for (task_entity, mut task) in &mut tasks {
         if let Some(Ok((character_model, client_id))) =
@@ -225,6 +227,21 @@ pub fn handle_authenticate_task(
                     server.disconnect(&online.id);
                 }
 
+                let mut player_stats = Stats::default();
+                let mastery = masteries
+                    .0
+                    .get(&character.mastery)
+                    .with_context(|| format!("Mastery not found: {}", &character.mastery))?;
+
+                player_stats.vitality = mastery.vitality;
+                player_stats.proficiency = mastery.proficiency;
+                player_stats.speed = mastery.speed;
+                player_stats.strength = mastery.strength;
+                player_stats.dexterity = mastery.dexterity;
+                player_stats.intelligence = mastery.intelligence;
+
+                player_stats.health = player_stats.max_health();
+
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
                     .insert((
@@ -243,7 +260,7 @@ pub fn handle_authenticate_task(
                             },
                         },
                         CombatBundle {
-                            stats: Stats::default(),
+                            stats: player_stats,
                         },
                     ));
 

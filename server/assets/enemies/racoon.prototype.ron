@@ -17,8 +17,8 @@
             stats: (
                 vitality: 50,
                 proficiency: 3,
-                speed: 5,
-                strength: 0,
+                speed: 3,
+                strength: 10,
                 dexterity: 0,
                 intelligence: 0,
                 dominance: 3,

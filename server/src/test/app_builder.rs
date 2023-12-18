@@ -51,6 +51,12 @@ impl AppBuilder {
             "freelancer".into(),
             Mastery {
                 name: "Freelancer".into(),
+                vitality: 0,
+                proficiency: 0,
+                speed: 0,
+                strength: 0,
+                dexterity: 0,
+                intelligence: 0,
                 skills: vec!["punch".into()],
             },
         );

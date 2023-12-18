@@ -1,4 +1,10 @@
 (
     name: "Freelancer",
+    vitality: 10,
+    proficiency: 10,
+    speed: 5,
+    strength: 10,
+    dexterity: 5,
+    intelligence: 0,
     skills: ["punch"],
 )
