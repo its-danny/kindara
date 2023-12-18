@@ -24,10 +24,11 @@ pub struct Stats {
     pub dexterity: u32,
     /// Modifier for magic attacks.
     pub intelligence: u32,
-    /// How likely an entity is to flee from you.
-    pub dominance: u32,
     // --- State
     pub health: u32,
+    // --- Offense
+    /// How likely an entity is to flee from you.
+    pub dominance: u32,
 }
 
 impl Stats {
