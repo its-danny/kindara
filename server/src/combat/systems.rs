@@ -36,7 +36,7 @@ pub fn update_attack_timer(
                 }
                 None => {
                     if let Some(client) = client {
-                        outbox.send_text(client.id, "You are ready attack again.");
+                        outbox.send_text(client.id, "You are ready to attack again.");
                     }
                 }
             }

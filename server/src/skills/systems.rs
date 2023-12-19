@@ -1,10 +1,17 @@
 use std::cmp::min;
 
 use bevy::prelude::*;
+use bevy_nest::prelude::*;
+use caith::Roller;
 
-use crate::combat::components::Stats;
+use crate::{
+    combat::components::Stats,
+    paint,
+    player::components::{Client, Online},
+    visual::components::Depiction,
+};
 
-use super::components::{Cooldowns, PotentialRegenTimer};
+use super::components::{Bleeding, Cooldowns, PotentialRegenTimer};
 
 pub fn potential_regen(time: Res<Time>, mut timers: Query<(&mut Stats, &mut PotentialRegenTimer)>) {
     for (mut stats, mut timer) in timers.iter_mut() {
@@ -33,6 +40,37 @@ pub fn update_cooldowns(time: Res<Time>, mut cooldowns: Query<&mut Cooldowns>) {
 
         for skill in finished {
             cooldowns.0.remove(&skill);
+        }
+    }
+}
+
+pub fn update_bleeding(
+    mut bevy: Commands,
+    time: Res<Time>,
+    mut targets: Query<(Entity, &Depiction, &mut Stats, &mut Bleeding)>,
+    players: Query<(Entity, &Client), With<Online>>,
+    mut outbox: EventWriter<Outbox>,
+) {
+    for (target, depiction, mut stats, mut bleeding) in targets.iter_mut() {
+        if bleeding.length.tick(time.delta()).just_finished() {
+            bevy.entity(target).remove::<Bleeding>();
+        } else if bleeding.tick.tick(time.delta()).just_finished() {
+            let roller = Roller::new(&bleeding.roll).unwrap();
+            let roll = roller.roll().unwrap();
+            let damage = roll.as_single().unwrap().get_total() as u32;
+
+            stats.health -= damage;
+
+            if let Ok((_, client)) = players.get(bleeding.source) {
+                outbox.send_text(
+                    client.id,
+                    paint!(
+                        "{} takes <fg.red>{}</> damage from bleeding.",
+                        depiction.name,
+                        damage
+                    ),
+                );
+            }
         }
     }
 }
