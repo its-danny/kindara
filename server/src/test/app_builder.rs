@@ -39,6 +39,7 @@ impl AppBuilder {
             "punch".into(),
             Skill {
                 name: "Punch".into(),
+                commands: vec!["punch".into()],
                 stat: RelevantStat::Strength,
                 distance: Distance::Near,
                 actions: vec![Action::ApplyDamage("2d10".into())],
@@ -48,9 +49,9 @@ impl AppBuilder {
         let mut masteries = Masteries::default();
 
         masteries.0.insert(
-            "freelancer".into(),
+            "boxer".into(),
             Mastery {
-                name: "Freelancer".into(),
+                name: "Boxer".into(),
                 vitality: 0,
                 proficiency: 0,
                 speed: 0,
