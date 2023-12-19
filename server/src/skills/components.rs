@@ -10,6 +10,6 @@ pub struct Cooldowns(pub HashMap<String, Timer>);
 pub struct Bleeding {
     pub source: Entity,
     pub tick: Timer,
-    pub length: Timer,
+    pub duration: Timer,
     pub roll: String,
 }
