@@ -327,14 +327,8 @@ fn execute_attack(
     );
 
     match in_combat.attack(bevy, player.entity, skill, &player.stats, &mut state) {
-        Ok(_) => Ok(format!(
-            "You attack the {}. It's health is now {}.",
-            npc.depiction.short_name, state.health
-        )),
-        Err(HitError::Missed) => Ok(format!(
-            "You attack the {} but miss.",
-            npc.depiction.short_name
-        )),
+        Ok(_) => Ok(skill.flavor.clone()),
+        Err(HitError::Missed) => Ok("You miss.".into()),
     }
 }
 
@@ -593,16 +587,9 @@ mod tests {
             &mut player_query,
             &skill,
             &in_combat.as_ref(),
-        )
-        .map(|s| {
-            if s.starts_with("You attack the goat") {
-                "You attack the goat.".into()
-            } else {
-                s
-            }
-        });
+        );
 
-        assert_eq!(result, Ok("You attack the goat.".into()));
+        assert_eq!(result, Ok("You sock 'em in the jaw.".into()));
     }
 
     #[rstest]
@@ -822,6 +809,6 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert!(content.starts_with("You attack the goat"));
+        assert_eq!(content, "You sock 'em in the jaw.");
     }
 }

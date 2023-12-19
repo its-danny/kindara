@@ -1,5 +1,6 @@
 (
     name: "Blade Flourish",
+    flavor: "You spin your blade in a series of quick slashes, leaving your foe bleeding.",
     commands: ["flourish"],
     stat: Dexterity,
     distance: Near,

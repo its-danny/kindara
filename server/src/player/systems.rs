@@ -50,8 +50,8 @@ pub fn handle_client_width(
 pub fn send_prompt(
     mut events: EventReader<Prompt>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Stats, Option<&InCombat>)>,
-    npcs: Query<&Depiction, With<Npc>>,
+    players: Query<(&Client, &Stats, Option<&InCombat>), (With<Online>, Without<Npc>)>,
+    npcs: Query<(&Stats, &Depiction), With<Npc>>,
 ) -> Result<(), anyhow::Error> {
     for prompt in events.iter() {
         let (client, stats, in_combat) = players
@@ -70,9 +70,15 @@ pub fn send_prompt(
         ));
 
         if let Some(combat) = in_combat {
-            let depiction = npcs.get(combat.target)?;
+            let (stats, depiction) = npcs.get(combat.target)?;
 
-            parts.push(format!("{} ({})", depiction.name, combat.distance));
+            parts.push(paint!(
+                "{} ({}) [{}/<fg.red>{}</>]",
+                depiction.name,
+                combat.distance,
+                stats.health,
+                stats.max_health(),
+            ));
         }
 
         parts.push("->".into());

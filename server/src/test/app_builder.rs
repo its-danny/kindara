@@ -39,6 +39,7 @@ impl AppBuilder {
             "punch".into(),
             Skill {
                 name: "Punch".into(),
+                flavor: "You sock 'em in the jaw.".into(),
                 commands: vec!["punch".into()],
                 stat: RelevantStat::Strength,
                 distance: Distance::Near,
