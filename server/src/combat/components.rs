@@ -52,9 +52,25 @@ impl Stats {
         BASE_POTENTIAL_REGEN + self.potential_regen
     }
 
-    /// Applies damage to the entity's health, saturating at 0.
-    pub fn apply_damage(&mut self, damage: u32) {
+    pub fn deal_damage(
+        &mut self,
+        roll: &str,
+        attacker_stats: &Stats,
+        relevant_stat: Option<&RelevantStat>,
+    ) -> u32 {
+        let roller = Roller::new(roll).unwrap();
+        let roll = roller.roll().unwrap();
+        let mut damage = roll.as_single().unwrap().get_total() as u32;
+
+        damage += relevant_stat.map_or(0, |stat| match stat {
+            RelevantStat::Strength => attacker_stats.strength,
+            RelevantStat::Dexterity => attacker_stats.dexterity,
+            RelevantStat::Intelligence => attacker_stats.intelligence,
+        });
+
         self.health = self.health.saturating_sub(damage);
+
+        damage
     }
 }
 
@@ -128,15 +144,7 @@ impl InCombat {
         for action in &skill.actions {
             match action {
                 Action::ApplyDamage(roll) => {
-                    let mut damage = self.roll_as_single(roll) as u32;
-
-                    damage += match &skill.stat {
-                        RelevantStat::Strength => attacker_stats.strength,
-                        RelevantStat::Dexterity => attacker_stats.dexterity,
-                        RelevantStat::Intelligence => attacker_stats.intelligence,
-                    };
-
-                    target_stats.apply_damage(damage);
+                    let damage = target_stats.deal_damage(roll, attacker_stats, Some(&skill.stat));
 
                     damage_done += damage;
                 }
