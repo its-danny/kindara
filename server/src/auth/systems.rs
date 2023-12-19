@@ -29,6 +29,7 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
+    skills::components::PotentialRegenTimer,
     spatial::components::{LifeSpawn, Tile},
     world::resources::WorldState,
 };
@@ -241,6 +242,7 @@ pub fn handle_authenticate_task(
                 player_stats.intelligence = mastery.intelligence;
 
                 player_stats.health = player_stats.max_health();
+                player_stats.potential = player_stats.max_potential();
 
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
@@ -262,6 +264,7 @@ pub fn handle_authenticate_task(
                         CombatBundle {
                             stats: player_stats,
                         },
+                        PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
                     ));
 
                 let spawn = spawn_tiles.iter().next().context("Spawn tile not found")?;

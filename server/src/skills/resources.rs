@@ -22,6 +22,7 @@ pub struct Skill {
     pub commands: Vec<String>,
     pub stat: RelevantStat,
     pub distance: Distance,
+    pub cost: u32,
     pub actions: Vec<Action>,
 }
 

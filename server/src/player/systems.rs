@@ -62,9 +62,11 @@ pub fn send_prompt(
         let mut parts: Vec<String> = vec![];
 
         parts.push(paint!(
-            "[{}/<fg.red>{}</>]",
+            "[{}/<fg.red>{}</> {}/<fg.cyan>{}</>]",
             stats.health,
-            stats.max_health()
+            stats.max_health(),
+            stats.potential,
+            stats.max_potential(),
         ));
 
         if let Some(combat) = in_combat {

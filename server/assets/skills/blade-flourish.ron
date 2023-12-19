@@ -3,6 +3,7 @@
     commands: ["flourish"],
     stat: Dexterity,
     distance: Near,
+    cost: 20,
     actions: [
         ApplyDamage("1d6"),
     ]
