@@ -59,7 +59,7 @@ pub fn update_bleeding(
             let roll = roller.roll().unwrap();
             let damage = roll.as_single().unwrap().get_total() as u32;
 
-            stats.health -= damage;
+            stats.apply_damage(damage);
 
             if let Ok((_, client)) = players.get(bleeding.source) {
                 outbox.send_text(
