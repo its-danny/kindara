@@ -11,7 +11,7 @@ use crate::{
     },
     mastery::resources::{Masteries, Mastery},
     player::events::Prompt,
-    skills::resources::{Action, RelevantStat, Skill, Skills},
+    skills::resources::{Action, DamageType, RelevantStat, Skill, Skills},
     visual::paint,
     world::resources::{WorldState, WorldTime},
 };
@@ -42,6 +42,8 @@ impl AppBuilder {
                 flavor: "You sock 'em in the jaw.".into(),
                 commands: vec!["punch".into()],
                 stat: RelevantStat::Strength,
+                damage_type: DamageType::Physical,
+                difficulty: 10,
                 distance: Distance::Near,
                 cost: 0,
                 cooldown: 0,

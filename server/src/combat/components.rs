@@ -8,12 +8,13 @@ use crate::{
     input::events::ParsedCommand,
     skills::{
         components::Bleeding,
-        resources::{Action, RelevantStat, Skill, StatusEffect},
+        resources::{Action, DamageType, RelevantStat, Skill, StatusEffect},
     },
 };
 
 #[derive(Component, Default, Reflect, Clone)]
 pub struct Stats {
+    pub level: u32,
     // --- Attributes
     /// Determines base health, max health, and health regeneration amount.
     pub vitality: u32,
@@ -32,6 +33,8 @@ pub struct Stats {
     pub potential: u32,
     // How much potential is regenerated per second.
     pub potential_regen: u32,
+    // Resistance
+    pub armor: u32,
     // --- Offense
     /// How likely an entity is to flee from you.
     pub dominance: u32,
@@ -57,16 +60,44 @@ impl Stats {
         roll: &str,
         attacker_stats: &Stats,
         relevant_stat: Option<&RelevantStat>,
+        damage_type: Option<&DamageType>,
+        difficulty: &u32,
     ) -> u32 {
-        let roller = Roller::new(roll).unwrap();
-        let roll = roller.roll().unwrap();
-        let mut damage = roll.as_single().unwrap().get_total() as u32;
+        let difficulty = (*difficulty as f32 + (self.level as f32 * 0.5)).floor() as u32;
+
+        let res_modifier = if let Some(damage_type) = damage_type {
+            match damage_type {
+                DamageType::Physical => self.armor,
+            }
+        } else {
+            0
+        };
+
+        let res_roller = Roller::new("2d10").unwrap();
+        let res_roll = res_roller.roll().unwrap();
+        let resistance = res_roll.as_single().unwrap().get_total() as u32;
+
+        let resistance = resistance + res_modifier;
+        let excess = resistance.saturating_sub(difficulty);
+
+        let mitigated = match excess {
+            0..=4 => 0.25,
+            5..=8 => 0.5,
+            9..=12 => 0.75,
+            _ => 1.0,
+        };
+
+        let dmg_roller = Roller::new(roll).unwrap();
+        let dmg_roll = dmg_roller.roll().unwrap();
+        let mut damage = dmg_roll.as_single().unwrap().get_total() as u32;
 
         damage += relevant_stat.map_or(0, |stat| match stat {
             RelevantStat::Strength => attacker_stats.strength,
             RelevantStat::Dexterity => attacker_stats.dexterity,
             RelevantStat::Intelligence => attacker_stats.intelligence,
         });
+
+        damage = (damage as f32 * (1.0 - mitigated)) as u32;
 
         self.health = self.health.saturating_sub(damage);
 
@@ -122,7 +153,7 @@ impl InCombat {
 
     fn roll_hit(&self) -> Result<(), HitError> {
         let quality = self.roll_as_single("2d10");
-        let dodge = self.roll_as_single("1d10");
+        let dodge = self.roll_as_single("2d10");
 
         if quality < dodge {
             Err(HitError::Missed)
@@ -144,7 +175,13 @@ impl InCombat {
         for action in &skill.actions {
             match action {
                 Action::ApplyDamage(roll) => {
-                    let damage = target_stats.deal_damage(roll, attacker_stats, Some(&skill.stat));
+                    let damage = target_stats.deal_damage(
+                        roll,
+                        attacker_stats,
+                        Some(&skill.stat),
+                        Some(&skill.damage_type),
+                        &skill.difficulty,
+                    );
 
                     damage_done += damage;
                 }
@@ -164,8 +201,8 @@ impl InCombat {
         damage_done
     }
 
-    // You can move if you have no attack queued and if you roll a 1d10 greater than
-    // the enemy's 1d10 + their dominance.
+    // You can move if you have no attack queued and if you roll a 2d10 greater than
+    // the enemy's 2d10 + their dominance.
     pub fn can_move(&self, target_stats: &Stats, queued_attack: &Option<&QueuedAttack>) -> bool {
         if queued_attack.is_some() {
             return false;
