@@ -52,8 +52,15 @@ pub fn update_bleeding(
     mut outbox: EventWriter<Outbox>,
 ) {
     for (target, depiction, mut stats, mut bleeding) in targets.iter_mut() {
-        if bleeding.length.tick(time.delta()).just_finished() {
+        if bleeding.duration.tick(time.delta()).just_finished() {
             bevy.entity(target).remove::<Bleeding>();
+
+            if let Ok((_, client)) = players.get(bleeding.source) {
+                outbox.send_text(
+                    client.id,
+                    paint!("{} is no longer bleeding.", depiction.name),
+                );
+            }
         } else if bleeding.tick.tick(time.delta()).just_finished() {
             let roller = Roller::new(&bleeding.roll).unwrap();
             let roll = roller.roll().unwrap();

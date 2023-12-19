@@ -18,7 +18,8 @@ pub enum StatusEffect {
 #[derive(Debug, Deserialize)]
 pub enum Action {
     ApplyDamage(String),
-    ApplyStatus(StatusEffect, String, u32),
+    // Effect, Roll, Tick, Duration
+    ApplyStatus(StatusEffect, String, u32, u32),
 }
 
 /// A skill definition.

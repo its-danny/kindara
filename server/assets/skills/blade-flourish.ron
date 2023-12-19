@@ -8,6 +8,6 @@
     cooldown: 15,
     actions: [
         ApplyDamage("1d6"),
-        ApplyStatus(Bleeding, "1d4", 10),
+        ApplyStatus(Bleeding, "1d4", 2, 10),
     ]
 )

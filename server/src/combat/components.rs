@@ -151,12 +151,12 @@ impl InCombat {
 
                     damage_done += damage;
                 }
-                Action::ApplyStatus(status, roll, length) => match status {
+                Action::ApplyStatus(status, roll, tick, duration) => match status {
                     StatusEffect::Bleeding => {
                         bevy.entity(self.target).insert(Bleeding {
                             source: *attacker,
-                            tick: Timer::from_seconds(1.0, TimerMode::Repeating),
-                            length: Timer::from_seconds(*length as f32, TimerMode::Once),
+                            tick: Timer::from_seconds(*tick as f32, TimerMode::Repeating),
+                            duration: Timer::from_seconds(*duration as f32, TimerMode::Once),
                             roll: roll.clone(),
                         });
                     }
