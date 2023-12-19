@@ -13,6 +13,7 @@ use crate::{
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
     npc::components::Npc,
+    paint,
     player::{
         components::{Character, Client, Online},
         events::Prompt,
@@ -327,7 +328,19 @@ fn execute_attack(
     );
 
     match in_combat.attack(bevy, player.entity, skill, &player.stats, &mut state) {
-        Ok(_) => Ok(skill.flavor.clone()),
+        Ok(damage) => {
+            let message = if damage > 0 {
+                paint!(
+                    "{} You deal <fg.red>{}</> damage.",
+                    skill.flavor.clone(),
+                    damage
+                )
+            } else {
+                skill.flavor.clone()
+            };
+
+            Ok(message)
+        }
         Err(HitError::Missed) => Ok("You miss.".into()),
     }
 }
@@ -589,7 +602,7 @@ mod tests {
             &in_combat.as_ref(),
         );
 
-        assert_eq!(result, Ok("You sock 'em in the jaw.".into()));
+        assert!(result.is_ok());
     }
 
     #[rstest]
@@ -809,6 +822,6 @@ mod tests {
 
         let content = get_message_content(&mut app, client_id).unwrap();
 
-        assert_eq!(content, "You sock 'em in the jaw.");
+        assert!(content.starts_with("You sock 'em in the jaw."));
     }
 }

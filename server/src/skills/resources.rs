@@ -11,8 +11,14 @@ pub enum RelevantStat {
 }
 
 #[derive(Debug, Deserialize)]
+pub enum StatusEffect {
+    Bleeding,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum Action {
     ApplyDamage(String),
+    ApplyStatus(StatusEffect, String, u32),
 }
 
 /// A skill definition.

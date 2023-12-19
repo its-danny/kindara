@@ -6,7 +6,10 @@ use serde::Deserialize;
 
 use crate::{
     input::events::ParsedCommand,
-    skills::resources::{Action, RelevantStat, Skill},
+    skills::{
+        components::Bleeding,
+        resources::{Action, RelevantStat, Skill, StatusEffect},
+    },
 };
 
 #[derive(Component, Default, Reflect, Clone)]
@@ -86,16 +89,17 @@ impl InCombat {
         skill: &Skill,
         attacker_stats: &Stats,
         target_stats: &mut Stats,
-    ) -> Result<(), HitError> {
+    ) -> Result<u32, HitError> {
         bevy.entity(attacker).insert(HasAttacked {
             timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
         });
 
         match self.roll_hit() {
             Ok(_) => {
-                self.apply_actions(skill, attacker_stats, target_stats);
+                let damage =
+                    self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
 
-                Ok(())
+                Ok(damage)
             }
             Err(err) => Err(err),
         }
@@ -117,7 +121,16 @@ impl InCombat {
         }
     }
 
-    fn apply_actions(&self, skill: &Skill, attacker_stats: &Stats, target_stats: &mut Stats) {
+    fn apply_actions(
+        &self,
+        bevy: &mut Commands,
+        skill: &Skill,
+        attacker: &Entity,
+        attacker_stats: &Stats,
+        target_stats: &mut Stats,
+    ) -> u32 {
+        let mut damage_done = 0_u32;
+
         for action in &skill.actions {
             match action {
                 Action::ApplyDamage(roll) => {
@@ -132,9 +145,23 @@ impl InCombat {
                     };
 
                     target_stats.apply_damage(damage);
+
+                    damage_done += damage;
                 }
+                Action::ApplyStatus(status, roll, length) => match status {
+                    StatusEffect::Bleeding => {
+                        bevy.entity(self.target).insert(Bleeding {
+                            source: *attacker,
+                            tick: Timer::from_seconds(1.0, TimerMode::Repeating),
+                            length: Timer::from_seconds(*length as f32, TimerMode::Once),
+                            roll: roll.clone(),
+                        });
+                    }
+                },
             }
         }
+
+        damage_done
     }
 
     // You can move if you have no attack queued and if you roll a 1d10 greater than
