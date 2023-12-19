@@ -1,13 +1,13 @@
 use std::cmp::min;
 
 use bevy::prelude::*;
+use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
-use caith::Roller;
 
 use crate::{
     combat::components::Stats,
     paint,
-    player::components::{Client, Online},
+    player::components::{Character, Client, Online},
     visual::components::Depiction,
 };
 
@@ -44,31 +44,41 @@ pub fn update_cooldowns(time: Res<Time>, mut cooldowns: Query<&mut Cooldowns>) {
     }
 }
 
+#[sysfail(log)]
 pub fn update_bleeding(
     mut bevy: Commands,
     time: Res<Time>,
-    mut targets: Query<(Entity, &Depiction, &mut Stats, &mut Bleeding)>,
-    players: Query<(Entity, &Client), With<Online>>,
     mut outbox: EventWriter<Outbox>,
-) {
-    for (target, depiction, mut stats, mut bleeding) in targets.iter_mut() {
+    mut targets: Query<(
+        Entity,
+        &mut Bleeding,
+        Option<&Depiction>,
+        Option<&Character>,
+    )>,
+    players: Query<&Client, With<Online>>,
+    mut stats: Query<&mut Stats>,
+) -> Result<(), anyhow::Error> {
+    for (target, mut bleeding, depiction, character) in targets.iter_mut() {
         if bleeding.duration.tick(time.delta()).just_finished() {
             bevy.entity(target).remove::<Bleeding>();
 
-            if let Ok((_, client)) = players.get(bleeding.source) {
+            if let (Ok(client), Some(depiction)) = (players.get(bleeding.source), depiction) {
                 outbox.send_text(
                     client.id,
-                    paint!("{} is no longer bleeding.", depiction.name),
+                    format!("{} is no longer bleeding.", depiction.name),
                 );
             }
+
+            if let (Ok(client), Some(_)) = (players.get(target), character) {
+                outbox.send_text(client.id, "You are no longer bleeding.");
+            }
         } else if bleeding.tick.tick(time.delta()).just_finished() {
-            let roller = Roller::new(&bleeding.roll).unwrap();
-            let roll = roller.roll().unwrap();
-            let damage = roll.as_single().unwrap().get_total() as u32;
+            let attacker_stats = stats.get(bleeding.source)?.clone();
+            let mut target_stats = stats.get_mut(target)?;
 
-            stats.apply_damage(damage);
+            let damage = target_stats.deal_damage(&bleeding.roll, &attacker_stats, None);
 
-            if let Ok((_, client)) = players.get(bleeding.source) {
+            if let (Ok(client), Some(depiction)) = (players.get(bleeding.source), depiction) {
                 outbox.send_text(
                     client.id,
                     paint!(
@@ -78,6 +88,15 @@ pub fn update_bleeding(
                     ),
                 );
             }
+
+            if let (Ok(client), Some(_)) = (players.get(target), character) {
+                outbox.send_text(
+                    client.id,
+                    paint!("You take <fg.red>{}</> damage from bleeding.", damage),
+                );
+            }
         }
     }
+
+    Ok(())
 }
