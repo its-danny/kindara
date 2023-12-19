@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{load::load_skills, resources::Skills, systems::potential_regen};
+use super::{load::load_skills, resources::Skills, systems::*};
 
 pub struct SkillsPlugin;
 
@@ -9,6 +9,6 @@ impl Plugin for SkillsPlugin {
         app.insert_resource(Skills::default());
 
         app.add_systems(Startup, load_skills);
-        app.add_systems(Update, potential_regen);
+        app.add_systems(Update, (potential_regen, update_cooldowns));
     }
 }

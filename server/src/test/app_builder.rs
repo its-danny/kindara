@@ -43,6 +43,7 @@ impl AppBuilder {
                 stat: RelevantStat::Strength,
                 distance: Distance::Near,
                 cost: 0,
+                cooldown: 0,
                 actions: vec![Action::ApplyDamage("2d10".into())],
             },
         );
