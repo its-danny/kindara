@@ -60,7 +60,7 @@ pub struct PlayerQuery {
     entity: Entity,
     client: &'static Client,
     character: &'static mut Character,
-    stats: &'static Stats,
+    stats: &'static mut Stats,
     tile: &'static Parent,
     in_combat: Option<&'static InCombat>,
     has_attacked: Option<&'static HasAttacked>,
@@ -105,6 +105,15 @@ pub fn attack(
                     continue;
                 }
             };
+
+            if player.stats.potential < skill.cost {
+                outbox.send_text(
+                    player.client.id,
+                    format!("You don't have enough potential to use {}.", skill.name),
+                );
+
+                continue;
+            }
 
             if let Some(target) = target {
                 let target = match get_target(target, &tiles, &player.tile.get(), &npcs) {
@@ -250,7 +259,7 @@ fn execute_attack(
     skill: &Skill,
     in_combat: &Option<&InCombat>,
 ) -> Result<String, AttackError> {
-    let Some(player) = players
+    let Some(mut player) = players
         .iter_mut()
         .find(|player| player.client.id == command.from)
     else {
@@ -293,7 +302,9 @@ fn execute_attack(
         };
     }
 
-    match in_combat.attack(bevy, player.entity, skill, player.stats, &mut state) {
+    player.stats.potential = player.stats.potential.saturating_sub(skill.cost);
+
+    match in_combat.attack(bevy, player.entity, skill, &player.stats, &mut state) {
         Ok(_) => Ok(format!(
             "You attack the {}. It's health is now {}.",
             npc.depiction.short_name, state.health

@@ -42,6 +42,7 @@ impl AppBuilder {
                 commands: vec!["punch".into()],
                 stat: RelevantStat::Strength,
                 distance: Distance::Near,
+                cost: 0,
                 actions: vec![Action::ApplyDamage("2d10".into())],
             },
         );

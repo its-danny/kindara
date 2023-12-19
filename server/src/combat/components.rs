@@ -14,7 +14,7 @@ pub struct Stats {
     // --- Attributes
     /// Determines base health, max health, and health regeneration amount.
     pub vitality: u32,
-    /// Determines base damage, max potential, and potential regeneration amount.
+    /// Determines max potential, and potential regeneration amount.
     pub proficiency: u32,
     /// Determines attack speed.
     pub speed: u32,
@@ -26,6 +26,8 @@ pub struct Stats {
     pub intelligence: u32,
     // --- State
     pub health: u32,
+    pub potential: u32,
+    pub potential_regen: u32,
     // --- Offense
     /// How likely an entity is to flee from you.
     pub dominance: u32,
@@ -34,6 +36,14 @@ pub struct Stats {
 impl Stats {
     pub fn max_health(&self) -> u32 {
         self.vitality * 10
+    }
+
+    pub fn max_potential(&self) -> u32 {
+        self.proficiency * 10
+    }
+
+    pub fn potential_per_second(&self) -> u32 {
+        self.proficiency / 10
     }
 
     /// Applies damage to the entity's health, saturating at 0.

@@ -23,6 +23,8 @@
                 intelligence: 0,
                 dominance: 3,
                 health: 0,
+                potential: 0,
+                potential_regen: 0,
             ),
         ),
         "server::interact::components::Interactions": ([Attack]),

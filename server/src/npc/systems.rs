@@ -30,6 +30,12 @@ pub fn on_enter_combat(
     for (entity, npc, depiction, npc_stats, in_combat) in npcs.iter() {
         let (client, mut player_stats) = players.get_mut(in_combat.target)?;
 
+        if npc.skills.is_empty() {
+            debug!("NPC entered combat with no skills");
+
+            continue;
+        }
+
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
         let skill = skills
