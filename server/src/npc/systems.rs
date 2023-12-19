@@ -45,13 +45,7 @@ pub fn on_enter_combat(
 
         match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
             Ok(_) => {
-                outbox.send_text(
-                    client.id,
-                    format!(
-                        "{} attacks you. Your health is now {}.",
-                        depiction.name, player_stats.health
-                    ),
-                );
+                outbox.send_text(client.id, format!("{} attacks you.", depiction.name));
             }
             Err(HitError::Missed) => {
                 outbox.send_text(
@@ -81,6 +75,12 @@ pub fn attack_when_able(
         let (entity, npc, depiction, npc_stats, in_combat) = npcs.get(entity)?;
         let (client, mut player_stats) = players.get_mut(in_combat.target)?;
 
+        if npc.skills.is_empty() {
+            debug!("NPC entered combat with no skills");
+
+            continue;
+        }
+
         let mut rng = thread_rng();
         let index = rng.gen_range(0..npc.skills.len());
         let skill = skills
@@ -90,13 +90,7 @@ pub fn attack_when_able(
 
         match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
             Ok(_) => {
-                outbox.send_text(
-                    client.id,
-                    format!(
-                        "{} attacks you. Your health is now {}.",
-                        depiction.name, player_stats.health
-                    ),
-                );
+                outbox.send_text(client.id, format!("{} attacks you.", depiction.name,));
             }
             Err(HitError::Missed) => {
                 outbox.send_text(

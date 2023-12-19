@@ -34,6 +34,8 @@ impl Schematic for CombatBundle {
     fn remove(_input: &Self::Input, context: &mut SchematicContext) {
         if let Some(mut entity) = context.entity_mut() {
             entity.remove::<Stats>();
+            entity.remove::<PotentialRegenTimer>();
+            entity.remove::<Cooldowns>();
         }
     }
 }
