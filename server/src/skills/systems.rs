@@ -11,7 +11,10 @@ use crate::{
     visual::components::Depiction,
 };
 
-use super::components::{Bleeding, Cooldowns, PotentialRegenTimer};
+use super::{
+    components::{Bleeding, Cooldowns, PotentialRegenTimer},
+    resources::DamageType,
+};
 
 pub fn potential_regen(time: Res<Time>, mut timers: Query<(&mut Stats, &mut PotentialRegenTimer)>) {
     for (mut stats, mut timer) in timers.iter_mut() {
@@ -76,7 +79,13 @@ pub fn update_bleeding(
             let attacker_stats = stats.get(bleeding.source)?.clone();
             let mut target_stats = stats.get_mut(target)?;
 
-            let damage = target_stats.deal_damage(&bleeding.roll, &attacker_stats, None);
+            let damage = target_stats.deal_damage(
+                &bleeding.roll,
+                &attacker_stats,
+                None,
+                Some(&DamageType::Physical),
+                &10,
+            );
 
             if let (Ok(client), Some(depiction)) = (players.get(bleeding.source), depiction) {
                 outbox.send_text(

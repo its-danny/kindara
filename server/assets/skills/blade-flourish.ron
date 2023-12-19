@@ -3,6 +3,8 @@
     flavor: "You spin your blade in a series of quick slashes, leaving your foe bleeding.",
     commands: ["flourish"],
     stat: Dexterity,
+    damage_type: Physical,
+    difficulty: 15,
     distance: Near,
     cost: 20,
     cooldown: 15,

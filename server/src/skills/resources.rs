@@ -11,6 +11,11 @@ pub enum RelevantStat {
 }
 
 #[derive(Debug, Deserialize)]
+pub enum DamageType {
+    Physical,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum StatusEffect {
     Bleeding,
 }
@@ -29,6 +34,8 @@ pub struct Skill {
     pub flavor: String,
     pub commands: Vec<String>,
     pub stat: RelevantStat,
+    pub damage_type: DamageType,
+    pub difficulty: u32,
     pub distance: Distance,
     pub cost: u32,
     pub cooldown: u32,
