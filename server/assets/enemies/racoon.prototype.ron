@@ -3,7 +3,7 @@
     schematics: {
         "server::npc::bundles::NpcBundle": (
             npc: (
-                skills: ["punch"],
+                skills: [],
             ),
             depiction: (
                 name: "Racoon",

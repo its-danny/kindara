@@ -19,6 +19,7 @@ pub enum Action {
 #[derive(Debug, Deserialize)]
 pub struct Skill {
     pub name: String,
+    pub commands: Vec<String>,
     pub stat: RelevantStat,
     pub distance: Distance,
     pub actions: Vec<Action>,

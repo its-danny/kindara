@@ -1,0 +1,9 @@
+(
+    name: "Blade Flourish",
+    commands: ["flourish"],
+    stat: Dexterity,
+    distance: Near,
+    actions: [
+        ApplyDamage("1d6"),
+    ]
+)

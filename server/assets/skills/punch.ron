@@ -1,8 +1,0 @@
-(
-    name: "Punch",
-    stat: Strength,
-    distance: Near,
-    actions: [
-        ApplyDamage("1d8+3"),
-    ]
-)

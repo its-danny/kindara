@@ -159,12 +159,22 @@ fn get_skill<'a>(
     character: &Character,
     skill: &str,
 ) -> Result<&'a Skill, SkillError> {
-    masteries
+    let (key, skill) = skills
+        .0
+        .iter()
+        .find(|(_, s)| s.commands.contains(&skill.to_string()))
+        .ok_or(SkillError::Unknown)?;
+
+    let mastery = masteries
         .0
         .get(&character.mastery)
-        .filter(|mastery| mastery.skills.contains(&skill.to_string()))
-        .and_then(|_| skills.0.get(skill))
-        .ok_or(SkillError::Unknown)
+        .ok_or(SkillError::Unknown)?;
+
+    if !mastery.skills.contains(key) {
+        return Err(SkillError::Unknown);
+    }
+
+    Ok(skill)
 }
 
 #[derive(Error, Debug, PartialEq)]
