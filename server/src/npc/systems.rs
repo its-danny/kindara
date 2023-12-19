@@ -47,11 +47,11 @@ pub fn on_enter_combat(
             Ok(_) => {
                 outbox.send_text(client.id, format!("{} attacks you.", depiction.name));
             }
-            Err(HitError::Missed) => {
-                outbox.send_text(
-                    client.id,
-                    format!("{} attacks you but misses.", depiction.name),
-                );
+            Err(HitError::Dodged) => {
+                outbox.send_text(client.id, "You dodge their attack.");
+            }
+            Err(HitError::Blocked) => {
+                outbox.send_text(client.id, "You block their attack.");
             }
         }
 
@@ -92,11 +92,11 @@ pub fn attack_when_able(
             Ok(_) => {
                 outbox.send_text(client.id, format!("{} attacks you.", depiction.name,));
             }
-            Err(HitError::Missed) => {
-                outbox.send_text(
-                    client.id,
-                    format!("{} attacks you but misses.", depiction.name),
-                );
+            Err(HitError::Dodged) => {
+                outbox.send_text(client.id, "You dodge their attack.");
+            }
+            Err(HitError::Blocked) => {
+                outbox.send_text(client.id, "You block their attack.");
             }
         }
 
