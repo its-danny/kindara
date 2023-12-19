@@ -30,11 +30,14 @@ pub struct Stats {
     // --- State
     pub health: u32,
     pub potential: u32,
+    // How much potential is regenerated per second.
     pub potential_regen: u32,
     // --- Offense
     /// How likely an entity is to flee from you.
     pub dominance: u32,
 }
+
+static BASE_POTENTIAL_REGEN: u32 = 1;
 
 impl Stats {
     pub fn max_health(&self) -> u32 {
@@ -46,7 +49,7 @@ impl Stats {
     }
 
     pub fn potential_per_second(&self) -> u32 {
-        self.proficiency / 10
+        BASE_POTENTIAL_REGEN + self.potential_regen
     }
 
     /// Applies damage to the entity's health, saturating at 0.
