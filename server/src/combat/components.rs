@@ -97,25 +97,16 @@ impl InCombat {
             timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
         });
 
-        match self.roll_hit() {
-            Ok(_) => {
-                let damage =
-                    self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
+        self.roll_hit()?;
 
-                Ok(damage)
-            }
-            Err(err) => Err(err),
-        }
+        let damage = self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
+
+        Ok(damage)
     }
 
     fn roll_hit(&self) -> Result<(), HitError> {
-        let roller = Roller::new("2d10").unwrap();
-        let roll = roller.roll().unwrap();
-        let quality = roll.as_single().unwrap().get_total();
-
-        let roller = Roller::new("1d10").unwrap();
-        let roll = roller.roll().unwrap();
-        let dodge = roll.as_single().unwrap().get_total();
+        let quality = self.roll_as_single("2d10");
+        let dodge = self.roll_as_single("1d10");
 
         if quality < dodge {
             Err(HitError::Missed)
@@ -137,9 +128,7 @@ impl InCombat {
         for action in &skill.actions {
             match action {
                 Action::ApplyDamage(roll) => {
-                    let roller = Roller::new(roll).unwrap();
-                    let roll = roller.roll().unwrap();
-                    let mut damage = roll.as_single().unwrap().get_total() as u32;
+                    let mut damage = self.roll_as_single(roll) as u32;
 
                     damage += match &skill.stat {
                         RelevantStat::Strength => attacker_stats.strength,
@@ -174,15 +163,16 @@ impl InCombat {
             return false;
         }
 
-        let attacker_roller = Roller::new("1d10").unwrap();
-        let attacker_roll = attacker_roller.roll().unwrap();
-        let attacker_roll = attacker_roll.as_single().unwrap().get_total();
-
-        let target_roller = Roller::new("1d10").unwrap();
-        let target_roll = target_roller.roll().unwrap();
-        let target_roll = target_roll.as_single().unwrap().get_total();
+        let attacker_roll = self.roll_as_single("2d10");
+        let target_roll = self.roll_as_single("2d10");
 
         attacker_roll > target_roll + target_stats.dominance as i64
+    }
+
+    fn roll_as_single(&self, roll: &str) -> i64 {
+        let roller = Roller::new(roll).unwrap();
+        let roll = roller.roll().unwrap();
+        roll.as_single().unwrap().get_total()
     }
 }
 
