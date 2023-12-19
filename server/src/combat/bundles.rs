@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-use crate::skills::components::PotentialRegenTimer;
+use crate::skills::components::{Cooldowns, PotentialRegenTimer};
 
 use super::components::Stats;
 
@@ -24,10 +24,10 @@ impl Schematic for CombatBundle {
 
             entity.insert(stats);
 
-            entity.insert(PotentialRegenTimer(Timer::from_seconds(
-                1.0,
-                TimerMode::Repeating,
-            )));
+            entity.insert((
+                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+                Cooldowns::default(),
+            ));
         }
     }
 

@@ -4,6 +4,7 @@
     stat: Dexterity,
     distance: Near,
     cost: 20,
+    cooldown: 15,
     actions: [
         ApplyDamage("1d6"),
     ]

@@ -5,6 +5,7 @@ use crate::{
     combat::{bundles::CombatBundle, components::Stats},
     interact::components::{Interaction, Interactions},
     npc::{bundles::NpcBundle, components::Npc},
+    skills::components::{Cooldowns, PotentialRegenTimer},
     visual::components::Depiction,
 };
 
@@ -93,9 +94,13 @@ impl NpcBuilder {
         }
 
         if self.combat {
-            entity.insert((CombatBundle {
-                stats: Stats::default(),
-            },));
+            entity.insert((
+                CombatBundle {
+                    stats: Stats::default(),
+                },
+                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+                Cooldowns::default(),
+            ));
 
             let interactions = entity.get_mut::<Interactions>();
 

@@ -17,7 +17,10 @@ use crate::{
         components::{Character, Client, Online},
         events::Prompt,
     },
-    skills::resources::{Skill, Skills},
+    skills::{
+        components::Cooldowns,
+        resources::{Skill, Skills},
+    },
     spatial::components::Tile,
     visual::components::Depiction,
 };
@@ -65,6 +68,7 @@ pub struct PlayerQuery {
     in_combat: Option<&'static InCombat>,
     has_attacked: Option<&'static HasAttacked>,
     queued_attack: Option<&'static mut QueuedAttack>,
+    cooldowns: &'static mut Cooldowns,
     with_online: With<Online>,
     without_npc: Without<Npc>,
 }
@@ -110,6 +114,19 @@ pub fn attack(
                 outbox.send_text(
                     player.client.id,
                     format!("You don't have enough potential to use {}.", skill.name),
+                );
+
+                continue;
+            }
+
+            if let Some(timer) = player.cooldowns.0.get(&skill.name) {
+                outbox.send_text(
+                    player.client.id,
+                    format!(
+                        "{} is on cooldown for {} more seconds.",
+                        skill.name,
+                        timer.remaining().as_secs()
+                    ),
                 );
 
                 continue;
@@ -303,6 +320,11 @@ fn execute_attack(
     }
 
     player.stats.potential = player.stats.potential.saturating_sub(skill.cost);
+
+    player.cooldowns.0.insert(
+        skill.name.clone(),
+        Timer::from_seconds(skill.cooldown as f32, TimerMode::Once),
+    );
 
     match in_combat.attack(bevy, player.entity, skill, &player.stats, &mut state) {
         Ok(_) => Ok(format!(

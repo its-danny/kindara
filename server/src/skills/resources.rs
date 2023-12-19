@@ -23,6 +23,7 @@ pub struct Skill {
     pub stat: RelevantStat,
     pub distance: Distance,
     pub cost: u32,
+    pub cooldown: u32,
     pub actions: Vec<Action>,
 }
 

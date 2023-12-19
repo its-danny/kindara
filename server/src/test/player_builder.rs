@@ -13,6 +13,7 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
+    skills::components::{Cooldowns, PotentialRegenTimer},
 };
 
 #[derive(Dummy)]
@@ -134,6 +135,8 @@ impl PlayerBuilder {
                 CombatBundle {
                     stats: Stats::default(),
                 },
+                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+                Cooldowns::default(),
             ));
         }
 

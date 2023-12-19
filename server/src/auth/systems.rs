@@ -29,7 +29,7 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
-    skills::components::PotentialRegenTimer,
+    skills::components::{Cooldowns, PotentialRegenTimer},
     spatial::components::{LifeSpawn, Tile},
     world::resources::WorldState,
 };
@@ -265,6 +265,7 @@ pub fn handle_authenticate_task(
                             stats: player_stats,
                         },
                         PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+                        Cooldowns::default(),
                     ));
 
                 let spawn = spawn_tiles.iter().next().context("Spawn tile not found")?;
