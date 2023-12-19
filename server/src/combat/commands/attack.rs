@@ -341,7 +341,8 @@ fn execute_attack(
 
             Ok(message)
         }
-        Err(HitError::Missed) => Ok("You miss.".into()),
+        Err(HitError::Dodged) => Ok("They dodge your attack.".into()),
+        Err(HitError::Blocked) => Ok("They block your attack.".into()),
     }
 }
 

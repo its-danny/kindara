@@ -55,6 +55,14 @@ impl Stats {
         BASE_POTENTIAL_REGEN + self.potential_regen
     }
 
+    pub fn get_relevant_stat(&self, stat: &RelevantStat) -> u32 {
+        match stat {
+            RelevantStat::Strength => self.strength,
+            RelevantStat::Dexterity => self.dexterity,
+            RelevantStat::Intelligence => self.intelligence,
+        }
+    }
+
     pub fn deal_damage(
         &mut self,
         roll: &str,
@@ -91,11 +99,7 @@ impl Stats {
         let dmg_roll = dmg_roller.roll().unwrap();
         let mut damage = dmg_roll.as_single().unwrap().get_total() as u32;
 
-        damage += relevant_stat.map_or(0, |stat| match stat {
-            RelevantStat::Strength => attacker_stats.strength,
-            RelevantStat::Dexterity => attacker_stats.dexterity,
-            RelevantStat::Intelligence => attacker_stats.intelligence,
-        });
+        damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
 
         damage = (damage as f32 * (1.0 - mitigated)) as u32;
 
@@ -105,29 +109,9 @@ impl Stats {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
-pub enum Distance {
-    Near,
-    Far,
-}
-
-impl Display for Distance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Distance::Near => write!(f, "near"),
-            Distance::Far => write!(f, "far"),
-        }
-    }
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct InCombat {
-    pub target: Entity,
-    pub distance: Distance,
-}
-
 pub enum HitError {
-    Missed,
+    Dodged,
+    Blocked,
 }
 
 impl InCombat {
@@ -144,19 +128,29 @@ impl InCombat {
             timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
         });
 
-        self.roll_hit()?;
+        self.roll_hit(skill, attacker_stats, target_stats)?;
 
         let damage = self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
 
         Ok(damage)
     }
 
-    fn roll_hit(&self) -> Result<(), HitError> {
-        let quality = self.roll_as_single("2d10");
-        let dodge = self.roll_as_single("2d10");
+    fn roll_hit(
+        &self,
+        skill: &Skill,
+        attacker_stats: &Stats,
+        target_stats: &Stats,
+    ) -> Result<(), HitError> {
+        let quality =
+            self.roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
 
-        if quality < dodge {
-            Err(HitError::Missed)
+        let dodge = self.roll_as_single("2d10") as u32 + target_stats.dexterity;
+        let block = self.roll_as_single("2d10") as u32 + target_stats.strength;
+
+        if dodge > quality {
+            Err(HitError::Dodged)
+        } else if block > quality {
+            Err(HitError::Blocked)
         } else {
             Ok(())
         }
@@ -219,6 +213,27 @@ impl InCombat {
         let roll = roller.roll().unwrap();
         roll.as_single().unwrap().get_total()
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub enum Distance {
+    Near,
+    Far,
+}
+
+impl Display for Distance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Distance::Near => write!(f, "near"),
+            Distance::Far => write!(f, "far"),
+        }
+    }
+}
+
+#[derive(Component, Clone, Copy)]
+pub struct InCombat {
+    pub target: Entity,
+    pub distance: Distance,
 }
 
 /// Added to an entity when it has attacked to prevent acting faster
