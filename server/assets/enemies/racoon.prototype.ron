@@ -25,6 +25,8 @@
                 potential: 0,
                 potential_regen: 0,
                 armor: 0,
+                dodge_chance: 0,
+                block_chance: 0,
                 speed: 3,
                 dominance: 3,
                 crit_strike_chance: 0,
