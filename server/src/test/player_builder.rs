@@ -23,7 +23,7 @@ pub struct PlayerBuilder {
     name: String,
     #[dummy(expr = "None")]
     description: Option<String>,
-    #[dummy(expr = "\"boxer\".into()")]
+    #[dummy(expr = "\"freelancer\".into()")]
     mastery: String,
     #[dummy(faker = "Password(3..30)")]
     password: String,

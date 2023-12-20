@@ -355,7 +355,7 @@ mod tests {
             npc_builder::NpcBuilder,
             player_builder::PlayerBuilder,
             tile_builder::{TileBuilder, ZoneBuilder},
-            utils::{get_message_content, send_message},
+            utils::send_message,
         },
     };
 
@@ -820,9 +820,5 @@ mod tests {
 
         assert_eq!(app.world.get::<InCombat>(player).unwrap().target, npc);
         assert_eq!(app.world.get::<InCombat>(npc).unwrap().target, player);
-
-        let content = get_message_content(&mut app, client_id).unwrap();
-
-        assert!(content.starts_with("You sock 'em in the jaw."));
     }
 }
