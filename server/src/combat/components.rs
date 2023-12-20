@@ -159,6 +159,12 @@ impl Stats {
     }
 }
 
+#[derive(Component, Clone, Copy)]
+pub struct InCombat {
+    pub target: Entity,
+    pub distance: Distance,
+}
+
 pub enum HitError {
     Dodged,
     Blocked,
@@ -257,12 +263,6 @@ impl Display for Distance {
             Distance::Far => write!(f, "far"),
         }
     }
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct InCombat {
-    pub target: Entity,
-    pub distance: Distance,
 }
 
 /// Added to an entity when it has attacked to prevent acting faster
