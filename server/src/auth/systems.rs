@@ -178,7 +178,7 @@ fn spawn_authenticate_task(
             .bind(&name)
             .bind(&hashed)
             .bind(Json(CharacterConfig::default()))
-            .bind("virtuoso")
+            .bind("freelancer")
             .fetch_one(&pool)
             .await?;
 

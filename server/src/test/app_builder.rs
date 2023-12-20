@@ -55,10 +55,10 @@ impl AppBuilder {
         let mut masteries = Masteries::default();
 
         masteries.0.insert(
-            "boxer".into(),
+            "freelancer".into(),
             Mastery {
-                id: "boxer".into(),
-                name: "Boxer".into(),
+                id: "freelancer".into(),
+                name: "Freelancer".into(),
                 vitality: 0,
                 proficiency: 0,
                 speed: 0,
