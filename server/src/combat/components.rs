@@ -19,31 +19,39 @@ use crate::{
 pub struct Stats {
     pub level: u32,
     // --- Attributes
-    /// Determines base health, max health, and health regeneration amount.
+    /// Determines max health and health regen.
     pub vitality: u32,
-    /// Determines max potential, and potential regeneration amount.
+    /// Determines max potential and potential regen.
     pub proficiency: u32,
-    /// Modifier for brute force attacks.
+    /// Increases damage of relevant skills and block chance.
     pub strength: u32,
-    /// Modifier for finesse attacks.
+    /// Increases damage of relevant skills and dodge chance.
     pub dexterity: u32,
-    /// Modifier for magic attacks.
+    /// Increases damage of relevant skills.
     pub intelligence: u32,
     // --- State
+    /// Current health.
     pub health: u32,
+    /// Current potential.
     pub potential: u32,
-    // How much potential is regenerated per second.
+    /// Potential regen per second.
     pub potential_regen: u32,
-    // Resistance
+    // --- Resistance
+    /// Resistance to physical damage.
     pub armor: u32,
+    // --- Defense
+    /// Chance to dodge an attack.
+    pub dodge_chance: u32,
+    /// Chance to block an attack.
+    pub block_chance: u32,
     // --- Offense
-    /// Determines attack speed.
+    /// Attack speed in seconds.
     pub speed: u32,
-    /// How likely an entity is to flee from you.
+    /// Decreases the chance of target fleeing.
     pub dominance: u32,
     /// How likely you are to hit a crit.
     pub crit_strike_chance: u32,
-    /// How much extra damage you deal on a crit.
+    /// How much damage is done from a crit.
     pub crit_strike_damage: u32,
 }
 
@@ -70,6 +78,21 @@ impl Stats {
             RelevantStat::Strength => self.strength,
             RelevantStat::Dexterity => self.dexterity,
             RelevantStat::Intelligence => self.intelligence,
+        }
+    }
+
+    pub fn hit(&self, skill: &Skill, attacker_stats: &Stats) -> Result<(), HitError> {
+        let quality = roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
+
+        let dodge = roll_as_single("2d10") as u32 + self.dexterity + self.dodge_chance;
+        let block = roll_as_single("2d10") as u32 + self.strength + self.block_chance;
+
+        if quality <= dodge {
+            Err(HitError::Dodged)
+        } else if quality <= block {
+            Err(HitError::Blocked)
+        } else {
+            Ok(())
         }
     }
 
@@ -155,31 +178,11 @@ impl InCombat {
             timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
         });
 
-        self.roll_hit(skill, attacker_stats, target_stats)?;
+        target_stats.hit(skill, attacker_stats)?;
 
         let damage = self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
 
         Ok(damage)
-    }
-
-    fn roll_hit(
-        &self,
-        skill: &Skill,
-        attacker_stats: &Stats,
-        target_stats: &Stats,
-    ) -> Result<(), HitError> {
-        let quality = roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
-
-        let dodge = roll_as_single("2d10") as u32 + target_stats.dexterity;
-        let block = roll_as_single("2d10") as u32 + target_stats.strength;
-
-        if dodge > quality {
-            Err(HitError::Dodged)
-        } else if block > quality {
-            Err(HitError::Blocked)
-        } else {
-            Ok(())
-        }
     }
 
     fn apply_actions(
