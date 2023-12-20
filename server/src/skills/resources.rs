@@ -30,6 +30,7 @@ pub enum Action {
 /// A skill definition.
 #[derive(Debug, Deserialize)]
 pub struct Skill {
+    pub id: String,
     pub name: String,
     pub flavor: String,
     pub commands: Vec<String>,

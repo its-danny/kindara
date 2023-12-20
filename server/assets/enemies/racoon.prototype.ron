@@ -3,7 +3,7 @@
     schematics: {
         "server::npc::bundles::NpcBundle": (
             npc: (
-                skills: [],
+                skills: ["blade-flourish"],
             ),
             depiction: (
                 name: "Racoon",

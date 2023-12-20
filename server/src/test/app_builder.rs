@@ -38,6 +38,7 @@ impl AppBuilder {
         skills.0.insert(
             "punch".into(),
             Skill {
+                id: "punch".into(),
                 name: "Punch".into(),
                 flavor: "You sock 'em in the jaw.".into(),
                 commands: vec!["punch".into()],
@@ -56,6 +57,7 @@ impl AppBuilder {
         masteries.0.insert(
             "boxer".into(),
             Mastery {
+                id: "boxer".into(),
                 name: "Boxer".into(),
                 vitality: 0,
                 proficiency: 0,

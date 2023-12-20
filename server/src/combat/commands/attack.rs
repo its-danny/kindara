@@ -120,7 +120,7 @@ pub fn attack(
                 continue;
             }
 
-            if let Some(timer) = player.cooldowns.0.get(&skill.name) {
+            if let Some(timer) = player.cooldowns.0.get(&skill.id) {
                 outbox.send_text(
                     player.client.id,
                     format!(
@@ -323,7 +323,7 @@ fn execute_attack(
     player.stats.potential = player.stats.potential.saturating_sub(skill.cost);
 
     player.cooldowns.0.insert(
-        skill.name.clone(),
+        skill.id.clone(),
         Timer::from_seconds(skill.cooldown as f32, TimerMode::Once),
     );
 

@@ -1,4 +1,5 @@
 (
+    id: "blade-flourish",
     name: "Blade Flourish",
     flavor: "You spin your blade in a series of quick slashes, leaving your foe bleeding.",
     commands: ["flourish"],

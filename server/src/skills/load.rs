@@ -23,7 +23,7 @@ pub fn load_skills(mut skills: ResMut<Skills>) {
                 )
                 .expect("Failed to parse skill def");
 
-                Some((def.name.to_lowercase(), def))
+                Some((def.id.clone(), def))
             } else {
                 None
             }

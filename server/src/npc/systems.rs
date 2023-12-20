@@ -1,9 +1,10 @@
 use anyhow::Context;
-use bevy::prelude::*;
+use bevy::{ecs::query::WorldQuery, prelude::*};
 use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
 use rand::{thread_rng, Rng};
+use thiserror::Error;
 
 use crate::{
     combat::components::{HasAttacked, HitError, InCombat, Stats},
@@ -11,99 +12,108 @@ use crate::{
         components::{Client, Online},
         events::Prompt,
     },
-    skills::resources::Skills,
+    skills::{components::Cooldowns, resources::Skills},
     spatial::components::Tile,
     visual::components::Depiction,
 };
 
 use super::components::{EnemySpawner, Npc, SpawnTimer};
 
-#[sysfail(log)]
-pub fn on_enter_combat(
-    mut bevy: Commands,
-    mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Stats), (With<Online>, Without<Npc>)>,
-    mut prompts: EventWriter<Prompt>,
-    npcs: Query<(Entity, &Npc, &Depiction, &Stats, &InCombat), Added<InCombat>>,
-    skills: Res<Skills>,
-) -> Result<(), anyhow::Error> {
-    for (entity, npc, depiction, npc_stats, in_combat) in npcs.iter() {
-        let (client, mut player_stats) = players.get_mut(in_combat.target)?;
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct PlayerQuery {
+    pub client: &'static Client,
+    pub stats: &'static mut Stats,
+    with_online: With<Online>,
+    without_npc: Without<Npc>,
+}
 
-        if npc.skills.is_empty() {
-            debug!("NPC entered combat with no skills");
-
-            continue;
-        }
-
-        let mut rng = thread_rng();
-        let index = rng.gen_range(0..npc.skills.len());
-        let skill = skills
-            .0
-            .get(&npc.skills[index])
-            .context("Skill not found")?;
-
-        match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
-            Ok(_) => {
-                outbox.send_text(client.id, format!("{} attacks you.", depiction.name));
-            }
-            Err(HitError::Dodged) => {
-                outbox.send_text(client.id, "You dodge their attack.");
-            }
-            Err(HitError::Blocked) => {
-                outbox.send_text(client.id, "You block their attack.");
-            }
-        }
-
-        prompts.send(Prompt::new(client.id));
-    }
-
-    Ok(())
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct NpcQuery {
+    pub entity: Entity,
+    pub npc: &'static Npc,
+    pub depiction: &'static Depiction,
+    pub stats: &'static Stats,
+    pub cooldowns: &'static mut Cooldowns,
+    pub in_combat: &'static InCombat,
 }
 
 #[sysfail(log)]
 pub fn attack_when_able(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(&Client, &mut Stats), (With<Online>, Without<Npc>)>,
-    mut prompts: EventWriter<Prompt>,
-    mut ready: RemovedComponents<HasAttacked>,
-    npcs: Query<(Entity, &Npc, &Depiction, &Stats, &InCombat)>,
     skills: Res<Skills>,
+    mut players: Query<PlayerQuery>,
+    mut prompts: EventWriter<Prompt>,
+    ready: Query<Entity, (With<Npc>, With<InCombat>, Without<HasAttacked>)>,
+    mut npcs: Query<NpcQuery>,
 ) -> Result<(), anyhow::Error> {
     for entity in ready.iter() {
-        let (entity, npc, depiction, npc_stats, in_combat) = npcs.get(entity)?;
-        let (client, mut player_stats) = players.get_mut(in_combat.target)?;
+        let mut npc = npcs.get_mut(entity)?;
+        let mut player = players.get_mut(npc.in_combat.target)?;
 
-        if npc.skills.is_empty() {
-            debug!("NPC entered combat with no skills");
-
-            continue;
+        if let Ok(Some(message)) = perform_attack(
+            &mut bevy,
+            &skills,
+            entity,
+            &mut player.stats,
+            npc.npc,
+            &mut npc.cooldowns,
+            npc.stats,
+            npc.in_combat,
+            npc.depiction,
+        ) {
+            outbox.send_text(player.client.id, message);
+            prompts.send(Prompt::new(player.client.id));
         }
-
-        let mut rng = thread_rng();
-        let index = rng.gen_range(0..npc.skills.len());
-        let skill = skills
-            .0
-            .get(&npc.skills[index])
-            .context("Skill not found")?;
-
-        match in_combat.attack(&mut bevy, entity, skill, npc_stats, &mut player_stats) {
-            Ok(_) => {
-                outbox.send_text(client.id, format!("{} attacks you.", depiction.name,));
-            }
-            Err(HitError::Dodged) => {
-                outbox.send_text(client.id, "You dodge their attack.");
-            }
-            Err(HitError::Blocked) => {
-                outbox.send_text(client.id, "You block their attack.");
-            }
-        }
-
-        prompts.send(Prompt::new(client.id));
     }
 
     Ok(())
+}
+
+#[derive(Error, Debug, PartialEq)]
+enum AttackError {
+    #[error("NPC entered combat with no skills")]
+    NoSkills,
+}
+
+fn perform_attack(
+    bevy: &mut Commands,
+    skills: &Res<Skills>,
+    entity: Entity,
+    player_stats: &mut Stats,
+    npc: &Npc,
+    npc_cooldowns: &mut Cooldowns,
+    npc_stats: &Stats,
+    npc_in_combat: &InCombat,
+    npc_depiction: &Depiction,
+) -> Result<Option<String>, anyhow::Error> {
+    if npc.skills.is_empty() {
+        Err(AttackError::NoSkills)?
+    }
+
+    if npc_cooldowns.0.contains_key(&npc.skills[0]) {
+        return Ok(None);
+    }
+
+    let mut rng = thread_rng();
+    let index = rng.gen_range(0..npc.skills.len());
+    let skill = skills
+        .0
+        .get(&npc.skills[index])
+        .context("Skill not found")?;
+
+    npc_cooldowns.0.insert(
+        skill.id.clone(),
+        Timer::from_seconds(skill.cooldown as f32, TimerMode::Once),
+    );
+
+    match npc_in_combat.attack(bevy, entity, skill, npc_stats, player_stats) {
+        Ok(_) => Ok(Some(format!("{} attacks you.", npc_depiction.name,))),
+        Err(HitError::Dodged) => Ok(Some("You dodge their attack.".into())),
+        Err(HitError::Blocked) => Ok(Some("You block their attack.".into())),
+    }
 }
 
 #[sysfail(log)]
