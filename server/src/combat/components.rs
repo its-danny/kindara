@@ -88,18 +88,18 @@ impl Stats {
         // Roll for base damage and add relevant stat modifier.
 
         let mut damage = roll_as_single(roll) as u32;
-
         damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
 
         // Check for crit and add crit damage.
 
+        let crit_roll = roll_as_single("2d10") as u32;
         let crit_threshold = BASE_CRIT_THRESHOLD.saturating_sub(attacker_stats.crit_strike_chance);
         let crit_threshold = std::cmp::max(crit_threshold, CRIT_THRESHOLD_CAP);
 
-        damage += if damage >= crit_threshold {
-            let crit = roll_as_single("2d10") as u32;
+        damage += if crit_roll >= crit_threshold {
+            let crit_dmg_roll = roll_as_single("2d10") as u32;
 
-            max(crit, BASE_CRIT_STRIKE_DAMAGE) + self.crit_strike_damage
+            max(crit_dmg_roll, BASE_CRIT_STRIKE_DAMAGE) + self.crit_strike_damage
         } else {
             0
         };
