@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>⚔️  kindara</h1>
+  <img src="./meta/logo.png">
 
   A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
 </div>
