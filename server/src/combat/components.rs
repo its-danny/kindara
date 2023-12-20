@@ -87,9 +87,7 @@ impl Stats {
 
         // Roll for base damage and add relevant stat modifier.
 
-        let dmg_roller = Roller::new(roll).unwrap();
-        let dmg_roll = dmg_roller.roll().unwrap();
-        let mut damage = dmg_roll.as_single().unwrap().get_total() as u32;
+        let mut damage = roll_as_single(roll) as u32;
 
         damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
 
@@ -99,9 +97,7 @@ impl Stats {
         let crit_threshold = std::cmp::max(crit_threshold, CRIT_THRESHOLD_CAP);
 
         damage += if damage >= crit_threshold {
-            let crit_roller = Roller::new(roll).unwrap();
-            let crit_roll = crit_roller.roll().unwrap();
-            let crit = crit_roll.as_single().unwrap().get_total() as u32;
+            let crit = roll_as_single("2d10") as u32;
 
             max(crit, BASE_CRIT_STRIKE_DAMAGE) + self.crit_strike_damage
         } else {
@@ -110,6 +106,8 @@ impl Stats {
 
         // Apply resistance.
 
+        let resistance = roll_as_single("2d10") as u32;
+
         let res_modifier = if let Some(damage_type) = damage_type {
             match damage_type {
                 DamageType::Physical => self.armor,
@@ -117,10 +115,6 @@ impl Stats {
         } else {
             0
         };
-
-        let res_roller = Roller::new("2d10").unwrap();
-        let res_roll = res_roller.roll().unwrap();
-        let resistance = res_roll.as_single().unwrap().get_total() as u32;
 
         let resistance = resistance + res_modifier;
         let excess = resistance.saturating_sub(difficulty);
@@ -174,11 +168,10 @@ impl InCombat {
         attacker_stats: &Stats,
         target_stats: &Stats,
     ) -> Result<(), HitError> {
-        let quality =
-            self.roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
+        let quality = roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
 
-        let dodge = self.roll_as_single("2d10") as u32 + target_stats.dexterity;
-        let block = self.roll_as_single("2d10") as u32 + target_stats.strength;
+        let dodge = roll_as_single("2d10") as u32 + target_stats.dexterity;
+        let block = roll_as_single("2d10") as u32 + target_stats.strength;
 
         if dodge > quality {
             Err(HitError::Dodged)
@@ -235,17 +228,17 @@ impl InCombat {
             return false;
         }
 
-        let attacker_roll = self.roll_as_single("2d10");
-        let target_roll = self.roll_as_single("2d10");
+        let attacker_roll = roll_as_single("2d10");
+        let target_roll = roll_as_single("2d10");
 
         attacker_roll > target_roll + target_stats.dominance as i64
     }
+}
 
-    fn roll_as_single(&self, roll: &str) -> i64 {
-        let roller = Roller::new(roll).unwrap();
-        let roll = roller.roll().unwrap();
-        roll.as_single().unwrap().get_total()
-    }
+fn roll_as_single(roll: &str) -> i64 {
+    let roller = Roller::new(roll).unwrap();
+    let roll = roller.roll().unwrap();
+    roll.as_single().unwrap().get_total()
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
