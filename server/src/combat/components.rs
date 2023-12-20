@@ -1,4 +1,7 @@
-use std::fmt::{self, Display, Formatter};
+use std::{
+    cmp::max,
+    fmt::{self, Display, Formatter},
+};
 
 use bevy::prelude::*;
 use caith::Roller;
@@ -20,8 +23,6 @@ pub struct Stats {
     pub vitality: u32,
     /// Determines max potential, and potential regeneration amount.
     pub proficiency: u32,
-    /// Determines attack speed.
-    pub speed: u32,
     /// Modifier for brute force attacks.
     pub strength: u32,
     /// Modifier for finesse attacks.
@@ -36,11 +37,20 @@ pub struct Stats {
     // Resistance
     pub armor: u32,
     // --- Offense
+    /// Determines attack speed.
+    pub speed: u32,
     /// How likely an entity is to flee from you.
     pub dominance: u32,
+    /// How likely you are to hit a crit.
+    pub crit_strike_chance: u32,
+    /// How much extra damage you deal on a crit.
+    pub crit_strike_damage: u32,
 }
 
 static BASE_POTENTIAL_REGEN: u32 = 1;
+static BASE_CRIT_THRESHOLD: u32 = 20;
+static BASE_CRIT_STRIKE_DAMAGE: u32 = 10;
+static CRIT_THRESHOLD_CAP: u32 = 5;
 
 impl Stats {
     pub fn max_health(&self) -> u32 {
@@ -71,7 +81,34 @@ impl Stats {
         damage_type: Option<&DamageType>,
         difficulty: &u32,
     ) -> u32 {
-        let difficulty = (*difficulty as f32 + (self.level as f32 * 0.5)).floor() as u32;
+        // Set difficulty.
+
+        let difficulty = (*difficulty as f32 + (attacker_stats.level as f32 * 0.5)).floor() as u32;
+
+        // Roll for base damage and add relevant stat modifier.
+
+        let dmg_roller = Roller::new(roll).unwrap();
+        let dmg_roll = dmg_roller.roll().unwrap();
+        let mut damage = dmg_roll.as_single().unwrap().get_total() as u32;
+
+        damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
+
+        // Check for crit and add crit damage.
+
+        let crit_threshold = BASE_CRIT_THRESHOLD.saturating_sub(attacker_stats.crit_strike_chance);
+        let crit_threshold = std::cmp::max(crit_threshold, CRIT_THRESHOLD_CAP);
+
+        damage += if damage >= crit_threshold {
+            let crit_roller = Roller::new(roll).unwrap();
+            let crit_roll = crit_roller.roll().unwrap();
+            let crit = crit_roll.as_single().unwrap().get_total() as u32;
+
+            max(crit, BASE_CRIT_STRIKE_DAMAGE) + self.crit_strike_damage
+        } else {
+            0
+        };
+
+        // Apply resistance.
 
         let res_modifier = if let Some(damage_type) = damage_type {
             match damage_type {
@@ -95,13 +132,9 @@ impl Stats {
             _ => 1.0,
         };
 
-        let dmg_roller = Roller::new(roll).unwrap();
-        let dmg_roll = dmg_roller.roll().unwrap();
-        let mut damage = dmg_roll.as_single().unwrap().get_total() as u32;
-
-        damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
-
         damage = (damage as f32 * (1.0 - mitigated)) as u32;
+
+        // Apply damage.
 
         self.health = self.health.saturating_sub(damage);
 
