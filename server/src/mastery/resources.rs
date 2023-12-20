@@ -4,6 +4,7 @@ use serde::Deserialize;
 /// A mastery definition.
 #[derive(Debug, Deserialize)]
 pub struct Mastery {
+    pub id: String,
     pub name: String,
     pub vitality: u32,
     pub proficiency: u32,

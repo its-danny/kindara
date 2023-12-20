@@ -34,7 +34,7 @@ pub fn update_cooldowns(time: Res<Time>, mut cooldowns: Query<&mut Cooldowns>) {
             .iter_mut()
             .filter_map(|(skill, timer)| {
                 if timer.tick(time.delta()).just_finished() {
-                    Some(skill.clone()) // Clone the key here
+                    Some(skill.clone())
                 } else {
                     None
                 }

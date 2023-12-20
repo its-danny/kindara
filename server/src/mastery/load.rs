@@ -23,7 +23,7 @@ pub fn load_masteries(mut masteries: ResMut<Masteries>) {
                 )
                 .expect("Failed to parse mastery def");
 
-                Some((def.name.to_lowercase(), def))
+                Some((def.id.clone(), def))
             } else {
                 None
             }

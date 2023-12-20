@@ -1,4 +1,5 @@
 (
+    id: "virtuoso",
     name: "Virtuoso",
     vitality: 10,
     proficiency: 10,
@@ -6,5 +7,5 @@
     strength: 3,
     dexterity: 10,
     intelligence: 3,
-    skills: ["blade flourish"],
+    skills: ["blade-flourish"],
 )
