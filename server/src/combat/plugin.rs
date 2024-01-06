@@ -7,6 +7,11 @@ pub struct CombatPlugin;
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Stats>();
+        app.register_type::<Attributes>();
+        app.register_type::<Status>();
+        app.register_type::<Defense>();
+        app.register_type::<Resistance>();
+        app.register_type::<Offense>();
         app.register_type::<Cooldowns>();
         app.register_type::<PotentialRegenTimer>();
         app.register_type::<CombatBundle>();

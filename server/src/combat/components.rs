@@ -8,20 +8,23 @@ use caith::Roller;
 use serde::Deserialize;
 
 use crate::{
+    data::resources::{Action, DamageType, RelevantStat, Skill},
     input::events::ParsedCommand,
-    skills::{
-        components::Bleeding,
-        resources::{Action, DamageType, RelevantStat, Skill, StatusEffect},
-    },
+    skills::{components::Bleeding, resources::StatusEffect},
 };
 
 #[derive(Component, Default, Reflect, Clone)]
 pub struct Stats {
     pub level: u32,
+    #[reflect(default)]
     pub attributes: Attributes,
-    pub state: State,
+    #[reflect(default)]
+    pub state: Status,
+    #[reflect(default)]
     pub defense: Defense,
+    #[reflect(default)]
     pub resistance: Resistance,
+    #[reflect(default)]
     pub offense: Offense,
 }
 
@@ -45,7 +48,7 @@ pub struct Attributes {
 }
 
 #[derive(Default, Reflect, Clone)]
-pub struct State {
+pub struct Status {
     /// Current health.
     #[reflect(default)]
     pub health: u32,

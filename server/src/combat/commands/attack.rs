@@ -9,16 +9,15 @@ use thiserror::Error;
 
 use crate::{
     combat::components::{Cooldowns, HasAttacked, HitError, InCombat, QueuedAttack, Stats},
+    data::resources::{Masteries, Skill, Skills},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
-    mastery::resources::Masteries,
     npc::components::Npc,
     paint,
     player::{
         components::{Character, Client, Online},
         events::Prompt,
     },
-    skills::resources::{Skill, Skills},
     spatial::components::Tile,
     visual::components::Depiction,
 };

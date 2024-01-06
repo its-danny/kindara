@@ -15,6 +15,7 @@ use sqlx::{types::Json, Pool, Postgres};
 
 use crate::{
     combat::{bundles::CombatBundle, components::Stats},
+    data::resources::Masteries,
     db::{
         models::{CharacterModel, Role},
         pool::DatabasePool,
@@ -22,7 +23,6 @@ use crate::{
     input::events::{Command, ParsedCommand, ProxyCommand},
     items::components::Inventory,
     keycard::Keycard,
-    mastery::resources::Masteries,
     paint,
     player::{
         bundles::PlayerBundle,

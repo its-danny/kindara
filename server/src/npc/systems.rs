@@ -8,11 +8,11 @@ use thiserror::Error;
 
 use crate::{
     combat::components::{Cooldowns, HasAttacked, HitError, InCombat, Stats},
+    data::resources::Skills,
     player::{
         components::{Client, Online},
         events::Prompt,
     },
-    skills::resources::Skills,
     spatial::components::Tile,
     visual::components::Depiction,
 };

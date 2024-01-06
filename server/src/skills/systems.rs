@@ -6,12 +6,13 @@ use bevy_nest::prelude::*;
 
 use crate::{
     combat::components::{Cooldowns, PotentialRegenTimer, Stats},
+    data::resources::DamageType,
     paint,
     player::components::{Character, Client, Online},
     visual::components::Depiction,
 };
 
-use super::{components::Bleeding, resources::DamageType};
+use super::components::Bleeding;
 
 pub fn potential_regen(time: Res<Time>, mut timers: Query<(&mut Stats, &mut PotentialRegenTimer)>) {
     for (mut stats, mut timer) in timers.iter_mut() {
