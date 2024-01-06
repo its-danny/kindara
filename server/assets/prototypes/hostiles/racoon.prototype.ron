@@ -19,11 +19,15 @@
             combat: (
                 stats: (
                     level: 1,
-                    vitality: 50,
-                    proficiency: 3,
-                    strength: 10,
-                    speed: 3,
-                    dominance: 3,
+                    attributes: (
+                        vitality: 50,
+                        proficiency: 3,
+                        strength: 10,
+                    ),
+                    offense: (
+                        attack_speed: 3,
+                        dominance: 3,
+                    )
                 ),
             ),
         ),

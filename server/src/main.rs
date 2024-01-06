@@ -1,11 +1,11 @@
 mod auth;
 mod combat;
+mod data;
 mod db;
 mod input;
 mod interact;
 mod items;
 mod keycard;
-mod mastery;
 mod menu;
 mod net;
 mod npc;
@@ -29,16 +29,15 @@ use bevy::{
 use bevy_nest::prelude::*;
 use bevy_proto::prelude::*;
 use dotenvy::dotenv;
-use mastery::plugin::MasteryPlugin;
-use menu::plugin::MenuPlugin;
 use sqlx::{migrate, postgres::PgPoolOptions};
 
 use crate::{
-    auth::plugin::AuthPlugin, combat::plugin::CombatPlugin, db::pool::DatabasePool,
-    input::plugin::InputPlugin, interact::plugin::InteractPlugin, items::plugin::ItemPlugin,
-    net::plugin::NetPlugin, npc::plugin::NpcPlugin, player::plugin::PlayerPlugin,
-    skills::plugin::SkillsPlugin, social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin,
-    visual::plugin::VisualPlugin, world::plugin::WorldPlugin,
+    auth::plugin::AuthPlugin, combat::plugin::CombatPlugin, data::plugin::DataPlugin,
+    db::pool::DatabasePool, input::plugin::InputPlugin, interact::plugin::InteractPlugin,
+    items::plugin::ItemPlugin, menu::plugin::MenuPlugin, net::plugin::NetPlugin,
+    npc::plugin::NpcPlugin, player::plugin::PlayerPlugin, skills::plugin::SkillsPlugin,
+    social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
+    world::plugin::WorldPlugin,
 };
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
@@ -101,10 +100,10 @@ async fn main() -> Result<(), sqlx::Error> {
         .add_plugins((
             AuthPlugin,
             CombatPlugin,
+            DataPlugin,
             InputPlugin,
             InteractPlugin,
             ItemPlugin,
-            MasteryPlugin,
             MenuPlugin,
             NetPlugin,
             NpcPlugin,

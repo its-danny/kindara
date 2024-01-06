@@ -4,14 +4,14 @@ use sqlx::PgPool;
 
 use crate::{
     combat::components::Distance,
+    data::resources::{Action, DamageType, RelevantStat, Skill, Skills},
+    data::resources::{Masteries, Mastery},
     db::pool::DatabasePool,
     input::{
         events::{ParsedCommand, ProxyCommand},
         systems::{handle_proxy_command, parse_command},
     },
-    mastery::resources::{Masteries, Mastery},
     player::events::Prompt,
-    skills::resources::{Action, DamageType, RelevantStat, Skill, Skills},
     visual::paint,
     world::resources::{WorldState, WorldTime},
 };
