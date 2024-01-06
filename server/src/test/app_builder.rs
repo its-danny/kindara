@@ -61,7 +61,7 @@ impl AppBuilder {
                 name: "Freelancer".into(),
                 vitality: 0,
                 proficiency: 0,
-                speed: 0,
+                attack_speed: 0,
                 strength: 0,
                 dexterity: 0,
                 intelligence: 0,

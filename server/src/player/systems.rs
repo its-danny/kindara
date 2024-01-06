@@ -63,9 +63,9 @@ pub fn send_prompt(
 
         parts.push(paint!(
             "[{}/<fg.red>{}</> {}/<fg.cyan>{}</>]",
-            stats.health,
+            stats.state.health,
             stats.max_health(),
-            stats.potential,
+            stats.state.potential,
             stats.max_potential(),
         ));
 
@@ -76,7 +76,7 @@ pub fn send_prompt(
                 "{} ({}) [{}/<fg.red>{}</>]",
                 depiction.name,
                 combat.distance,
-                stats.health,
+                stats.state.health,
                 stats.max_health(),
             ));
         }

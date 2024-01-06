@@ -8,7 +8,7 @@ pub struct Mastery {
     pub name: String,
     pub vitality: u32,
     pub proficiency: u32,
-    pub speed: u32,
+    pub attack_speed: u32,
     pub strength: u32,
     pub dexterity: u32,
     pub intelligence: u32,

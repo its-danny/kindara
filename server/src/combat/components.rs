@@ -18,7 +18,15 @@ use crate::{
 #[derive(Component, Default, Reflect, Clone)]
 pub struct Stats {
     pub level: u32,
-    // --- Attributes
+    pub attributes: Attributes,
+    pub state: State,
+    pub defense: Defense,
+    pub resistance: Resistance,
+    pub offense: Offense,
+}
+
+#[derive(Default, Reflect, Clone)]
+pub struct Attributes {
     /// Determines max health and health regen.
     #[reflect(default)]
     pub vitality: u32,
@@ -34,7 +42,10 @@ pub struct Stats {
     /// Increases damage of relevant skills.
     #[reflect(default)]
     pub intelligence: u32,
-    // --- State
+}
+
+#[derive(Default, Reflect, Clone)]
+pub struct State {
     /// Current health.
     #[reflect(default)]
     pub health: u32,
@@ -44,21 +55,30 @@ pub struct Stats {
     /// Potential regen per second.
     #[reflect(default)]
     pub potential_regen: u32,
-    // --- Resistance
-    /// Resistance to physical damage.
-    #[reflect(default)]
-    pub armor: u32,
-    // --- Defense
+}
+
+#[derive(Default, Reflect, Clone)]
+pub struct Defense {
     /// Chance to dodge an attack.
     #[reflect(default)]
     pub dodge_chance: u32,
     /// Chance to block an attack.
     #[reflect(default)]
     pub block_chance: u32,
-    // --- Offense
+}
+
+#[derive(Default, Reflect, Clone)]
+pub struct Resistance {
+    /// Resistance to physical damage.
+    #[reflect(default)]
+    pub armor: u32,
+}
+
+#[derive(Default, Reflect, Clone)]
+pub struct Offense {
     /// Attack speed in seconds.
     #[reflect(default)]
-    pub speed: u32,
+    pub attack_speed: u32,
     /// Decreases the chance of target fleeing.
     #[reflect(default)]
     pub dominance: u32,
@@ -77,30 +97,32 @@ static CRIT_THRESHOLD_CAP: u32 = 5;
 
 impl Stats {
     pub fn max_health(&self) -> u32 {
-        self.vitality * 10
+        self.attributes.vitality * 10
     }
 
     pub fn max_potential(&self) -> u32 {
-        self.proficiency * 10
+        self.attributes.proficiency * 10
     }
 
     pub fn potential_per_second(&self) -> u32 {
-        BASE_POTENTIAL_REGEN + self.potential_regen
+        BASE_POTENTIAL_REGEN + self.state.potential_regen
     }
 
     pub fn get_relevant_stat(&self, stat: &RelevantStat) -> u32 {
         match stat {
-            RelevantStat::Strength => self.strength,
-            RelevantStat::Dexterity => self.dexterity,
-            RelevantStat::Intelligence => self.intelligence,
+            RelevantStat::Strength => self.attributes.strength,
+            RelevantStat::Dexterity => self.attributes.dexterity,
+            RelevantStat::Intelligence => self.attributes.intelligence,
         }
     }
 
     pub fn hit(&self, skill: &Skill, attacker_stats: &Stats) -> Result<(), HitError> {
         let quality = roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
 
-        let dodge = roll_as_single("2d10") as u32 + self.dexterity + self.dodge_chance;
-        let block = roll_as_single("2d10") as u32 + self.strength + self.block_chance;
+        let dodge =
+            roll_as_single("2d10") as u32 + self.attributes.dexterity + self.defense.dodge_chance;
+        let block =
+            roll_as_single("2d10") as u32 + self.attributes.strength + self.defense.block_chance;
 
         if quality <= dodge {
             Err(HitError::Dodged)
@@ -131,13 +153,14 @@ impl Stats {
         // Check for crit and add crit damage.
 
         let crit_roll = roll_as_single("2d10") as u32;
-        let crit_threshold = BASE_CRIT_THRESHOLD.saturating_sub(attacker_stats.crit_strike_chance);
+        let crit_threshold =
+            BASE_CRIT_THRESHOLD.saturating_sub(attacker_stats.offense.crit_strike_chance);
         let crit_threshold = std::cmp::max(crit_threshold, CRIT_THRESHOLD_CAP);
 
         damage += if crit_roll >= crit_threshold {
             let crit_dmg_roll = roll_as_single("2d10") as u32;
 
-            max(crit_dmg_roll, BASE_CRIT_STRIKE_DAMAGE) + self.crit_strike_damage
+            max(crit_dmg_roll, BASE_CRIT_STRIKE_DAMAGE) + self.offense.crit_strike_damage
         } else {
             0
         };
@@ -148,7 +171,7 @@ impl Stats {
 
         let res_modifier = if let Some(damage_type) = damage_type {
             match damage_type {
-                DamageType::Physical => self.armor,
+                DamageType::Physical => self.resistance.armor,
             }
         } else {
             0
@@ -168,7 +191,7 @@ impl Stats {
 
         // Apply damage.
 
-        self.health = self.health.saturating_sub(damage);
+        self.state.health = self.state.health.saturating_sub(damage);
 
         damage
     }
@@ -208,7 +231,7 @@ impl InCombat {
         target_stats: &mut Stats,
     ) -> Result<u32, HitError> {
         bevy.entity(attacker).insert(HasAttacked {
-            timer: Timer::from_seconds(attacker_stats.speed as f32, TimerMode::Once),
+            timer: Timer::from_seconds(attacker_stats.offense.attack_speed as f32, TimerMode::Once),
         });
 
         target_stats.hit(skill, attacker_stats)?;
@@ -267,7 +290,7 @@ impl InCombat {
         let attacker_roll = roll_as_single("2d10");
         let target_roll = roll_as_single("2d10");
 
-        attacker_roll > target_roll + target_stats.dominance as i64
+        attacker_roll > target_roll + target_stats.offense.dominance as i64
     }
 }
 

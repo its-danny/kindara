@@ -108,7 +108,7 @@ pub fn attack(
                 }
             };
 
-            if player.stats.potential < skill.cost {
+            if player.stats.state.potential < skill.cost {
                 outbox.send_text(
                     player.client.id,
                     format!("You don't have enough potential to use {}.", skill.name),
@@ -317,7 +317,7 @@ fn execute_attack(
         };
     }
 
-    player.stats.potential = player.stats.potential.saturating_sub(skill.cost);
+    player.stats.state.potential = player.stats.state.potential.saturating_sub(skill.cost);
 
     player.cooldowns.0.insert(
         skill.id.clone(),
