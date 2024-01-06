@@ -21,7 +21,6 @@ censor = "0.3"
 chrono = "0.4"
 colored = "2.1"
 dotenvy = "0.15"
-enum-as-inner = "0.6"
 futures-lite = "2.1"
 indefinite = "0.1"
 rand = "0.8"
@@ -36,10 +35,9 @@ sqlx = { version = "0.7", features = [
   "runtime-async-std",
   "tls-rustls",
 ] }
-thiserror = "1.0.50"
+thiserror = "1.0"
 
 [dev-dependencies]
 fake = { version = "2.6", features = ["derive"] }
-rstest = "0.18.2"
+rstest = "0.18"
 rusty-hook = "0.11"
-test-log = "0.2.14"
