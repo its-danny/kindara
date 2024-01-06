@@ -233,15 +233,14 @@ pub fn handle_authenticate_task(
                     .get(&character.mastery)
                     .with_context(|| format!("Mastery not found: {}", &character.mastery))?;
 
-                player_stats.vitality = mastery.vitality;
-                player_stats.proficiency = mastery.proficiency;
-                player_stats.speed = mastery.speed;
-                player_stats.strength = mastery.strength;
-                player_stats.dexterity = mastery.dexterity;
-                player_stats.intelligence = mastery.intelligence;
-
-                player_stats.health = player_stats.max_health();
-                player_stats.potential = player_stats.max_potential();
+                player_stats.attributes.vitality = mastery.vitality;
+                player_stats.attributes.proficiency = mastery.proficiency;
+                player_stats.attributes.strength = mastery.strength;
+                player_stats.attributes.dexterity = mastery.dexterity;
+                player_stats.attributes.intelligence = mastery.intelligence;
+                player_stats.state.health = player_stats.max_health();
+                player_stats.state.potential = player_stats.max_potential();
+                player_stats.offense.attack_speed = mastery.attack_speed;
 
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()

@@ -54,7 +54,7 @@ pub fn on_hostile_death(
     for (entity, depiction, stats, parent) in hostiles.iter() {
         let siblings = tiles.get(parent.get()).ok();
 
-        if stats.health == 0 {
+        if stats.state.health == 0 {
             let players_in_combat = players
                 .iter_mut()
                 .filter(|(_, _, in_combat)| in_combat.target == entity);
@@ -90,13 +90,13 @@ pub fn on_player_death(
     spawn_tiles: Query<Entity, With<DeathSpawn>>,
 ) {
     for (player, client, mut stats) in players.iter_mut() {
-        if stats.health == 0 {
+        if stats.state.health == 0 {
             outbox.send_text(client.id, "You have died.");
 
             bevy.entity(player).remove::<InCombat>();
             bevy.entity(player).remove::<QueuedAttack>();
 
-            stats.health = stats.max_health();
+            stats.state.health = stats.max_health();
 
             let hostiles_in_combat = hostiles
                 .iter_mut()
@@ -206,7 +206,7 @@ mod tests {
         assert!(app.world.get::<InCombat>(player).is_none());
 
         assert_eq!(
-            app.world.get::<Stats>(player).unwrap().health,
+            app.world.get::<Stats>(player).unwrap().state.health,
             app.world.get::<Stats>(player).unwrap().max_health()
         );
     }

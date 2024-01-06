@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
 use crate::{
-    combat::{bundles::CombatBundle, components::Stats},
+    combat::{
+        bundles::CombatBundle,
+        components::{State, Stats},
+    },
     interact::components::Interactions,
     visual::components::Depiction,
 };
@@ -37,8 +40,11 @@ impl Schematic for HostileBundle {
                 input.hostile.clone(),
                 CombatBundle {
                     stats: Stats {
-                        health: input.combat.stats.max_health(),
-                        potential: input.combat.stats.max_potential(),
+                        state: State {
+                            health: input.combat.stats.max_health(),
+                            potential: input.combat.stats.max_potential(),
+                            ..Default::default()
+                        },
                         ..input.combat.stats.clone()
                     },
                     cooldowns: input.combat.cooldowns.clone(),
