@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use caith::Roller;
 use serde::Deserialize;
 
@@ -20,38 +20,53 @@ pub struct Stats {
     pub level: u32,
     // --- Attributes
     /// Determines max health and health regen.
+    #[reflect(default)]
     pub vitality: u32,
     /// Determines max potential and potential regen.
+    #[reflect(default)]
     pub proficiency: u32,
     /// Increases damage of relevant skills and block chance.
+    #[reflect(default)]
     pub strength: u32,
     /// Increases damage of relevant skills and dodge chance.
+    #[reflect(default)]
     pub dexterity: u32,
     /// Increases damage of relevant skills.
+    #[reflect(default)]
     pub intelligence: u32,
     // --- State
     /// Current health.
+    #[reflect(default)]
     pub health: u32,
     /// Current potential.
+    #[reflect(default)]
     pub potential: u32,
     /// Potential regen per second.
+    #[reflect(default)]
     pub potential_regen: u32,
     // --- Resistance
     /// Resistance to physical damage.
+    #[reflect(default)]
     pub armor: u32,
     // --- Defense
     /// Chance to dodge an attack.
+    #[reflect(default)]
     pub dodge_chance: u32,
     /// Chance to block an attack.
+    #[reflect(default)]
     pub block_chance: u32,
     // --- Offense
     /// Attack speed in seconds.
+    #[reflect(default)]
     pub speed: u32,
     /// Decreases the chance of target fleeing.
+    #[reflect(default)]
     pub dominance: u32,
     /// How likely you are to hit a crit.
+    #[reflect(default)]
     pub crit_strike_chance: u32,
     /// How much damage is done from a crit.
+    #[reflect(default)]
     pub crit_strike_damage: u32,
 }
 
@@ -159,6 +174,18 @@ impl Stats {
     }
 }
 
+#[derive(Component, Reflect, Clone)]
+pub struct PotentialRegenTimer(pub Timer);
+
+impl Default for PotentialRegenTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(1.0, TimerMode::Repeating))
+    }
+}
+
+#[derive(Component, Reflect, Default, Clone)]
+pub struct Cooldowns(pub HashMap<String, Timer>);
+
 #[derive(Component, Clone, Copy)]
 pub struct InCombat {
     pub target: Entity,
@@ -231,7 +258,7 @@ impl InCombat {
     }
 
     // You can move if you have no attack queued and if you roll a 2d10 greater than
-    // the enemy's 2d10 + their dominance.
+    // the hostile's 2d10 + their dominance.
     pub fn can_move(&self, target_stats: &Stats, queued_attack: &Option<&QueuedAttack>) -> bool {
         if queued_attack.is_some() {
             return false;

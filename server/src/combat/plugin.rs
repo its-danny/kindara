@@ -7,11 +7,18 @@ pub struct CombatPlugin;
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Stats>();
+        app.register_type::<Cooldowns>();
+        app.register_type::<PotentialRegenTimer>();
         app.register_type::<CombatBundle>();
 
         app.add_systems(
             Update,
-            (attack, update_attack_timer, on_npc_death, on_player_death),
+            (
+                attack,
+                update_attack_timer,
+                on_hostile_death,
+                on_player_death,
+            ),
         );
     }
 }

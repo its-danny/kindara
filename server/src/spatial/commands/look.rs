@@ -346,7 +346,7 @@ fn get_npcs_line(siblings: Option<&Children>, npcs: &Query<NpcQuery>) -> String 
         return "".into();
     }
 
-    let npc_names = name_list(&npcs_found, Some(Color::Npc), true);
+    let npc_names = name_list(&npcs_found, Some(Color::Friendly), true);
 
     let formatted = format!(
         "{}{}",

@@ -16,9 +16,9 @@ static ENABLED: AtomicBool = AtomicBool::new(true);
 
 #[derive(Clone, Copy)]
 pub enum Color {
-    Enemy,
+    Friendly,
+    Hostile,
     Item,
-    Npc,
     Player,
     Transition,
 }
@@ -26,9 +26,9 @@ pub enum Color {
 impl Color {
     pub fn value(&self) -> &str {
         match self {
-            Color::Enemy => "red",
+            Color::Friendly => "blue",
+            Color::Hostile => "red",
             Color::Item => "yellow",
-            Color::Npc => "blue",
             Color::Player => "cyan",
             Color::Transition => "green",
         }
@@ -58,9 +58,9 @@ pub fn style(text: &str) -> String {
 
             for attr in regex_attr.captures_iter(&cap["attrs"]) {
                 let value = match &attr["value"] {
-                    "enemy" => Color::Enemy.value(),
+                    "friendly" => Color::Friendly.value(),
+                    "hostile" => Color::Hostile.value(),
                     "item" => Color::Item.value(),
-                    "npc" => Color::Npc.value(),
                     "player" => Color::Player.value(),
                     "transition" => Color::Transition.value(),
                     _ => &attr["value"],

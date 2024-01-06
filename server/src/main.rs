@@ -42,7 +42,7 @@ use crate::{
 };
 
 fn load_prototypes(mut prototypes: PrototypesMut) {
-    match prototypes.load_folder("world/") {
+    match prototypes.load_folder("prototypes/world/") {
         Ok(loaded) => {
             loaded.iter().for_each(|proto| {
                 info!("Loaded zones: {:?}", proto);
@@ -53,10 +53,10 @@ fn load_prototypes(mut prototypes: PrototypesMut) {
         }
     }
 
-    match prototypes.load_folder("enemies/") {
+    match prototypes.load_folder("prototypes/hostiles/") {
         Ok(loaded) => {
             loaded.iter().for_each(|proto| {
-                info!("Loaded enemies: {:?}", proto);
+                info!("Loaded hostiles: {:?}", proto);
             });
         }
         Err(err) => {

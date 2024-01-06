@@ -1,41 +1,14 @@
 use bevy::prelude::*;
 use bevy_proto::prelude::*;
 
-use crate::skills::components::{Cooldowns, PotentialRegenTimer};
+use super::components::{Cooldowns, PotentialRegenTimer, Stats};
 
-use super::components::Stats;
-
-#[derive(Bundle, Reflect)]
+#[derive(Bundle, Schematic, Reflect, Default)]
 #[reflect(Schematic)]
 pub struct CombatBundle {
     pub stats: Stats,
-}
-
-impl Schematic for CombatBundle {
-    type Input = Self;
-
-    fn apply(input: &Self::Input, context: &mut SchematicContext) {
-        if let Some(mut entity) = context.entity_mut() {
-            let stats = Stats {
-                health: input.stats.max_health(),
-                potential: input.stats.max_potential(),
-                ..input.stats.clone()
-            };
-
-            entity.insert(stats);
-
-            entity.insert((
-                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
-                Cooldowns::default(),
-            ));
-        }
-    }
-
-    fn remove(_input: &Self::Input, context: &mut SchematicContext) {
-        if let Some(mut entity) = context.entity_mut() {
-            entity.remove::<Stats>();
-            entity.remove::<PotentialRegenTimer>();
-            entity.remove::<Cooldowns>();
-        }
-    }
+    #[reflect(default)]
+    pub cooldowns: Cooldowns,
+    #[reflect(default)]
+    pub potential_regen_timer: PotentialRegenTimer,
 }
