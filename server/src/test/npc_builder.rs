@@ -2,10 +2,12 @@ use bevy::prelude::*;
 use fake::{Dummy, Fake, Faker};
 
 use crate::{
-    combat::{bundles::CombatBundle, components::Stats},
+    combat::bundles::CombatBundle,
     interact::components::{Interaction, Interactions},
-    npc::{bundles::NpcBundle, components::Npc},
-    skills::components::{Cooldowns, PotentialRegenTimer},
+    npc::{
+        bundles::{HostileBundle, NpcBundle},
+        components::{Friendly, Hostile, Npc},
+    },
     visual::components::Depiction,
 };
 
@@ -60,7 +62,7 @@ impl NpcBuilder {
         self
     }
 
-    /// Gives the entity the Combat bundle, State, and an Attack interaction.
+    /// Gives the entity the Hostile bundle and an Attack interaction.
     pub fn combat(mut self, combat: bool) -> Self {
         self.combat = combat;
         self
@@ -73,9 +75,8 @@ impl NpcBuilder {
 
     pub fn build(self, app: &mut App) -> Entity {
         let mut entity = app.world.spawn(NpcBundle {
-            npc: Npc {
-                skills: self.skills,
-            },
+            npc: Npc,
+            interactions: Interactions(vec![]),
             depiction: Depiction {
                 name: self.name,
                 short_name: self.short_name,
@@ -94,13 +95,12 @@ impl NpcBuilder {
         }
 
         if self.combat {
-            entity.insert((
-                CombatBundle {
-                    stats: Stats::default(),
+            entity.insert((HostileBundle {
+                hostile: Hostile {
+                    skills: self.skills,
                 },
-                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
-                Cooldowns::default(),
-            ));
+                combat: CombatBundle::default(),
+            },));
 
             let interactions = entity.get_mut::<Interactions>();
 
@@ -109,6 +109,8 @@ impl NpcBuilder {
             } else {
                 entity.insert(Interactions(vec![Interaction::Attack]));
             }
+        } else {
+            entity.insert(Friendly);
         }
 
         entity.id()

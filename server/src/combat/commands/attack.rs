@@ -8,7 +8,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::{
-    combat::components::{HasAttacked, HitError, InCombat, QueuedAttack, Stats},
+    combat::components::{Cooldowns, HasAttacked, HitError, InCombat, QueuedAttack, Stats},
     input::events::{Command, ParseError, ParsedCommand},
     interact::components::{Interaction, Interactions},
     mastery::resources::Masteries,
@@ -18,10 +18,7 @@ use crate::{
         components::{Character, Client, Online},
         events::Prompt,
     },
-    skills::{
-        components::Cooldowns,
-        resources::{Skill, Skills},
-    },
+    skills::resources::{Skill, Skills},
     spatial::components::Tile,
     visual::components::Depiction,
 };

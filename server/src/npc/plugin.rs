@@ -8,10 +8,14 @@ impl Plugin for NpcPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Vec<Entity>>()
             .register_type::<(String, u16, u16)>()
-            .register_type::<NpcBundle>()
             .register_type::<Npc>()
-            .register_type::<EnemySpawner>();
+            .register_type::<Friendly>()
+            .register_type::<Hostile>()
+            .register_type::<NpcBundle>()
+            .register_type::<FriendlyBundle>()
+            .register_type::<HostileBundle>()
+            .register_type::<HostileSpawner>();
 
-        app.add_systems(Update, (handle_enemy_spawner, attack_when_able));
+        app.add_systems(Update, (handle_hostile_spawner, attack_when_able));
     }
 }

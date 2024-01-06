@@ -14,7 +14,7 @@
                         position: (IVec3 ( x: 0, y: 0, z: 0 )),
                         tile: (
                             name: "Common room",
-                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn <fg.item>wooden tables</>, their laughter blending with the clinking of mugs. A <fg.item>roaring hearth</> warms the room, while a <fg.npc>barkeep</> tends a <fg.item>stocked bar</> along the back wall. The sounds of a <fg.transition>lively city street</> sing to the south.",
+                            description: "Lanterns hang from the tall ceilings, putting a dim spotlight on the patrons gathered around worn <fg.item>wooden tables</>, their laughter blending with the clinking of mugs. A <fg.item>roaring hearth</> warms the room, while a <fg.friendly>barkeep</> tends a <fg.item>stocked bar</> along the back wall. The sounds of a <fg.transition>lively city street</> sing to the south.",
                         ),
                         sprite: (
                             character: "=",
@@ -27,17 +27,17 @@
                             name: "jWtPbu",
                             schematics: {
                                 "server::npc::bundles::NpcBundle": (
-                                    npc: (
-                                        skills: [],
-                                    ),
+                                    npc: (),
                                     depiction: (
                                         name: "Barkeep",
                                         short_name: "barkeep",
                                         description: "Laughter lines etch a weathered face. His sharp eyes, a remarkable shade of hazel, are alert and quick, keeping pace with the tavern's ebb and flow. His muscular hands, stained from years of pouring spirits, glide across the polished counter with a dancer's grace. A well-worn apron drapes over his sturdy frame, and his chestnut hair, peppered with grey, gives him an air of mature charisma.",
                                         tags: ["bartender"],
                                         visible: false,
-                                    )
+                                    ),
+                                    interactions: ([]),
                                 ),
+                                "server::npc::bundles::FriendlyBundle": (),
                             },
                         )),
                     ),
@@ -209,9 +209,9 @@
                         value: Inline((
                             name: "fLcfUO",
                             schematics: {
-                                "server::npc::components::EnemySpawner": (
+                                "server::npc::components::HostileSpawner": (
                                     delay: 60,
-                                    enemies: ("enemies.racoon", 1, 3),
+                                    hostiles: ("hostiles.racoon", 1, 3),
                                     spawned: [],
                                 ),
                             },

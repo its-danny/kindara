@@ -5,7 +5,7 @@ use sqlx::{types::Json, PgPool};
 
 use crate::{
     auth::components::Authenticating,
-    combat::{bundles::CombatBundle, components::Stats},
+    combat::bundles::CombatBundle,
     items::components::Inventory,
     keycard::Keycard,
     player::{
@@ -13,7 +13,6 @@ use crate::{
         components::{Character, Client, Online},
         config::CharacterConfig,
     },
-    skills::components::{Cooldowns, PotentialRegenTimer},
 };
 
 #[derive(Dummy)]
@@ -131,12 +130,8 @@ impl PlayerBuilder {
                         mastery: self.mastery,
                         name: self.name,
                     },
+                    combat: CombatBundle::default(),
                 },
-                CombatBundle {
-                    stats: Stats::default(),
-                },
-                PotentialRegenTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
-                Cooldowns::default(),
             ));
         }
 

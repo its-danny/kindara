@@ -3,7 +3,7 @@ use bevy_nest::prelude::*;
 
 use crate::{
     input::events::{Command, ParsedCommand, ProxyCommand},
-    npc::components::Npc,
+    npc::components::Hostile,
     player::components::{Client, Online},
     spatial::components::{DeathSpawn, Tile},
     visual::components::Depiction,
@@ -44,14 +44,14 @@ pub fn update_attack_timer(
     }
 }
 
-pub fn on_npc_death(
+pub fn on_hostile_death(
     mut bevy: Commands,
     mut outbox: EventWriter<Outbox>,
-    npcs: Query<(Entity, &Depiction, &Stats, &Parent), With<Npc>>,
+    hostiles: Query<(Entity, &Depiction, &Stats, &Parent), With<Hostile>>,
     mut players: Query<(Entity, &Client, &InCombat), With<Online>>,
     tiles: Query<&Children, With<Tile>>,
 ) {
-    for (entity, depiction, stats, parent) in npcs.iter() {
+    for (entity, depiction, stats, parent) in hostiles.iter() {
         let siblings = tiles.get(parent.get()).ok();
 
         if stats.health == 0 {
@@ -83,7 +83,7 @@ pub fn on_npc_death(
 
 pub fn on_player_death(
     mut bevy: Commands,
-    mut npcs: Query<(Entity, &InCombat), With<Npc>>,
+    mut hostiles: Query<(Entity, &InCombat), With<Hostile>>,
     mut outbox: EventWriter<Outbox>,
     mut proxy: EventWriter<ProxyCommand>,
     mut players: Query<(Entity, &Client, &mut Stats), (With<Online>, With<InCombat>)>,
@@ -98,12 +98,12 @@ pub fn on_player_death(
 
             stats.health = stats.max_health();
 
-            let npcs_in_combat = npcs
+            let hostiles_in_combat = hostiles
                 .iter_mut()
                 .filter(|(_, in_combat)| in_combat.target == player);
 
-            for (npc, _) in npcs_in_combat {
-                bevy.entity(npc).remove::<InCombat>();
+            for (entity, _) in hostiles_in_combat {
+                bevy.entity(entity).remove::<InCombat>();
             }
 
             if let Some(tile) = spawn_tiles.iter().next() {
@@ -173,7 +173,7 @@ mod tests {
     #[rstest]
     fn on_npc_death_destroys_entity(setup: (App, Entity, ClientId, Entity)) {
         let (mut app, _, _, npc) = setup;
-        app.add_systems(Update, on_npc_death);
+        app.add_systems(Update, on_hostile_death);
 
         app.world.entity_mut(npc).insert(Stats::default());
         app.update();
@@ -184,7 +184,7 @@ mod tests {
     #[rstest]
     fn on_npc_death_alerts_neighbors(setup: (App, Entity, ClientId, Entity)) {
         let (mut app, _, client_id, npc) = setup;
-        app.add_systems(Update, on_npc_death);
+        app.add_systems(Update, on_hostile_death);
 
         app.world.entity_mut(npc).insert(Stats::default());
 

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::keycard::Keycard;
+use crate::{combat::bundles::CombatBundle, keycard::Keycard};
 
 use super::components::Character;
 
@@ -8,4 +8,5 @@ use super::components::Character;
 pub struct PlayerBundle {
     pub keycard: Keycard,
     pub character: Character,
+    pub combat: CombatBundle,
 }
