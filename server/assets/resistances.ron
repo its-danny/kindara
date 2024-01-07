@@ -1,0 +1,7 @@
+[
+    (
+        id: "armor",
+        name: "Armor",
+        description: "Reduces damage taken from physical attacks.",
+    )
+]

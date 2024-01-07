@@ -6,14 +6,15 @@ mod input;
 mod interact;
 mod items;
 mod keycard;
+mod lua;
 mod menu;
 mod net;
 mod npc;
 mod player;
-mod skills;
 mod social;
 mod spatial;
 mod test;
+mod values;
 mod visual;
 mod world;
 
@@ -34,8 +35,8 @@ use sqlx::{migrate, postgres::PgPoolOptions};
 use crate::{
     auth::plugin::AuthPlugin, combat::plugin::CombatPlugin, data::plugin::DataPlugin,
     db::pool::DatabasePool, input::plugin::InputPlugin, interact::plugin::InteractPlugin,
-    items::plugin::ItemPlugin, menu::plugin::MenuPlugin, net::plugin::NetPlugin,
-    npc::plugin::NpcPlugin, player::plugin::PlayerPlugin, skills::plugin::SkillsPlugin,
+    items::plugin::ItemPlugin, lua::plugin::LuaPlugin, menu::plugin::MenuPlugin,
+    net::plugin::NetPlugin, npc::plugin::NpcPlugin, player::plugin::PlayerPlugin,
     social::plugin::SocialPlugin, spatial::plugin::SpatialPlugin, visual::plugin::VisualPlugin,
     world::plugin::WorldPlugin,
 };
@@ -104,11 +105,11 @@ async fn main() -> Result<(), sqlx::Error> {
             InputPlugin,
             InteractPlugin,
             ItemPlugin,
+            LuaPlugin,
             MenuPlugin,
             NetPlugin,
             NpcPlugin,
             PlayerPlugin,
-            SkillsPlugin,
             SocialPlugin,
             SpatialPlugin,
             VisualPlugin,

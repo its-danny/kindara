@@ -16,6 +16,6 @@ impl Plugin for NpcPlugin {
             .register_type::<HostileBundle>()
             .register_type::<HostileSpawner>();
 
-        app.add_systems(Update, (handle_hostile_spawner, attack_when_able));
+        app.add_systems(Update, handle_hostile_spawner);
     }
 }

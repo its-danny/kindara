@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::values::PROMPT_TICK;
+
 use super::{
     commands::{config::*, describe::*},
     events::Prompt,
@@ -12,7 +14,10 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Prompt>();
-        app.insert_resource(PromptTimer(Timer::from_seconds(60.0, TimerMode::Repeating)));
+        app.insert_resource(PromptTimer(Timer::from_seconds(
+            PROMPT_TICK,
+            TimerMode::Repeating,
+        )));
 
         app.add_systems(
             Update,

@@ -1,0 +1,69 @@
+// Combat
+
+pub static BASE_HEALTH: f32 = 100.0;
+pub static MAX_HEALTH_STAT_CONTRIBUTION: f32 = 5.0;
+pub static MAX_HEALTH_LEVEL_CONTRIBUTION: f32 = 0.1;
+
+pub static BASE_HEALTH_REGEN: u32 = 1;
+pub static HEALTH_REGEN_STAT_CONTRIBUTION: f32 = 0.05;
+pub static HEALTH_REGEN_TICK: f32 = 1.0;
+
+pub static BASE_VIGOR: f32 = 50.0;
+pub static MAX_VIGOR_STAT_CONTRIBUTION: f32 = 3.0;
+pub static MAX_VIGOR_LEVEL_CONTRIBUTION: f32 = 0.08;
+
+pub static BASE_VIGOR_REGEN: u32 = 1;
+pub static VIGOR_REGEN_STAT_CONTRIBUTION: f32 = 0.05;
+pub static VIGOR_REGEN_TICK: f32 = 1.0;
+
+pub static BASE_ATTACK_SPEED: f32 = 5.0;
+pub static ATTACK_SPEED_FACTOR: f32 = 0.01;
+pub static ATTACK_SPEED_CAP: f32 = 0.5;
+
+pub static AUTO_ATTACK_SPEED_FACTOR: f32 = 1.0;
+pub static BASE_AUTO_ATTACK_DAMAGE: u32 = 5;
+pub static AUTO_ATTACK_LEVEL_CONTRIBUTION: u32 = 2;
+pub static AUTO_ATTACK_STAT_CONTRIBUTION: f32 = 0.5;
+
+pub static BASE_FLEE_CHANCE: f32 = 0.30;
+pub static FLEE_CHANCE_DOMINANCE_CONTRIBUTION: f32 = 0.01;
+pub static FLEE_CHANCE_FLEET_CONTRIBUTION: f32 = 0.01;
+pub static FLEE_COOLDOWN: f32 = 3.0;
+
+pub static BASE_DODGE_CHANCE: f32 = 0.1;
+pub static DODGE_CHANCE_DEXTERITY_CONTRIBUTION: f32 = 0.03;
+pub static DODGE_CHANCE_STAT_CONTRIBUTION: f32 = 0.07;
+pub static DODGE_CHANCE_CAP: f32 = 0.5;
+
+pub static BASE_DODGE_RATE: f32 = 5.0;
+pub static DODGE_RATE_DEXTERITY_CONTRIBUTION: f32 = 0.05;
+pub static DODGE_RATE_STAT_CONTRIBUTION: f32 = 0.05;
+pub static DODGE_RATE_CAP: f32 = 1.0;
+
+pub static MANUAL_DODGE_TIMER: f32 = 10.0;
+
+pub static BASE_BLOCK_CHANCE: f32 = 0.15;
+pub static BLOCK_CHANCE_STRENGTH_CONTRIBUTION: f32 = 0.05;
+pub static BLOCK_CHANCE_STAT_CONTRIBUTION: f32 = 0.1;
+pub static BLOCK_CHANCE_CAP: f32 = 0.5;
+
+pub static BASE_BLOCK_RATE: f32 = 3.0;
+pub static BLOCK_RATE_STRENGTH_CONTRIBUTION: f32 = 0.05;
+pub static BLOCK_RATE_STAT_CONTRIBUTION: f32 = 0.05;
+pub static BLOCK_RATE_CAP: f32 = 0.5;
+
+pub static MANUAL_BLOCK_TIMER: f32 = 10.0;
+
+pub static BASE_CRIT_STRIKE_CHANCE: f32 = 0.05;
+pub static CRIT_STRIKE_STAT_CONTRIBUTION: f32 = 0.04;
+pub static CRIT_STRIKE_CHANCE_CAP: f32 = 0.5;
+
+pub static BASE_CRIT_DAMAGE_MULTIPLIER: f32 = 1.5;
+pub static CRIT_DAMAGE_STAT_CONTRIBUTION: f32 = 0.02;
+
+pub static RESISTANCE_FACTOR: f32 = 0.08;
+pub static RESISTANCE_CAP: f32 = 0.75;
+
+// Player
+
+pub static PROMPT_TICK: f32 = 60.0;

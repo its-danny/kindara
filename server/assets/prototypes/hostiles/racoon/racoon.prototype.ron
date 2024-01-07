@@ -14,15 +14,16 @@
         ),
         "server::npc::bundles::HostileBundle": (
             hostile: (
-                skills: ["blade-flourish"],
+                auto_attack: "swift-strike",
+                skills: [],
             ),
             combat: (
                 stats: (
                     level: 1,
                     attributes: (
-                        vitality: 50,
-                        proficiency: 3,
-                        strength: 10,
+                        vitality: 10,
+                        stamina: 3,
+                        strength: 3,
                     ),
                     offense: (
                         attack_speed: 3,

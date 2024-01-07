@@ -4,7 +4,7 @@ use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 
 use crate::{
-    combat::components::{InCombat, Stats},
+    combat::components::{BlockCooldown, CombatState, DodgeCooldown, Stats},
     net::telnet::NAWS,
     npc::components::Npc,
     paint,
@@ -50,33 +50,45 @@ pub fn handle_client_width(
 pub fn send_prompt(
     mut events: EventReader<Prompt>,
     mut outbox: EventWriter<Outbox>,
-    players: Query<(&Client, &Stats, Option<&InCombat>), (With<Online>, Without<Npc>)>,
+    players: Query<
+        (
+            &Client,
+            &Stats,
+            Option<&CombatState>,
+            Option<&DodgeCooldown>,
+            Option<&BlockCooldown>,
+        ),
+        (With<Online>, Without<Npc>),
+    >,
     npcs: Query<(&Stats, &Depiction), With<Npc>>,
 ) -> Result<(), anyhow::Error> {
     for prompt in events.iter() {
-        let (client, stats, in_combat) = players
+        let (client, stats, combat_state, dodge_cooldown, block_cooldown) = players
             .iter()
-            .find(|(c, _, _)| c.id == prompt.client_id)
+            .find(|(c, _, _, _, _)| c.id == prompt.client_id)
             .context("Player not found")?;
 
         let mut parts: Vec<String> = vec![];
 
         parts.push(paint!(
-            "[{}/<fg.red>{}</> {}/<fg.cyan>{}</>]",
-            stats.state.health,
+            "[{}/<fg.red>{}</> {}/<fg.cyan>{}</>{}{}]",
+            stats.status.health,
             stats.max_health(),
-            stats.state.potential,
-            stats.max_potential(),
+            stats.status.vigor,
+            stats.max_vigor(),
+            if dodge_cooldown.is_none() { " d" } else { "" },
+            if block_cooldown.is_none() { " b" } else { "" },
         ));
 
-        if let Some(combat) = in_combat {
+        if let Some(combat) = combat_state {
             let (stats, depiction) = npcs.get(combat.target)?;
 
             parts.push(paint!(
-                "{} ({}) [{}/<fg.red>{}</>]",
+                "{} ({}, {}) [{}/<fg.red>{}</>]",
                 depiction.name,
                 combat.distance,
-                stats.state.health,
+                combat.approach,
+                stats.status.health,
                 stats.max_health(),
             ));
         }

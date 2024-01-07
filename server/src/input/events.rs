@@ -29,12 +29,15 @@ impl ChatChannel {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Command {
+    Advance,
     Announce(String),
-    Attack((String, Option<String>)),
+    Attack(Option<String>),
+    Block,
     Chat((ChatChannel, String)),
     Close(Option<String>),
     Config((Option<String>, Option<String>)),
     Describe(Option<String>),
+    Dodge,
     Drop((String, bool)),
     Emote(String),
     Enter(Option<String>),
@@ -42,11 +45,12 @@ pub enum Command {
     Inventory,
     Look(Option<String>),
     Map,
-    Movement(String),
     Menu(String),
+    Movement((String, bool)),
     Open(Option<String>),
     Place((String, String)),
     Quit,
+    Retreat,
     Roll(String),
     Say(String),
     Scan((bool, Option<String>)),
@@ -54,6 +58,7 @@ pub enum Command {
     Stand,
     Take((String, bool, Option<String>)),
     Time,
+    UseSkill((String, Option<String>)),
     Who,
     Yell(String),
 }

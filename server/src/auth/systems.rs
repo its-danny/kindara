@@ -234,13 +234,12 @@ pub fn handle_authenticate_task(
                     .with_context(|| format!("Mastery not found: {}", &character.mastery))?;
 
                 player_stats.attributes.vitality = mastery.vitality;
-                player_stats.attributes.proficiency = mastery.proficiency;
+                player_stats.attributes.stamina = mastery.stamina;
                 player_stats.attributes.strength = mastery.strength;
                 player_stats.attributes.dexterity = mastery.dexterity;
                 player_stats.attributes.intelligence = mastery.intelligence;
-                player_stats.state.health = player_stats.max_health();
-                player_stats.state.potential = player_stats.max_potential();
-                player_stats.offense.attack_speed = mastery.attack_speed;
+                player_stats.status.health = player_stats.max_health();
+                player_stats.status.vigor = player_stats.max_vigor();
 
                 bevy.entity(player_entity)
                     .remove::<Authenticating>()
@@ -259,7 +258,7 @@ pub fn handle_authenticate_task(
                                 name: character.name,
                             },
                             combat: CombatBundle {
-                                stats: player_stats,
+                                stats: player_stats.clone(),
                                 ..Default::default()
                             },
                         },

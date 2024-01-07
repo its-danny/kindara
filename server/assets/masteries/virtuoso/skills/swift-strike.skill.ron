@@ -1,0 +1,15 @@
+(
+  id: "swift-strike",
+  commands: [],
+
+  name: "Swift Strike",
+  description: "A swift strike that deals minimal damage.",
+
+  cost: 0,
+  cooldown: 0,
+  distance: Near,
+  dodge_difficulty: 0.0,
+  block_difficulty: 0.0,
+
+  scripts: ["swift-strike"],
+)

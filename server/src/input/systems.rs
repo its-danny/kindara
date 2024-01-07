@@ -4,7 +4,10 @@ use bevy_mod_sysfail::sysfail;
 use bevy_nest::prelude::*;
 
 use crate::{
-    combat::commands::attack::handle_attack,
+    combat::commands::{
+        advance::handle_advance, attack::handle_attack, block::handle_block, dodge::handle_dodge,
+        retreat::handle_retreat, use_skill::handle_use_skill,
+    },
     interact::{
         commands::{
             examine::handle_examine, place::handle_place, quit::handle_quit, roll::handle_roll,
@@ -60,11 +63,15 @@ pub fn parse_command(
             ]
         } else {
             vec![
+                Box::new(handle_advance),
                 Box::new(handle_announce),
+                Box::new(handle_attack),
+                Box::new(handle_block),
                 Box::new(handle_chat),
                 Box::new(handle_close),
                 Box::new(handle_config),
                 Box::new(handle_describe),
+                Box::new(handle_dodge),
                 Box::new(handle_drop),
                 Box::new(handle_emote),
                 Box::new(handle_enter),
@@ -76,6 +83,7 @@ pub fn parse_command(
                 Box::new(handle_open),
                 Box::new(handle_place),
                 Box::new(handle_quit),
+                Box::new(handle_retreat),
                 Box::new(handle_roll),
                 Box::new(handle_say),
                 Box::new(handle_scan),
@@ -87,7 +95,7 @@ pub fn parse_command(
                 Box::new(handle_yell),
                 // Attack is last because the commands are a catch-all and
                 // defined via ron files.
-                Box::new(handle_attack),
+                Box::new(handle_use_skill),
             ]
         };
 
