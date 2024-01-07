@@ -1,0 +1,9 @@
+[
+    (
+        id: "physical",
+        name: "Physical",
+        description: "Physical attacks.",
+
+        resistances: ["armor"],
+    )
+]

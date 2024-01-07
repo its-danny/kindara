@@ -1,312 +1,261 @@
-use std::{
-    cmp::max,
-    fmt::{self, Display, Formatter},
-};
+use std::fmt::{self, Display, Formatter};
 
 use bevy::{prelude::*, utils::HashMap};
-use caith::Roller;
 use serde::Deserialize;
 
-use crate::{
-    data::resources::{Action, DamageType, RelevantStat, Skill},
-    input::events::ParsedCommand,
-    skills::{components::Bleeding, resources::StatusEffect},
+use crate::data::resources::DamageKind;
+use crate::{data::resources::Stat, input::events::ParsedCommand};
+
+use crate::values::{
+    ATTACK_SPEED_CAP, ATTACK_SPEED_FACTOR, AUTO_ATTACK_LEVEL_CONTRIBUTION,
+    AUTO_ATTACK_SPEED_FACTOR, AUTO_ATTACK_STAT_CONTRIBUTION, BASE_ATTACK_SPEED,
+    BASE_AUTO_ATTACK_DAMAGE, BASE_BLOCK_CHANCE, BASE_BLOCK_RATE, BASE_CRIT_DAMAGE_MULTIPLIER,
+    BASE_CRIT_STRIKE_CHANCE, BASE_DODGE_CHANCE, BASE_DODGE_RATE, BASE_FLEE_CHANCE, BASE_HEALTH,
+    BASE_HEALTH_REGEN, BASE_VIGOR, BASE_VIGOR_REGEN, BLOCK_CHANCE_CAP,
+    BLOCK_CHANCE_STAT_CONTRIBUTION, BLOCK_CHANCE_STRENGTH_CONTRIBUTION, BLOCK_RATE_CAP,
+    BLOCK_RATE_STAT_CONTRIBUTION, BLOCK_RATE_STRENGTH_CONTRIBUTION, CRIT_DAMAGE_STAT_CONTRIBUTION,
+    CRIT_STRIKE_CHANCE_CAP, CRIT_STRIKE_STAT_CONTRIBUTION, DODGE_CHANCE_CAP,
+    DODGE_CHANCE_DEXTERITY_CONTRIBUTION, DODGE_CHANCE_STAT_CONTRIBUTION, DODGE_RATE_CAP,
+    DODGE_RATE_DEXTERITY_CONTRIBUTION, DODGE_RATE_STAT_CONTRIBUTION,
+    FLEE_CHANCE_DOMINANCE_CONTRIBUTION, FLEE_CHANCE_FLEET_CONTRIBUTION,
+    HEALTH_REGEN_STAT_CONTRIBUTION, HEALTH_REGEN_TICK, MAX_HEALTH_LEVEL_CONTRIBUTION,
+    MAX_HEALTH_STAT_CONTRIBUTION, MAX_VIGOR_LEVEL_CONTRIBUTION, MAX_VIGOR_STAT_CONTRIBUTION,
+    RESISTANCE_CAP, RESISTANCE_FACTOR, VIGOR_REGEN_STAT_CONTRIBUTION, VIGOR_REGEN_TICK,
 };
 
-#[derive(Component, Default, Reflect, Clone)]
+#[derive(Component, Deserialize, Debug, Default, Reflect, Clone)]
 pub struct Stats {
     pub level: u32,
     #[reflect(default)]
     pub attributes: Attributes,
     #[reflect(default)]
-    pub state: Status,
+    pub status: Status,
     #[reflect(default)]
     pub defense: Defense,
     #[reflect(default)]
-    pub resistance: Resistance,
-    #[reflect(default)]
     pub offense: Offense,
+    #[reflect(default)]
+    pub resistance: Resistance,
 }
 
-#[derive(Default, Reflect, Clone)]
+#[derive(Default, Deserialize, Debug, Reflect, Clone)]
 pub struct Attributes {
-    /// Determines max health and health regen.
     #[reflect(default)]
     pub vitality: u32,
-    /// Determines max potential and potential regen.
     #[reflect(default)]
-    pub proficiency: u32,
-    /// Increases damage of relevant skills and block chance.
+    pub stamina: u32,
     #[reflect(default)]
     pub strength: u32,
-    /// Increases damage of relevant skills and dodge chance.
     #[reflect(default)]
     pub dexterity: u32,
-    /// Increases damage of relevant skills.
     #[reflect(default)]
     pub intelligence: u32,
 }
 
-#[derive(Default, Reflect, Clone)]
+#[derive(Default, Deserialize, Debug, Reflect, Clone)]
 pub struct Status {
-    /// Current health.
     #[reflect(default)]
     pub health: u32,
-    /// Current potential.
     #[reflect(default)]
-    pub potential: u32,
-    /// Potential regen per second.
+    pub vigor: u32,
     #[reflect(default)]
-    pub potential_regen: u32,
+    pub vigor_regen: u32,
 }
 
-#[derive(Default, Reflect, Clone)]
+#[derive(Default, Deserialize, Debug, Reflect, Clone)]
 pub struct Defense {
-    /// Chance to dodge an attack.
     #[reflect(default)]
-    pub dodge_chance: u32,
-    /// Chance to block an attack.
+    pub dodge_chance: f32,
     #[reflect(default)]
-    pub block_chance: u32,
+    pub dodge_rate: f32,
+    #[reflect(default)]
+    pub block_chance: f32,
+    #[reflect(default)]
+    pub block_rate: f32,
+    #[reflect(default)]
+    pub fleet: u32,
 }
 
-#[derive(Default, Reflect, Clone)]
-pub struct Resistance {
-    /// Resistance to physical damage.
-    #[reflect(default)]
-    pub armor: u32,
-}
-
-#[derive(Default, Reflect, Clone)]
+#[derive(Default, Deserialize, Debug, Reflect, Clone)]
 pub struct Offense {
-    /// Attack speed in seconds.
     #[reflect(default)]
     pub attack_speed: u32,
-    /// Decreases the chance of target fleeing.
     #[reflect(default)]
     pub dominance: u32,
-    /// How likely you are to hit a crit.
     #[reflect(default)]
-    pub crit_strike_chance: u32,
-    /// How much damage is done from a crit.
+    pub crit_strike_chance: f32,
     #[reflect(default)]
-    pub crit_strike_damage: u32,
+    pub crit_strike_damage: f32,
 }
 
-static BASE_POTENTIAL_REGEN: u32 = 1;
-static BASE_CRIT_THRESHOLD: u32 = 20;
-static BASE_CRIT_STRIKE_DAMAGE: u32 = 10;
-static CRIT_THRESHOLD_CAP: u32 = 5;
+#[derive(Default, Deserialize, Debug, Reflect, Clone)]
+pub struct Resistance(pub HashMap<String, u32>);
 
 impl Stats {
     pub fn max_health(&self) -> u32 {
-        self.attributes.vitality * 10
+        let mut max_health =
+            BASE_HEALTH + (self.attributes.vitality as f32 * MAX_HEALTH_STAT_CONTRIBUTION);
+
+        for _ in 1..self.level {
+            max_health += max_health * MAX_HEALTH_LEVEL_CONTRIBUTION;
+        }
+
+        f32::floor(max_health) as u32
     }
 
-    pub fn max_potential(&self) -> u32 {
-        self.attributes.proficiency * 10
+    pub fn health_per_second(&self) -> u32 {
+        BASE_HEALTH_REGEN
+            + ((self.attributes.vitality as f32 * HEALTH_REGEN_STAT_CONTRIBUTION).floor() as u32)
     }
 
-    pub fn potential_per_second(&self) -> u32 {
-        BASE_POTENTIAL_REGEN + self.state.potential_regen
+    pub fn max_vigor(&self) -> u32 {
+        let mut max_vigor =
+            BASE_VIGOR + (self.attributes.stamina as f32 * MAX_VIGOR_STAT_CONTRIBUTION);
+
+        for _ in 1..self.level {
+            max_vigor += max_vigor * MAX_VIGOR_LEVEL_CONTRIBUTION;
+        }
+
+        f32::floor(max_vigor) as u32
     }
 
-    pub fn get_relevant_stat(&self, stat: &RelevantStat) -> u32 {
-        match stat {
-            RelevantStat::Strength => self.attributes.strength,
-            RelevantStat::Dexterity => self.attributes.dexterity,
-            RelevantStat::Intelligence => self.attributes.intelligence,
+    pub fn vigor_per_second(&self) -> u32 {
+        BASE_VIGOR_REGEN
+            + ((self.attributes.stamina as f32 * VIGOR_REGEN_STAT_CONTRIBUTION).floor() as u32)
+    }
+
+    pub fn attack_speed(&self) -> f32 {
+        f32::max(
+            BASE_ATTACK_SPEED / (1.0 + (self.offense.attack_speed as f32 * ATTACK_SPEED_FACTOR)),
+            ATTACK_SPEED_CAP,
+        )
+    }
+
+    pub fn auto_attack_speed(&self) -> f32 {
+        self.attack_speed() * AUTO_ATTACK_SPEED_FACTOR
+    }
+
+    pub fn auto_attack_damage(&self) -> u32 {
+        let highest_stat = self
+            .attributes
+            .strength
+            .max(self.attributes.dexterity)
+            .max(self.attributes.intelligence);
+
+        (BASE_AUTO_ATTACK_DAMAGE + (self.level * AUTO_ATTACK_LEVEL_CONTRIBUTION))
+            + (highest_stat as f32 * AUTO_ATTACK_STAT_CONTRIBUTION) as u32
+    }
+
+    pub fn dodge_chance(&self, manual_dodge: bool, difficulty: &f32) -> f32 {
+        if manual_dodge {
+            1.0 - difficulty
+        } else {
+            f32::min(
+                BASE_DODGE_CHANCE
+                    + (self.attributes.dexterity as f32 * DODGE_CHANCE_DEXTERITY_CONTRIBUTION)
+                    + (self.defense.dodge_chance * DODGE_CHANCE_STAT_CONTRIBUTION)
+                    - difficulty,
+                DODGE_CHANCE_CAP,
+            )
         }
     }
 
-    pub fn hit(&self, skill: &Skill, attacker_stats: &Stats) -> Result<(), HitError> {
-        let quality = roll_as_single("2d10") as u32 + attacker_stats.get_relevant_stat(&skill.stat);
+    pub fn dodge_cooldown(&self) -> f32 {
+        f32::max(
+            BASE_DODGE_RATE
+                - (self.attributes.dexterity as f32 * DODGE_RATE_DEXTERITY_CONTRIBUTION)
+                - (self.defense.dodge_rate * DODGE_RATE_STAT_CONTRIBUTION),
+            DODGE_RATE_CAP,
+        )
+    }
 
-        let dodge =
-            roll_as_single("2d10") as u32 + self.attributes.dexterity + self.defense.dodge_chance;
-        let block =
-            roll_as_single("2d10") as u32 + self.attributes.strength + self.defense.block_chance;
-
-        if quality <= dodge {
-            Err(HitError::Dodged)
-        } else if quality <= block {
-            Err(HitError::Blocked)
+    pub fn block_chance(&self, manual_block: bool, difficulty: &f32) -> f32 {
+        if manual_block {
+            1.0 - difficulty
         } else {
-            Ok(())
+            f32::min(
+                BASE_BLOCK_CHANCE
+                    + (self.attributes.strength as f32 * BLOCK_CHANCE_STRENGTH_CONTRIBUTION)
+                    + (self.defense.block_chance * BLOCK_CHANCE_STAT_CONTRIBUTION)
+                    - difficulty,
+                BLOCK_CHANCE_CAP,
+            )
         }
     }
 
-    pub fn deal_damage(
-        &mut self,
-        roll: &str,
-        attacker_stats: &Stats,
-        relevant_stat: Option<&RelevantStat>,
-        damage_type: Option<&DamageType>,
-        difficulty: &u32,
-    ) -> u32 {
-        // Set difficulty.
+    pub fn block_cooldown(&self) -> f32 {
+        f32::max(
+            BASE_BLOCK_RATE
+                - (self.attributes.strength as f32 * BLOCK_RATE_STRENGTH_CONTRIBUTION)
+                - (self.defense.block_rate * BLOCK_RATE_STAT_CONTRIBUTION),
+            BLOCK_RATE_CAP,
+        )
+    }
 
-        let difficulty = (*difficulty as f32 + (attacker_stats.level as f32 * 0.5)).floor() as u32;
+    pub fn flee_chance(&self, dominance: &f32) -> f32 {
+        BASE_FLEE_CHANCE - (dominance * FLEE_CHANCE_DOMINANCE_CONTRIBUTION)
+            + (self.defense.fleet as f32 * FLEE_CHANCE_FLEET_CONTRIBUTION)
+    }
 
-        // Roll for base damage and add relevant stat modifier.
+    pub fn critical_strike_chance(&self) -> f32 {
+        f32::min(
+            BASE_CRIT_STRIKE_CHANCE
+                + (self.offense.crit_strike_chance * CRIT_STRIKE_STAT_CONTRIBUTION),
+            CRIT_STRIKE_CHANCE_CAP,
+        )
+    }
 
-        let mut damage = roll_as_single(roll) as u32;
-        damage += relevant_stat.map_or(0, |stat| attacker_stats.get_relevant_stat(stat));
+    pub fn critical_strike_damage(&self) -> f32 {
+        BASE_CRIT_DAMAGE_MULTIPLIER
+            + (self.offense.crit_strike_damage * CRIT_DAMAGE_STAT_CONTRIBUTION)
+    }
 
-        // Check for crit and add crit damage.
-
-        let crit_roll = roll_as_single("2d10") as u32;
-        let crit_threshold =
-            BASE_CRIT_THRESHOLD.saturating_sub(attacker_stats.offense.crit_strike_chance);
-        let crit_threshold = std::cmp::max(crit_threshold, CRIT_THRESHOLD_CAP);
-
-        damage += if crit_roll >= crit_threshold {
-            let crit_dmg_roll = roll_as_single("2d10") as u32;
-
-            max(crit_dmg_roll, BASE_CRIT_STRIKE_DAMAGE) + self.offense.crit_strike_damage
-        } else {
-            0
-        };
-
-        // Apply resistance.
-
-        let resistance = roll_as_single("2d10") as u32;
-
-        let res_modifier = if let Some(damage_type) = damage_type {
-            match damage_type {
-                DamageType::Physical => self.resistance.armor,
+    pub fn resisted(&self, damage_kind: &DamageKind) -> u32 {
+        let resistances = self.resistance.0.iter().fold(0, |acc, (key, value)| {
+            if damage_kind.resistances.contains(key) {
+                acc + value
+            } else {
+                acc
             }
-        } else {
-            0
-        };
+        });
 
-        let resistance = resistance + res_modifier;
-        let excess = resistance.saturating_sub(difficulty);
-
-        let mitigated = match excess {
-            0..=4 => 0.25,
-            5..=8 => 0.5,
-            9..=12 => 0.75,
-            _ => 1.0,
-        };
-
-        damage = (damage as f32 * (1.0 - mitigated)) as u32;
-
-        // Apply damage.
-
-        self.state.health = self.state.health.saturating_sub(damage);
-
-        damage
-    }
-}
-
-#[derive(Component, Reflect, Clone)]
-pub struct PotentialRegenTimer(pub Timer);
-
-impl Default for PotentialRegenTimer {
-    fn default() -> Self {
-        Self(Timer::from_seconds(1.0, TimerMode::Repeating))
+        f32::floor(f32::min(
+            resistances as f32 * RESISTANCE_FACTOR,
+            RESISTANCE_CAP,
+        )) as u32
     }
 }
 
 #[derive(Component, Reflect, Default, Clone)]
-pub struct Cooldowns(pub HashMap<String, Timer>);
+pub struct Cooldowns(pub HashMap<String, (Entity, Timer)>);
 
-#[derive(Component, Clone, Copy)]
-pub struct InCombat {
+#[derive(Component, Reflect, Default, Clone)]
+pub struct Conditions(pub HashMap<String, Option<Timer>>);
+
+#[derive(Component, Reflect, Default, Clone)]
+pub struct Modifiers(pub HashMap<String, (Stat, f32)>);
+
+impl Modifiers {
+    pub fn sum_stat(&self, stat: &Stat) -> f32 {
+        self.0
+            .values()
+            .filter_map(|(s, v)| if s == stat { Some(*v) } else { None })
+            .sum()
+    }
+}
+
+#[derive(Component, Clone)]
+pub struct CombatState {
     pub target: Entity,
     pub distance: Distance,
+    pub approach: Approach,
 }
 
-pub enum HitError {
-    Dodged,
-    Blocked,
-}
-
-impl InCombat {
-    /// Attacks the target entity with the given skill.
-    pub fn attack(
-        &self,
-        bevy: &mut Commands,
-        attacker: Entity,
-        skill: &Skill,
-        attacker_stats: &Stats,
-        target_stats: &mut Stats,
-    ) -> Result<u32, HitError> {
-        bevy.entity(attacker).insert(HasAttacked {
-            timer: Timer::from_seconds(attacker_stats.offense.attack_speed as f32, TimerMode::Once),
-        });
-
-        target_stats.hit(skill, attacker_stats)?;
-
-        let damage = self.apply_actions(bevy, skill, &attacker, attacker_stats, target_stats);
-
-        Ok(damage)
-    }
-
-    fn apply_actions(
-        &self,
-        bevy: &mut Commands,
-        skill: &Skill,
-        attacker: &Entity,
-        attacker_stats: &Stats,
-        target_stats: &mut Stats,
-    ) -> u32 {
-        let mut damage_done = 0_u32;
-
-        for action in &skill.actions {
-            match action {
-                Action::ApplyDamage(roll) => {
-                    let damage = target_stats.deal_damage(
-                        roll,
-                        attacker_stats,
-                        Some(&skill.stat),
-                        Some(&skill.damage_type),
-                        &skill.difficulty,
-                    );
-
-                    damage_done += damage;
-                }
-                Action::ApplyStatus(status, roll, tick, duration) => match status {
-                    StatusEffect::Bleeding => {
-                        bevy.entity(self.target).insert(Bleeding {
-                            source: *attacker,
-                            tick: Timer::from_seconds(*tick as f32, TimerMode::Repeating),
-                            duration: Timer::from_seconds(*duration as f32, TimerMode::Once),
-                            roll: roll.clone(),
-                        });
-                    }
-                },
-            }
-        }
-
-        damage_done
-    }
-
-    // You can move if you have no attack queued and if you roll a 2d10 greater than
-    // the hostile's 2d10 + their dominance.
-    pub fn can_move(&self, target_stats: &Stats, queued_attack: &Option<&QueuedAttack>) -> bool {
-        if queued_attack.is_some() {
-            return false;
-        }
-
-        let attacker_roll = roll_as_single("2d10");
-        let target_roll = roll_as_single("2d10");
-
-        attacker_roll > target_roll + target_stats.offense.dominance as i64
-    }
-}
-
-fn roll_as_single(roll: &str) -> i64 {
-    let roller = Roller::new(roll).unwrap();
-    let roll = roller.roll().unwrap();
-    roll.as_single().unwrap().get_total()
-}
-
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 pub enum Distance {
     Near,
     Far,
+    Either,
 }
 
 impl Display for Distance {
@@ -314,16 +263,64 @@ impl Display for Distance {
         match self {
             Distance::Near => write!(f, "near"),
             Distance::Far => write!(f, "far"),
+            Distance::Either => write!(f, "either"),
         }
     }
 }
 
-/// Added to an entity when it has attacked to prevent acting faster
-/// than their attack speed. The timer is handled via the `update_attack_timer` system.
-#[derive(Component)]
-pub struct HasAttacked {
-    pub timer: Timer,
+#[derive(Clone, Copy, Debug)]
+pub enum Approach {
+    Front,
+    Rear,
+}
+
+impl Display for Approach {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Approach::Front => write!(f, "front"),
+            Approach::Rear => write!(f, "rear"),
+        }
+    }
 }
 
 #[derive(Component)]
+pub struct AutoAttackTimer(pub Timer);
+
+#[derive(Component)]
+pub struct AttackTimer(pub Timer);
+
+#[derive(Component)]
 pub struct QueuedAttack(pub ParsedCommand);
+
+#[derive(Component)]
+pub struct ManualDodge(pub Timer);
+
+#[derive(Component)]
+pub struct DodgeCooldown(pub Timer);
+
+#[derive(Component)]
+pub struct ManualBlock(pub Timer);
+
+#[derive(Component)]
+pub struct BlockCooldown(pub Timer);
+
+#[derive(Component)]
+pub struct FleeTimer(pub Timer);
+
+#[derive(Component, Reflect, Clone)]
+pub struct HealthRegenTimer(pub Timer);
+
+impl Default for HealthRegenTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(HEALTH_REGEN_TICK, TimerMode::Repeating))
+    }
+}
+
+#[derive(Component, Reflect, Clone)]
+pub struct VigorRegenTimer(pub Timer);
+
+impl Default for VigorRegenTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(VIGOR_REGEN_TICK, TimerMode::Repeating))
+    }
+}

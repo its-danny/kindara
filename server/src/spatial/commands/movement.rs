@@ -8,7 +8,10 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::{
-    combat::components::{InCombat, QueuedAttack, Stats},
+    combat::{
+        components::{CombatState, QueuedAttack, Stats},
+        events::{CombatEvent, CombatEventKind, CombatEventTrigger},
+    },
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     npc::components::Npc,
     player::components::{Client, Online},
@@ -27,7 +30,7 @@ pub fn handle_movement(content: &str) -> Result<Command, ParseError> {
 
     match regex.is_match(content) {
         false => Err(ParseError::WrongCommand),
-        true => Ok(Command::Movement(content.into())),
+        true => Ok(Command::Movement((content.into(), false))),
     }
 }
 
@@ -52,33 +55,41 @@ pub fn movement(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
+    mut combat_events: EventWriter<CombatEvent>,
     mut players: Query<
         (
             Entity,
             &Client,
-            Option<&InCombat>,
+            Option<&CombatState>,
             Option<&QueuedAttack>,
             &Parent,
             Option<&Seated>,
         ),
         With<Online>,
     >,
-    npcs: Query<NpcQuery>,
     tiles: Query<TileQuery>,
     zones: Query<&Children, With<Zone>>,
     doors: Query<&Door>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
-        if let Command::Movement(direction) = &command.command {
-            let (player, client, in_combat, queued_attack, tile, seated) = players
+        if let Command::Movement((direction, fleeing)) = &command.command {
+            let (player, client, combat_state, queued_attack, tile, seated) = players
                 .iter_mut()
                 .find(|(_, c, _, _, _, _)| c.id == command.from)
                 .context("Player not found")?;
 
-            if let Err(err) = attempt_to_flee(&in_combat, &queued_attack, &npcs) {
-                outbox.send_text(client.id, err.to_string());
+            if combat_state.is_some() && !fleeing {
+                combat_events.send(CombatEvent {
+                    source: player,
+                    trigger: CombatEventTrigger::Movement,
+                    kind: CombatEventKind::AttemptFlee(direction.clone()),
+                });
 
                 continue;
+            }
+
+            if queued_attack.is_some() {
+                bevy.entity(player).remove::<QueuedAttack>();
             }
 
             let player_tile = tiles.get(tile.get())?;
@@ -116,28 +127,6 @@ pub fn movement(
                 from: client.id,
                 command: Command::Look(None),
             }));
-        }
-    }
-
-    Ok(())
-}
-
-#[derive(Error, Debug, PartialEq)]
-enum FleeError {
-    #[error("You failed to get away.")]
-    Failed,
-}
-
-fn attempt_to_flee(
-    in_combat: &Option<&InCombat>,
-    queued_attack: &Option<&QueuedAttack>,
-    npcs: &Query<NpcQuery>,
-) -> Result<(), anyhow::Error> {
-    if let Some(in_combat) = in_combat {
-        let npc = npcs.get(in_combat.target)?;
-
-        if !in_combat.can_move(npc.stats, queued_attack) {
-            Err(FleeError::Failed)?
         }
     }
 

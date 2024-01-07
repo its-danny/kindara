@@ -6,6 +6,8 @@ use super::{
         close::*, enter::*, look::*, map::*, movement::*, open::*, scan::*, sit::*, stand::*,
     },
     components::*,
+    events::*,
+    systems::*,
 };
 
 pub struct SpatialPlugin;
@@ -23,9 +25,22 @@ impl Plugin for SpatialPlugin {
             .register_type::<TileBundle>()
             .register_type::<TransitionBundle>();
 
+        app.add_event::<MovementEvent>();
+
         app.add_systems(
             Update,
-            (look, scan, map, movement, enter, sit, stand, open, close),
+            (
+                close,
+                enter,
+                look,
+                map,
+                movement,
+                open,
+                scan,
+                sit,
+                stand,
+                on_movement_event_flee,
+            ),
         );
     }
 }

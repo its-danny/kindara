@@ -8,7 +8,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::{
-    combat::components::InCombat,
+    combat::components::CombatState,
     input::events::{Command, ParseError, ParsedCommand, ProxyCommand},
     player::components::{Client, Online},
     spatial::components::{Position, Tile, Transition, Zone},
@@ -61,19 +61,19 @@ pub fn enter(
     mut commands: EventReader<ParsedCommand>,
     mut proxy: EventWriter<ProxyCommand>,
     mut outbox: EventWriter<Outbox>,
-    mut players: Query<(Entity, &Client, Option<&InCombat>, &Parent), With<Online>>,
+    mut players: Query<(Entity, &Client, Option<&CombatState>, &Parent), With<Online>>,
     transitions: Query<TransitionQuery>,
     tiles: Query<TileQuery>,
     zones: Query<ZoneQuery>,
 ) -> Result<(), anyhow::Error> {
     for command in commands.iter() {
         if let Command::Enter(target) = &command.command {
-            let (player, client, in_combat, tile) = players
+            let (player, client, combat_state, tile) = players
                 .iter_mut()
                 .find(|(_, c, _, _)| c.id == command.from)
                 .context("Player not found")?;
 
-            if in_combat.is_some() {
+            if combat_state.is_some() {
                 outbox.send_text(client.id, "You can't move while in combat.");
 
                 continue;

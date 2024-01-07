@@ -23,6 +23,7 @@ colored = "2.1"
 dotenvy = "0.15"
 futures-lite = "2.1"
 indefinite = "0.1"
+mlua = { version = "0.9", features = ["lua54", "vendored", "send"] }
 rand = "0.8"
 regex = "1.8"
 ron = "0.8"
@@ -35,7 +36,11 @@ sqlx = { version = "0.7", features = [
   "runtime-async-std",
   "tls-rustls",
 ] }
+strum = "0.26.1"
+strum_macros = "0.26.1"
 thiserror = "1.0"
+uuid = { version = "1.6.1", features = ["v4", "fast-rng"] }
+walkdir = "2.4.0"
 
 [dev-dependencies]
 fake = { version = "2.6", features = ["derive"] }

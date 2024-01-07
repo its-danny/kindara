@@ -3,9 +3,9 @@ use bevy_nest::prelude::*;
 use sqlx::PgPool;
 
 use crate::{
-    combat::components::Distance,
-    data::resources::{Action, DamageType, RelevantStat, Skill, Skills},
+    combat::{components::Distance, events::CombatEvent},
     data::resources::{Masteries, Mastery},
+    data::resources::{Skill, Skills},
     db::pool::DatabasePool,
     input::{
         events::{ParsedCommand, ProxyCommand},
@@ -39,16 +39,15 @@ impl AppBuilder {
             "punch".into(),
             Skill {
                 id: "punch".into(),
-                name: "Punch".into(),
-                flavor: "You sock 'em in the jaw.".into(),
                 commands: vec!["punch".into()],
-                stat: RelevantStat::Strength,
-                damage_type: DamageType::Physical,
-                difficulty: 10,
-                distance: Distance::Near,
+                name: "Punch".into(),
+                description: "You sock 'em in the jaw.".into(),
                 cost: 0,
                 cooldown: 0,
-                actions: vec![Action::ApplyDamage("2d10".into())],
+                distance: Distance::Near,
+                dodge_difficulty: 0.0,
+                block_difficulty: 0.0,
+                scripts: vec![],
             },
         );
 
@@ -60,11 +59,11 @@ impl AppBuilder {
                 id: "freelancer".into(),
                 name: "Freelancer".into(),
                 vitality: 0,
-                proficiency: 0,
-                attack_speed: 0,
+                stamina: 0,
                 strength: 0,
                 dexterity: 0,
                 intelligence: 0,
+                auto_attack: "punch".into(),
                 skills: vec!["punch".into()],
             },
         );
@@ -81,6 +80,7 @@ impl AppBuilder {
             .add_event::<ParsedCommand>()
             .add_event::<ProxyCommand>()
             .add_event::<Prompt>()
+            .add_event::<CombatEvent>()
             .add_systems(First, (parse_command, handle_proxy_command));
 
         if let Some(database) = self.database {

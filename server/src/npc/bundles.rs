@@ -40,15 +40,18 @@ impl Schematic for HostileBundle {
                 input.hostile.clone(),
                 CombatBundle {
                     stats: Stats {
-                        state: Status {
+                        status: Status {
                             health: input.combat.stats.max_health(),
-                            potential: input.combat.stats.max_potential(),
+                            vigor: input.combat.stats.max_vigor(),
                             ..Default::default()
                         },
                         ..input.combat.stats.clone()
                     },
                     cooldowns: input.combat.cooldowns.clone(),
-                    potential_regen_timer: input.combat.potential_regen_timer.clone(),
+                    conditions: input.combat.conditions.clone(),
+                    modifiers: input.combat.modifiers.clone(),
+                    health_regen_timer: input.combat.health_regen_timer.clone(),
+                    vigor_regen_timer: input.combat.vigor_regen_timer.clone(),
                 },
             ));
         }

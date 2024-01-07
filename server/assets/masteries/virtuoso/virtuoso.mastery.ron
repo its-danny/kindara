@@ -1,11 +1,13 @@
 (
     id: "virtuoso",
     name: "Virtuoso",
+
     vitality: 10,
-    proficiency: 10,
-    attack_speed: 5,
+    stamina: 10,
     strength: 3,
     dexterity: 10,
     intelligence: 3,
-    skills: ["blade-flourish"],
+
+    auto_attack: "swift-strike",
+    skills: [],
 )

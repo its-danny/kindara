@@ -97,6 +97,7 @@ impl NpcBuilder {
         if self.combat {
             entity.insert((HostileBundle {
                 hostile: Hostile {
+                    auto_attack: "kick".into(),
                     skills: self.skills,
                 },
                 combat: CombatBundle::default(),
