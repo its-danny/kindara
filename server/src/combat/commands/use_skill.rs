@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::{
     combat::{
-        components::{Approach, AttackTimer, CombatState, Cooldowns, QueuedAttack, Stats},
+        components::{AttackTimer, CombatState, Cooldowns, Distance, QueuedAttack, Stats},
         events::{CombatEvent, CombatEventKind, CombatEventTrigger},
     },
     data::resources::{Masteries, Skill, Skills},
@@ -154,16 +154,22 @@ pub fn use_skill(
                     }
                 };
 
+                let distance = if skill.distance == Distance::Either {
+                    Distance::Near
+                } else {
+                    skill.distance
+                };
+
                 bevy.entity(player.entity).insert(CombatState {
                     target,
-                    distance: skill.distance,
-                    approach: Approach::Front,
+                    distance,
+                    approach: skill.approach,
                 });
 
                 bevy.entity(target).insert(CombatState {
                     target: player.entity,
-                    distance: skill.distance,
-                    approach: Approach::Front,
+                    distance,
+                    approach: skill.approach,
                 });
 
                 put_in_combat = true;
