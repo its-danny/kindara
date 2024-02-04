@@ -2,7 +2,7 @@ use bevy::{prelude::*, utils::HashMap};
 use serde::Deserialize;
 use strum_macros::{Display, EnumIter};
 
-use crate::combat::components::Distance;
+use crate::combat::components::{Approach, Distance};
 
 #[derive(Debug, Deserialize)]
 pub struct DamageKind {
@@ -25,7 +25,6 @@ pub struct Resistance {
 #[derive(Default, Resource)]
 pub struct Resistances(pub HashMap<String, Resistance>);
 
-/// A mastery definition.
 #[derive(Debug, Deserialize)]
 pub struct Mastery {
     pub id: String,
@@ -39,12 +38,11 @@ pub struct Mastery {
     pub skills: Vec<String>,
 }
 
-/// A collection of all masteries.
 #[derive(Default, Resource)]
 pub struct Masteries(pub HashMap<String, Mastery>);
 
-/// A skill definition.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default)]
 pub struct Skill {
     pub id: String,
     pub commands: Vec<String>,
@@ -52,13 +50,13 @@ pub struct Skill {
     pub description: String,
     pub cost: u32,
     pub cooldown: u32,
+    pub approach: Approach,
     pub distance: Distance,
     pub dodge_difficulty: f32,
     pub block_difficulty: f32,
     pub scripts: Vec<String>,
 }
 
-/// A collection of all available skills.
 #[derive(Default, Resource)]
 pub struct Skills(pub HashMap<String, Skill>);
 

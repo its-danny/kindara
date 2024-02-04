@@ -9,5 +9,5 @@
     intelligence: 3,
 
     auto_attack: "swift-strike",
-    skills: [],
+    skills: ["blade-dash"],
 )

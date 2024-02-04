@@ -3,7 +3,10 @@ use bevy_nest::prelude::*;
 use sqlx::PgPool;
 
 use crate::{
-    combat::{components::Distance, events::CombatEvent},
+    combat::{
+        components::{Approach, Distance},
+        events::CombatEvent,
+    },
     data::resources::{Masteries, Mastery},
     data::resources::{Skill, Skills},
     db::pool::DatabasePool,
@@ -44,6 +47,7 @@ impl AppBuilder {
                 description: "You sock 'em in the jaw.".into(),
                 cost: 0,
                 cooldown: 0,
+                approach: Approach::Front,
                 distance: Distance::Near,
                 dodge_difficulty: 0.0,
                 block_difficulty: 0.0,

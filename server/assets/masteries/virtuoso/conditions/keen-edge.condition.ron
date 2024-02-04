@@ -1,0 +1,7 @@
+(
+    id: "keen-edge",
+    name: "Keen Edge",
+    description: "Increases critical strike chance for a duration.",
+
+    scripts: ["keen-edge"],
+)

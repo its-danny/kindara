@@ -43,7 +43,7 @@ pub fn retreat(
                 combat_state.distance = Distance::Far;
 
                 let mut hostile = hostiles.get_mut(combat_state.target)?;
-                hostile.distance = Distance::Near;
+                hostile.distance = Distance::Far;
 
                 bevy.entity(entity).insert(AttackTimer(Timer::from_seconds(
                     stats.attack_speed(),

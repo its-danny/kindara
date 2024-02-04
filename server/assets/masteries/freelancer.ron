@@ -8,5 +8,6 @@
     dexterity: 10,
     intelligence: 3,
 
+    auto_attack: "swift-strike",
     skills: [],
 )

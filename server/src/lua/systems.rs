@@ -165,16 +165,29 @@ pub fn execute_scripts(
     Ok(())
 }
 
+/**
+Usage:
+```lua
+action.apply_damage(var.target.entity, {
+    damage = 10,
+    kind = "physical",
+    after = function(damage, kind, crit)
+        print("Damage applied: " .. damage .. " (" .. kind .. ")")
+    end
+})
+```
+*/
 fn apply_damage_func(
     lua: &Lua,
     sandbox_id: String,
     context: ExecutionContext,
 ) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target: LuaEntity = args.get("target")?;
+        let (target, args) = args;
+
         let damage: f32 = args.get("damage")?;
         let kind: String = args.get("kind")?;
         let after: Option<Function> = args.get("after")?;
@@ -212,12 +225,22 @@ fn apply_damage_func(
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.apply_condition(var.target.entity, {
+    id = "stunned",
+    duration = 5
+})
+```
+*/
 fn apply_condition_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let condition = args.get::<_, String>("id")?;
         let duration = args.get::<_, f32>("duration");
 
@@ -238,12 +261,21 @@ fn apply_condition_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function>
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.set_distance(var.target.entity, {
+    distance = distance.Near
+})
+```
+*/
 fn set_distance_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let distance = args.get::<_, Distance>("distance")?;
 
         let events: Table = sandbox.get("events")?;
@@ -262,12 +294,21 @@ fn set_distance_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.set_approach(var.target.entity, {
+    approach = approach.Front
+})
+```
+*/
 fn set_approach_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let approach = args.get::<_, Approach>("approach")?;
 
         let events: Table = sandbox.get("events")?;
@@ -286,12 +327,22 @@ fn set_approach_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.add_stat_modifier(var.target.entity, {
+    stat = stat.Strength,
+    amount = 5
+})
+```
+*/
 fn add_stat_modifier_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let stat = args.get::<_, Stat>("stat")?;
         let amount = args.get::<_, f32>("amount")?;
 
@@ -314,12 +365,21 @@ fn add_stat_modifier_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Functio
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.remove_stat_modifier(var.target.entity, {
+    id = "some-uuid"
+})
+```
+*/
 fn remove_stat_modifier_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes: Table = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox: Table = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let id = args.get::<_, String>("id")?;
 
         let events: Table = sandbox.get("events")?;
@@ -338,13 +398,20 @@ fn remove_stat_modifier_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Func
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.combat_log(var.source.entity, var.target.entity, {
+    damaged = { message = "They hit ya!", damage = 10, kind = "physical", crit = true },
+})
+```
+*/
 fn combat_log_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, LuaEntity, Table)| {
         let sandboxes = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let source = args.get::<_, LuaEntity>("source")?;
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (source, target, args) = args;
 
         if let Ok(used) = args.get::<_, Table>("used") {
             let message = used.get::<_, String>("message")?;
@@ -483,12 +550,21 @@ fn combat_log_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
     Ok(func)
 }
 
+/**
+Usage:
+```lua
+action.send_message(var.target.entity, {
+    message = "Hello"
+})
+```
+*/
 fn send_message_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
-    let func = lua.create_function(move |ctx, args: Table| {
+    let func = lua.create_function(move |ctx, args: (LuaEntity, Table)| {
         let sandboxes = ctx.globals().get::<_, Table>("sandboxes")?;
         let sandbox = sandboxes.get::<_, Table>(sandbox_id.clone())?;
 
-        let target = args.get::<_, LuaEntity>("target")?;
+        let (target, args) = args;
+
         let message = args.get::<_, String>("message")?;
 
         let events = sandbox.get::<_, Table>("events")?;
@@ -507,6 +583,20 @@ fn send_message_func(lua: &Lua, sandbox_id: String) -> mlua::Result<Function> {
     Ok(func)
 }
 
+/**
+Returns a table with the following fields:
+- entity: [`LuaEntity`]
+- stats: Their [`Stats`]
+- distance: Their current [`Distance`]
+- approach: Their current [`Approach`]
+
+Accessible via `var.source` and `var.target`.
+
+Usage:
+```lua
+send_message(var.source.target, { message = "Hello" })
+```
+*/
 fn combat_entity_var<'a>(
     lua: &'a Lua,
     entity: Entity,
@@ -523,6 +613,14 @@ fn combat_entity_var<'a>(
     Ok(table)
 }
 
+/**
+See [`Stat`] for possible values.
+
+Usage:
+```lua
+action.add_stat_modifier(var.target.entity, { stat = var.stat.Strength, amount = 5 })
+```
+*/
 fn stat_var(lua: &Lua) -> mlua::Result<Table> {
     let table = lua.create_table()?;
 
@@ -533,6 +631,14 @@ fn stat_var(lua: &Lua) -> mlua::Result<Table> {
     Ok(table)
 }
 
+/**
+See [`Distance`] for possible values.
+
+Usage:
+```lua
+action.set_distance(var.target.entity, { distance = var.distance.Near })
+```
+*/
 fn distance_var(lua: &Lua) -> mlua::Result<Table> {
     let table = lua.create_table()?;
 
@@ -542,6 +648,14 @@ fn distance_var(lua: &Lua) -> mlua::Result<Table> {
     Ok(table)
 }
 
+/**
+See [`Approach`] for possible values.
+
+Usage:
+```lua
+action.set_approach(var.target.entity, { approach = var.approach.Front })
+```
+*/
 fn approach_var(lua: &Lua) -> mlua::Result<Table> {
     let table = lua.create_table()?;
 
