@@ -3,7 +3,7 @@
 
   A fantasy MUD shaped by the cultures, mysteries, and magic of the ancient world.
 
-  ![On hold](https://img.shields.io/badge/status-on%20hold-orange)
+  ![Not Maintained](https://img.shields.io/maintenance/no/2024)
 </div>
 
 ## Dev
