@@ -251,10 +251,11 @@ pub struct CombatState {
     pub approach: Approach,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
 pub enum Distance {
     Near,
     Far,
+    #[default]
     Either,
 }
 
@@ -268,8 +269,9 @@ impl Display for Distance {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
 pub enum Approach {
+    #[default]
     Front,
     Rear,
 }

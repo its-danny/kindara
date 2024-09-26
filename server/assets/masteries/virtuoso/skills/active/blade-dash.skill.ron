@@ -1,0 +1,14 @@
+(
+    id: "blade-dash",
+    commands: ["dash"],
+
+    name: "Blade Dash",
+    description: "Dash forward, slashing through your enemies and giving yourself a keen edge.",
+
+    cost: 10,
+    cooldown: 5,
+    distance: Far,
+    block_difficulty: 0.3,
+
+    scripts: ["blade-dash"],
+)
